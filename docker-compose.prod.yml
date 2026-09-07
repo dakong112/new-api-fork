@@ -1,0 +1,56 @@
+# KID API — 生产部署（从本仓库源码构建镜像）
+#
+# 与仓库自带的 docker-compose.yml 的区别：
+#   - 用 `build: .` 从本仓库源码构建，而不是拉上游的官方镜像。
+#     这是关键：拉上游镜像会得到原版 New API，本仓库的所有改动都不会生效。
+#   - 不内置 PostgreSQL 和 Redis，连接你自己已部署的实例（见 .env）。
+#     因此这里只有一个服务，不需要自定义网络。
+#
+# 单独放一个文件而不是改 docker-compose.yml，是为了将来从上游同步时不产生冲突。
+#
+# 用法：
+#   cp .env.prod.example .env   # 然后按注释填写
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# 注意 .env.prod.example 只覆盖生产部署要用的变量。仓库根目录的
+# .env.example 是上游的完整环境变量参考，未做改动，需要调别的开关时查它。
+
+services:
+  new-api:
+    build: .
+    image: kid-api:latest
+    container_name: kid-api
+    restart: always
+    command: --log-dir /app/logs
+    ports:
+      # 只监听回环，由宿主机上的 Nginx / Caddy 反代并终止 TLS。
+      # 若确实要直接暴露到公网，改成 "3000:3000"。
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - ./data:/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - ERROR_LOG_ENABLED=true
+      - BATCH_UPDATE_ENABLED=true
+      - NODE_NAME=${NODE_NAME:-kid-api-node-1}
+      # 外部 PostgreSQL 必须压低连接数：上游默认 1000，而 PG 的 max_connections
+      # 默认才 100，不改会撞 "sorry, too many clients already"。
+      - SQL_MAX_OPEN_CONNS=${SQL_MAX_OPEN_CONNS:-50}
+      - SQL_MAX_IDLE_CONNS=${SQL_MAX_IDLE_CONNS:-10}
+    # PostgreSQL 和 Redis 都在容器外，容器内的 localhost 指向容器自身。
+    # 若它们跑在宿主机上，用 host.docker.internal 指回宿主机，
+    # 或直接在 .env 里写宿主机内网 IP 并删掉下面两行。
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget -q -O - http://localhost:3000/api/status | grep -o ''"success":\s*true'' || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
