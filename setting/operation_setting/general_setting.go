@@ -24,7 +24,8 @@ type GeneralSetting struct {
 
 // 默认配置
 var generalSetting = GeneralSetting{
-	DocsLink:                   "https://docs.newapi.pro",
+	// 留空：未配置时前端不展示文档入口。部署方在「系统设置 → 通用」填自有文档地址后自动出现。
+	DocsLink:                   "",
 	PingIntervalEnabled:        false,
 	PingIntervalSeconds:        60,
 	QuotaDisplayType:           QuotaDisplayTypeUSD,

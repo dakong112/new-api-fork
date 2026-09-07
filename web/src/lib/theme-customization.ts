@@ -25,6 +25,13 @@ For commercial licensing, please contact support@quantumnous.com
 
 export const THEME_PRESETS = [
   {
+    // House brand: near-neutral cool canvas with a single deep sapphire
+    // accent. Shipped as the default preset.
+    value: 'kid',
+    name: 'KID',
+    swatches: ['oklch(0.988 0.002 260)', 'oklch(0.47 0.128 262)'],
+  },
+  {
     value: 'default',
     name: 'Default',
     swatches: ['oklch(0.72 0.18 250)', 'oklch(0.7 0.12 280)'],
@@ -116,7 +123,7 @@ export type ThemeCustomization = {
 }
 
 export const DEFAULT_THEME_CUSTOMIZATION: ThemeCustomization = {
-  preset: 'default',
+  preset: 'kid',
   font: 'default',
   radius: 'default',
   scale: 'default',
@@ -176,6 +183,9 @@ export const THEME_COOKIE_KEYS = {
 export const PRESET_DEFAULT_FONT: Partial<
   Record<ThemePreset, ResolvedThemeFont>
 > = {
+  // A developer-facing console reads more credible in a humanist sans than
+  // in the editorial serif. Switch to 'serif' here for a more literary voice.
+  kid: 'sans',
   default: 'sans',
   anthropic: 'serif',
 }

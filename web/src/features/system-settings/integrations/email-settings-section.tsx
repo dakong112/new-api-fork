@@ -370,13 +370,15 @@ export function EmailSettingsSection({
                 <FormControl>
                   <Input
                     autoComplete='off'
-                    placeholder={t('New API &lt;noreply@example.com&gt;')}
+                    placeholder={t('noreply@example.com')}
                     {...field}
                     onChange={(event) => field.onChange(event.target.value)}
                   />
                 </FormControl>
                 <FormDescription>
-                  {t('Display name and email used in outgoing messages')}
+                  {t(
+                    'Sender email address only. The display name automatically uses your system name.'
+                  )}
                 </FormDescription>
                 <FormMessage />
               </FormItem>

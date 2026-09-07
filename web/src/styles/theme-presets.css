@@ -426,10 +426,12 @@ For commercial licensing, please contact support@quantumnous.com
  *   - `anthropic`: warm cream surfaces are a brand choice, NOT a primary-mix
  *     derivation (the Anthropic system deliberately uses warm neutrals for
  *     cards/borders rather than tinting them with the clay accent).
- *   - `simple-large`: keeps intentionally neutral, high-contrast surfaces. */
+ *   - `simple-large`: keeps intentionally neutral, high-contrast surfaces.
+ *   - `kid`: house brand; cool-neutral surfaces with a scarce sapphire accent
+ *     are the whole point, so tinting every surface would defeat it. */
 [data-theme-preset]:not([data-theme-preset='default']):not(
   [data-theme-preset='anthropic']
-):not([data-theme-preset='simple-large']) {
+):not([data-theme-preset='simple-large']):not([data-theme-preset='kid']) {
   --card: color-mix(in oklch, var(--primary) 3%, var(--background));
   --popover: color-mix(in oklch, var(--primary) 5%, var(--background));
   --muted: color-mix(in oklch, var(--primary) 7%, var(--background));
@@ -454,7 +456,7 @@ For commercial licensing, please contact support@quantumnous.com
 .dark
   [data-theme-preset]:not([data-theme-preset='default']):not(
     [data-theme-preset='anthropic']
-  ):not([data-theme-preset='simple-large']) {
+  ):not([data-theme-preset='simple-large']):not([data-theme-preset='kid']) {
   --card: color-mix(in oklch, var(--primary) 8%, var(--background));
   --popover: color-mix(in oklch, var(--primary) 12%, var(--background));
   --muted: color-mix(in oklch, var(--primary) 12%, var(--background));
@@ -610,6 +612,146 @@ For commercial licensing, please contact support@quantumnous.com
 
   --skeleton-base: oklch(0.305 0.004 60);
   --skeleton-highlight: oklch(0.41 0.004 60);
+}
+
+/* ── KID API ──────────────────────────────────────────────────────────────
+ * The house brand preset, and the shipped default.
+ *
+ * Design intent: "premium" here comes from restraint, not saturation. A
+ * near-neutral cool canvas, pure-white cards that lift off it by luminance
+ * alone, hairline borders, and a single deep sapphire accent spent only on
+ * primary actions and focus rings. That reads institutional (bank / trading
+ * desk) rather than consumer-SaaS, which is the point for a paid gateway.
+ *
+ * Like `anthropic` and `simple-large`, this preset is opted out of the
+ * semantic surface bridge above: the bridge would `color-mix` the sapphire
+ * into every card, border and sidebar and produce exactly the tinted look
+ * this preset exists to avoid. The opt-out is what keeps the surfaces true
+ * neutral, so the accent stays scarce and therefore reads as expensive.
+ *
+ * Accent lightness is pinned at L=0.47 (light) / L=0.68 (dark) so
+ * primary-on-primary-foreground clears WCAG AA 4.5:1 for normal text, not
+ * just the 3:1 large-text threshold. Re-tune the hue from the brand mark
+ * when the final icon lands; keep the lightness values.
+ *
+ * OKLCH hue 260-262 = cool neutral / sapphire family.
+ */
+[data-theme-preset='kid'] {
+  /* Canvas + ink. Cards are pure white and lift by luminance, not by tint. */
+  --background: oklch(0.988 0.002 260);
+  --foreground: oklch(0.2 0.008 262);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.008 262);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.008 262);
+
+  /* Deep sapphire — spent only on primary actions and focus. */
+  --primary: oklch(0.47 0.128 262);
+  --primary-foreground: oklch(0.99 0.002 260);
+
+  --secondary: oklch(0.955 0.003 260);
+  --secondary-foreground: oklch(0.28 0.008 262);
+
+  --muted: oklch(0.962 0.003 260);
+  --muted-foreground: oklch(0.47 0.01 262);
+  --accent: oklch(0.945 0.005 262);
+  --accent-foreground: oklch(0.2 0.008 262);
+
+  --destructive: oklch(0.52 0.19 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.52 0.105 160);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.7 0.135 72);
+  --warning-foreground: oklch(0.2 0.008 262);
+  --info: oklch(0.52 0.11 240);
+  --info-foreground: oklch(0.99 0 0);
+  --neutral: oklch(0.47 0.01 262);
+  --neutral-foreground: oklch(0.2 0.008 262);
+
+  /* Hairline borders — cool gray, never sapphire-tinted. */
+  --border: oklch(0.915 0.004 260);
+  --input: oklch(0.9 0.005 260);
+  --ring: oklch(0.47 0.128 262);
+
+  /* Charts: sapphire lead, then desaturated companions that stay legible
+   * side by side without competing with the primary. */
+  --chart-1: oklch(0.47 0.128 262);
+  --chart-2: oklch(0.58 0.1 195);
+  --chart-3: oklch(0.55 0.11 292);
+  --chart-4: oklch(0.7 0.13 72);
+  --chart-5: oklch(0.62 0.075 155);
+
+  --sidebar: oklch(0.972 0.003 260);
+  --sidebar-foreground: oklch(0.28 0.008 262);
+  --sidebar-primary: oklch(0.47 0.128 262);
+  --sidebar-primary-foreground: oklch(0.99 0.002 260);
+  --sidebar-accent: oklch(0.935 0.005 262);
+  --sidebar-accent-foreground: oklch(0.2 0.008 262);
+  --sidebar-border: oklch(0.915 0.004 260);
+  --sidebar-ring: oklch(0.47 0.128 262);
+
+  --skeleton-base: oklch(0.945 0.003 260);
+  --skeleton-highlight: oklch(0.975 0.002 260);
+
+  /* Tighter than the 0.625rem house default — squarer corners read more
+   * like instrumentation and less like a consumer app. */
+  --radius: 0.5rem;
+}
+.dark [data-theme-preset='kid'] {
+  /* Deep ink, not pure black: keeps elevation readable and avoids the
+   * smeared-halation look pure black gives on OLED. */
+  --background: oklch(0.185 0.008 262);
+  --foreground: oklch(0.965 0.003 260);
+
+  --card: oklch(0.225 0.008 262);
+  --card-foreground: oklch(0.965 0.003 260);
+  --popover: oklch(0.245 0.008 262);
+  --popover-foreground: oklch(0.965 0.003 260);
+
+  --primary: oklch(0.68 0.13 262);
+  --primary-foreground: oklch(0.17 0.008 262);
+
+  --secondary: oklch(0.28 0.008 262);
+  --secondary-foreground: oklch(0.95 0.003 260);
+
+  --muted: oklch(0.26 0.008 262);
+  --muted-foreground: oklch(0.74 0.008 262);
+  --accent: oklch(0.31 0.01 262);
+  --accent-foreground: oklch(0.975 0.003 260);
+
+  --destructive: oklch(0.68 0.19 25);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.72 0.12 160);
+  --success-foreground: oklch(0.17 0.008 262);
+  --warning: oklch(0.79 0.135 75);
+  --warning-foreground: oklch(0.17 0.008 262);
+  --info: oklch(0.72 0.1 240);
+  --info-foreground: oklch(0.17 0.008 262);
+  --neutral: oklch(0.74 0.008 262);
+  --neutral-foreground: oklch(0.17 0.008 262);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.68 0.13 262);
+
+  --chart-1: oklch(0.68 0.13 262);
+  --chart-2: oklch(0.72 0.1 195);
+  --chart-3: oklch(0.7 0.12 292);
+  --chart-4: oklch(0.79 0.135 75);
+  --chart-5: oklch(0.74 0.08 155);
+
+  --sidebar: oklch(0.205 0.008 262);
+  --sidebar-foreground: oklch(0.95 0.003 260);
+  --sidebar-primary: oklch(0.68 0.13 262);
+  --sidebar-primary-foreground: oklch(0.17 0.008 262);
+  --sidebar-accent: oklch(0.3 0.01 262);
+  --sidebar-accent-foreground: oklch(0.975 0.003 260);
+  --sidebar-border: oklch(1 0 0 / 11%);
+  --sidebar-ring: oklch(0.68 0.13 262);
+
+  --skeleton-base: oklch(0.28 0.008 262);
+  --skeleton-highlight: oklch(0.38 0.008 262);
 }
 
 /* ── Font axis ────────────────────────────────────────────────────────────

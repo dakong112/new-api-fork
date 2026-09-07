@@ -48,10 +48,11 @@ const MoreIcon = () => (
 export function Hero(props: HeroProps) {
   const { t } = useTranslation()
   const { status } = useStatus()
-  const docsUrl =
-    (status?.docs_link as string | undefined) || 'https://docs.newapi.pro'
+  const docsUrl = (status?.docs_link as string | undefined)?.trim()
 
   const renderDocsButton = () => {
+    // No docs link configured → no button, rather than a link off-site.
+    if (!docsUrl) return null
     const isExternal = docsUrl.startsWith('http')
     if (isExternal) {
       return (
@@ -82,14 +83,17 @@ export function Hero(props: HeroProps) {
   return (
     <section className='relative z-10 overflow-hidden px-6 pt-24 pb-16 md:pt-32 md:pb-24 lg:pt-36 lg:pb-28'>
       {/* Radial gradient background */}
+      {/* Reads from the active theme's chart ramp rather than hardcoded
+          blue/violet, so the landing page follows the brand preset instead of
+          drifting from it. */}
       <div
         aria-hidden
         className='pointer-events-none absolute inset-0 -z-10 opacity-25 dark:opacity-[0.12]'
         style={{
           background: [
-            'radial-gradient(ellipse 60% 50% at 20% 20%, oklch(0.72 0.18 250 / 80%) 0%, transparent 70%)',
-            'radial-gradient(ellipse 50% 40% at 80% 15%, oklch(0.65 0.15 200 / 60%) 0%, transparent 70%)',
-            'radial-gradient(ellipse 40% 35% at 40% 80%, oklch(0.70 0.12 280 / 40%) 0%, transparent 70%)',
+            'radial-gradient(ellipse 60% 50% at 20% 20%, color-mix(in oklch, var(--chart-1) 80%, transparent) 0%, transparent 70%)',
+            'radial-gradient(ellipse 50% 40% at 80% 15%, color-mix(in oklch, var(--chart-2) 60%, transparent) 0%, transparent 70%)',
+            'radial-gradient(ellipse 40% 35% at 40% 80%, color-mix(in oklch, var(--chart-3) 40%, transparent) 0%, transparent 70%)',
           ].join(', '),
         }}
       />
@@ -104,12 +108,12 @@ export function Hero(props: HeroProps) {
         <div className='flex flex-col items-start text-left lg:col-span-6'>
           {/* Top Pill Badge */}
           <div
-            className='landing-animate-fade-up mb-5 inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/5 px-3 py-1.5 text-[11px] font-medium text-blue-600 opacity-0 shadow-xs dark:border-blue-400/20 dark:bg-blue-400/5 dark:text-blue-400'
+            className='landing-animate-fade-up border-primary/20 bg-primary/5 text-primary mb-5 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium opacity-0 shadow-xs'
             style={{ animationDelay: '0ms' }}
           >
             <span className='relative flex size-1.5'>
-              <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75' />
-              <span className='relative inline-flex size-1.5 rounded-full bg-blue-500 dark:bg-blue-400' />
+              <span className='bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75' />
+              <span className='bg-primary relative inline-flex size-1.5 rounded-full' />
             </span>
             <span>{t('AI Application Infrastructure Foundation')}</span>
           </div>
@@ -120,7 +124,7 @@ export function Hero(props: HeroProps) {
           >
             {t('Unified API Gateway for')}
             <br />
-            <span className='bg-gradient-to-r from-blue-400 via-violet-400 to-purple-500 bg-clip-text text-transparent'>
+            <span className='from-chart-1 to-chart-2 bg-gradient-to-r bg-clip-text text-transparent'>
               {t('Vast Range of AI Models')}
             </span>
           </h1>
@@ -180,7 +184,7 @@ export function Hero(props: HeroProps) {
               </span>
               <p className='text-muted-foreground/60 text-xs leading-relaxed'>
                 {t(
-                  'Supports one-click configuration and perfectly adapts to NewAPI multi-protocol configuration.'
+                  'Supports one-click configuration and adapts to our multi-protocol gateway.'
                 )}
               </p>
             </div>

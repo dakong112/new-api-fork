@@ -135,11 +135,17 @@ export function ThemeCustomizationProvider(props: {
 
   // Mirror state to the <body> via data-* attributes so theme-presets.css can
   // override CSS variables at the right cascade layer.
+  //
+  // The preset attribute is ALWAYS written, never omitted for the default.
+  // Omitting it only worked while the default preset's tokens lived in :root;
+  // the shipped default (`kid`) declares its tokens in a
+  // `[data-theme-preset='kid']` block, which cannot match an absent attribute.
+  // `default` is still handled correctly when written out: no
+  // `[data-theme-preset='default']` block exists, so it falls through to :root,
+  // and every `:not([data-theme-preset='default'])` rule still excludes it.
+  // index.html seeds the same attribute on <body> so first paint is correct.
   useEffect(() => {
-    applyAttribute(
-      'data-theme-preset',
-      preset === DEFAULT_THEME_CUSTOMIZATION.preset ? null : preset
-    )
+    applyAttribute('data-theme-preset', preset)
   }, [preset])
 
   // Font is the one axis where we resolve before writing the attribute:

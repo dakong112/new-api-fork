@@ -86,13 +86,10 @@ export function useTopNavLinks(): TopNavLink[] {
     links.push({ title: t('Rankings'), href: '/rankings', requiresAuth })
   }
 
-  // Docs (supports external links)
-  if (modules?.docs !== false) {
-    if (docsLink) {
-      links.push({ title: t('Docs'), href: docsLink, external: true })
-    } else {
-      links.push({ title: t('Docs'), href: '/docs' })
-    }
+  // Docs — external only. There is no in-app /docs route, so an unconfigured
+  // docs link means no entry at all rather than a link to a 404.
+  if (modules?.docs !== false && docsLink) {
+    links.push({ title: t('Docs'), href: docsLink, external: true })
   }
 
   // About

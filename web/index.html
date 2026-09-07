@@ -7,11 +7,11 @@
     <meta name="google" content="notranslate" />
 
     <!-- Primary Meta Tags -->
-    <title>New API</title>
-    <meta name="title" content="New API" />
+    <title>KID API</title>
+    <meta name="title" content="KID API" />
     <meta
       name="description"
-      content="Unified AI API gateway and admin dashboard."
+      content="KID API — 统一的 AI 模型接入网关，一套标准协议直连主流大模型，附带用量、计费与密钥管理。"
     />
 
     <meta name="theme-color" content="#fff" />
@@ -19,7 +19,11 @@
     <!--Google Analytics-->
   </head>
 
-  <body>
+  <!-- Seeds the default theme preset for first paint so the page never flashes
+       an unstyled/neutral theme before React mounts. Must stay in sync with
+       DEFAULT_THEME_CUSTOMIZATION.preset in src/lib/theme-customization.ts;
+       ThemeCustomizationProvider overwrites it on mount from the user's cookie. -->
+  <body data-theme-preset="kid">
     <div id="root" translate="no" class="notranslate"></div>
   </body>
 </html>
