@@ -781,6 +781,7 @@
     "Built-in v{{factory}} / marketplace v{{market}}": "Встроенный v{{factory}} / магазин v{{market}}",
     "Built-in: phone fingerprint/face, or Windows Hello; External: USB security key": "Встроенное: отпечаток пальца/лицо телефона или Windows Hello; Внешнее: USB-ключ безопасности",
     "Bulk actions for {{count}} selected records": "Групповые действия для {{count}} записей",
+    "Buy Redemption Code": "Купить код активации",
     "by": "от",
     "By category": "По категориям",
     "By model author": "По автору модели",

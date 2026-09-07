@@ -781,6 +781,7 @@
     "Built-in v{{factory}} / marketplace v{{market}}": "組み込み v{{factory}} / マーケット v{{market}}",
     "Built-in: phone fingerprint/face, or Windows Hello; External: USB security key": "内蔵: 電話の指紋/顔認証、またはWindows Hello。外部: USBセキュリティキー",
     "Bulk actions for {{count}} selected records": "選択した {{count}} 件への一括操作",
+    "Buy Redemption Code": "引き換えコードを購入",
     "by": "によって",
     "By category": "カテゴリ別",
     "By model author": "モデル提供者別",
