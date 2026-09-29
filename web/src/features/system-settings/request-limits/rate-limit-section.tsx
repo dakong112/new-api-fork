@@ -23,6 +23,7 @@ import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import * as z from 'zod'
 
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { JsonCodeEditor } from '@/components/json-code-editor'
 import { Button } from '@/components/ui/button'
 import {
@@ -34,7 +35,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 
 import {
@@ -155,14 +155,12 @@ export function RateLimitSection({ defaultValues }: RateLimitSectionProps) {
                   <FormLabel>{t('Limit period')}</FormLabel>
                   <FormControl>
                     <div className='flex items-center gap-2'>
-                      <Input
-                        type='number'
+                      <DraftNumberInput
+                        onValueChange={field.onChange}
+                        integer
                         min={0}
                         step={1}
                         {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 0)
-                        }
                       />
                       <span className='text-muted-foreground text-sm'>
                         {t('minutes')}
@@ -185,15 +183,13 @@ export function RateLimitSection({ defaultValues }: RateLimitSectionProps) {
                   <FormLabel>{t('Max requests per period')}</FormLabel>
                   <FormControl>
                     <div className='flex items-center gap-2'>
-                      <Input
-                        type='number'
+                      <DraftNumberInput
+                        onValueChange={field.onChange}
+                        integer
                         min={0}
                         max={100000000}
                         step={1}
                         {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 0)
-                        }
                       />
                       <span className='text-muted-foreground text-sm'>
                         {t('times')}
@@ -216,15 +212,14 @@ export function RateLimitSection({ defaultValues }: RateLimitSectionProps) {
                   <FormLabel>{t('Max successful requests')}</FormLabel>
                   <FormControl>
                     <div className='flex items-center gap-2'>
-                      <Input
-                        type='number'
+                      <DraftNumberInput
+                        onValueChange={field.onChange}
+                        emptyValue={1}
+                        integer
                         min={1}
                         max={100000000}
                         step={1}
                         {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || 1)
-                        }
                       />
                       <span className='text-muted-foreground text-sm'>
                         {t('times')}

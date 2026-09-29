@@ -22,6 +22,7 @@ type Redemption struct {
 	RedeemedTime int64          `json:"redeemed_time" gorm:"bigint"`
 	Count        int            `json:"count" gorm:"-:all"` // only for api request
 	UsedUserId   int            `json:"used_user_id"`
+	UsedUsername string         `json:"used_username" gorm:"-:all"` // only for api response
 	DeletedAt    gorm.DeletedAt `gorm:"index"`
 	ExpiredTime  int64          `json:"expired_time" gorm:"bigint"` // 过期时间，0 表示不过期
 }
@@ -57,7 +58,7 @@ func GetAllRedemptions(startIdx int, num int) (redemptions []*Redemption, total 
 		return nil, 0, err
 	}
 
-	return redemptions, total, nil
+	return redemptions, total, fillRedemptionUsernames(redemptions)
 }
 
 func SearchRedemptions(keyword string, status string, startIdx int, num int) (redemptions []*Redemption, total int64, err error) {
@@ -74,10 +75,11 @@ func SearchRedemptions(keyword string, status string, startIdx int, num int) (re
 	query := tx.Model(&Redemption{})
 
 	if keyword != "" {
+		// Prefix match on the name or the code itself; a number also matches the id.
 		if id, err := strconv.Atoi(keyword); err == nil {
-			query = query.Where("id = ? OR name LIKE ?", id, keyword+"%")
+			query = query.Where("id = ? OR name LIKE ? OR "+commonKeyCol+" LIKE ?", id, keyword+"%", keyword+"%")
 		} else {
-			query = query.Where("name LIKE ?", keyword+"%")
+			query = query.Where("name LIKE ? OR "+commonKeyCol+" LIKE ?", keyword+"%", keyword+"%")
 		}
 	}
 
@@ -121,7 +123,33 @@ func SearchRedemptions(keyword string, status string, startIdx int, num int) (re
 		return nil, 0, err
 	}
 
-	return redemptions, total, nil
+	return redemptions, total, fillRedemptionUsernames(redemptions)
+}
+
+// fillRedemptionUsernames resolves who redeemed each code in one query, so
+// the admin list can show and link the username. Deleted users still resolve.
+func fillRedemptionUsernames(redemptions []*Redemption) error {
+	ids := make([]int, 0, len(redemptions))
+	for _, r := range redemptions {
+		if r.UsedUserId != 0 {
+			ids = append(ids, r.UsedUserId)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	var users []User
+	if err := DB.Unscoped().Model(&User{}).Select("id", "username").Where("id IN ?", ids).Find(&users).Error; err != nil {
+		return err
+	}
+	names := make(map[int]string, len(users))
+	for _, u := range users {
+		names[u.Id] = u.Username
+	}
+	for _, r := range redemptions {
+		r.UsedUsername = names[r.UsedUserId]
+	}
+	return nil
 }
 
 func GetRedemptionById(id int) (*Redemption, error) {

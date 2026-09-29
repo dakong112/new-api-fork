@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { DateTimePicker } from '@/components/datetime-picker'
+import { DraftNumberInput } from '@/components/draft-number-input'
 import {
   SideDrawerSection,
   sideDrawerContentClassName,
@@ -322,16 +323,11 @@ export function RedemptionsMutateDrawer({
                       <FormItem>
                         <FormLabel>{quotaLabel}</FormLabel>
                         <FormControl>
-                          <Input
+                          <DraftNumberInput
+                            onValueChange={field.onChange}
                             {...field}
-                            type='number'
                             step={quotaStep}
                             placeholder={quotaPlaceholder}
-                            onChange={(e) =>
-                              field.onChange(
-                                Number.parseFloat(e.target.value) || 0
-                              )
-                            }
                           />
                         </FormControl>
                         <FormDescription>
@@ -411,17 +407,14 @@ export function RedemptionsMutateDrawer({
                         <FormItem>
                           <FormLabel>{t('Quantity')}</FormLabel>
                           <FormControl>
-                            <Input
+                            <DraftNumberInput
+                              onValueChange={field.onChange}
+                              emptyValue={1}
+                              integer
                               {...field}
-                              type='number'
                               min='1'
                               max='100'
                               placeholder={t('Number of codes to create')}
-                              onChange={(e) =>
-                                field.onChange(
-                                  Number.parseInt(e.target.value, 10) || 1
-                                )
-                              }
                             />
                           </FormControl>
                           <FormDescription>

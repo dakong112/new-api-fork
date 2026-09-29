@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { DateTimePicker } from '@/components/datetime-picker'
+import { DraftNumberInput } from '@/components/draft-number-input'
 import {
   SideDrawerSection,
   SideDrawerSectionHeader,
@@ -582,16 +583,13 @@ export function ApiKeysMutateDrawer({
                     <FormItem>
                       <FormLabel>{t('Quantity')}</FormLabel>
                       <FormControl>
-                        <Input
+                        <DraftNumberInput
+                          onValueChange={field.onChange}
+                          emptyValue={1}
+                          integer
                           {...field}
-                          type='number'
                           min='1'
                           placeholder={t('Number of keys to create')}
-                          onChange={(e) =>
-                            field.onChange(
-                              Number.parseInt(e.target.value, 10) || 1
-                            )
-                          }
                         />
                       </FormControl>
                       <FormDescription>
@@ -621,16 +619,11 @@ export function ApiKeysMutateDrawer({
                     <FormItem>
                       <FormLabel>{quotaLabel}</FormLabel>
                       <FormControl>
-                        <Input
+                        <DraftNumberInput
+                          onValueChange={field.onChange}
                           {...field}
-                          type='number'
                           step={tokensOnly ? 1 : 0.01}
                           placeholder={quotaPlaceholder}
-                          onChange={(e) =>
-                            field.onChange(
-                              Number.parseFloat(e.target.value) || 0
-                            )
-                          }
                         />
                       </FormControl>
                       <FormDescription>

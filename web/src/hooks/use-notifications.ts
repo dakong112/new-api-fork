@@ -77,7 +77,12 @@ export function useNotifications() {
   } = useQuery({
     queryKey: ['notice'],
     queryFn: async () => requireServerSuccess(await getNotice()),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    // Poll so a notice published mid-session reaches signed-in users; the
+    // server answers 304 via ETag when nothing changed, so this stays cheap.
+    // Polling pauses while the tab is hidden and resumes on focus.
+    staleTime: 1000 * 30,
+    refetchInterval: 1000 * 60,
+    refetchOnWindowFocus: true,
   })
 
   // Fetch Announcements from status

@@ -30,6 +30,7 @@ import { CreemConfirmDialog } from './components/dialogs/creem-confirm-dialog'
 import { PaymentConfirmDialog } from './components/dialogs/payment-confirm-dialog'
 import { TransferDialog } from './components/dialogs/transfer-dialog'
 import { RechargeFormCard } from './components/recharge-form-card'
+import { RedemptionCard } from './components/redemption-card'
 import { SubscriptionPlansCard } from './components/subscription-plans-card'
 import { WalletStatsCard } from './components/wallet-stats-card'
 import { DEFAULT_DISCOUNT_RATE, PAYMENT_TYPES } from './constants'
@@ -213,9 +214,11 @@ export function Wallet(props: WalletProps) {
 
   // Handle redemption
   const handleRedeem = async () => {
-    if (!redemptionCode) return
+    // Pasted codes often carry stray whitespace; the backend matches exactly.
+    const code = redemptionCode.trim()
+    if (!code) return
 
-    const success = await redeemCode(redemptionCode)
+    const success = await redeemCode(code)
     if (success) {
       setRedemptionCode('')
       await fetchUser()
@@ -285,10 +288,21 @@ export function Wallet(props: WalletProps) {
   return (
     <>
       <SectionPageLayout>
-        <SectionPageLayout.Title>{t('Wallet')}</SectionPageLayout.Title>
+        <SectionPageLayout.Title>
+          {t('Top Up & Redeem')}
+        </SectionPageLayout.Title>
         <SectionPageLayout.Content>
           <div className='mx-auto flex w-full max-w-7xl flex-col gap-4 sm:gap-5'>
             <WalletStatsCard user={user} loading={userLoading} />
+
+            <RedemptionCard
+              enabled={topupInfo?.enable_redemption !== false}
+              purchaseLink={topupInfo?.topup_link}
+              code={redemptionCode}
+              onCodeChange={setRedemptionCode}
+              onRedeem={handleRedeem}
+              redeeming={redeeming}
+            />
 
             <div
               className={
@@ -309,11 +323,6 @@ export function Wallet(props: WalletProps) {
                   calculating={calculating}
                   onPaymentMethodSelect={handlePaymentMethodSelect}
                   paymentLoading={paymentLoading}
-                  redemptionCode={redemptionCode}
-                  onRedemptionCodeChange={setRedemptionCode}
-                  onRedeem={handleRedeem}
-                  redeeming={redeeming}
-                  topupLink={topupInfo?.topup_link}
                   loading={topupLoading}
                   priceRatio={(status?.price as number) || 1}
                   usdExchangeRate={effectiveUsdExchangeRate}

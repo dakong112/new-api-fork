@@ -21,11 +21,11 @@ import { memo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Combobox } from '@/components/ui/combobox'
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -218,8 +218,7 @@ function TaskBillingPreview(props: TaskBillingPreviewProps) {
                 })}
               </FieldLabel>
               <div className='flex items-center gap-2'>
-                <Input
-                  type='number'
+                <DraftNumberInput
                   aria-label={t('Usage · {{price}}', {
                     price: taskPriceLabel(
                       definition.description,
@@ -230,13 +229,9 @@ function TaskBillingPreview(props: TaskBillingPreviewProps) {
                   min={0}
                   step={1}
                   value={props.sample[field] ?? 0}
-                  onChange={(event) => {
-                    const value = Number(event.target.value)
-                    props.onSampleChange(
-                      field,
-                      Number.isFinite(value) && value >= 0 ? value : 0
-                    )
-                  }}
+                  onValueChange={(value) =>
+                    props.onSampleChange(field, Math.max(value, 0))
+                  }
                   className='font-mono'
                 />
                 <span className='text-muted-foreground shrink-0 text-xs'>

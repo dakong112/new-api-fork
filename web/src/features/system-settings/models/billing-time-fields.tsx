@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { Combobox } from '@/components/ui/combobox'
 import { Input } from '@/components/ui/input'
 import {
@@ -34,8 +35,6 @@ import {
 } from '@/features/pricing/lib/billing-expr'
 import type { VisualComparison } from '@/features/pricing/lib/billing-expression/visual'
 import { toIntlLocale } from '@/i18n/languages'
-
-import { DraftNumberInput } from './draft-number-input'
 
 const PROBE_LABELS = {
   hour: 'Hour of day',

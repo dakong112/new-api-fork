@@ -348,7 +348,7 @@ export function SummaryCards() {
           </div>
 
           <Button className='justify-between' render={<Link to='/wallet' />}>
-            <span>{t('Wallet')}</span>
+            <span>{t('Top Up & Redeem')}</span>
             <ArrowRight data-icon='inline-end' />
           </Button>
         </div>

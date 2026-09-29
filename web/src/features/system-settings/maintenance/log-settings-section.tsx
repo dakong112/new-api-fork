@@ -24,6 +24,7 @@ import { toast } from 'sonner'
 import * as z from 'zod'
 
 import { DateTimePicker } from '@/components/datetime-picker'
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -45,7 +46,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -516,14 +516,11 @@ export function LogSettingsSection({
                       ? t('Files to Retain')
                       : t('Days to Retain')}
                   </Label>
-                  <Input
-                    type='number'
+                  <DraftNumberInput
                     min={1}
                     max={serverLogCleanupMode === 'by_count' ? 1000 : 3650}
                     value={serverLogCleanupValue}
-                    onChange={(event) =>
-                      setServerLogCleanupValue(Number(event.target.value))
-                    }
+                    onValueChange={setServerLogCleanupValue}
                     className='w-[120px]'
                   />
                 </div>

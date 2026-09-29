@@ -23,6 +23,7 @@ import { useForm, type Resolver } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { DraftNumberInput } from '@/components/draft-number-input'
 import {
   SideDrawerSection,
   sideDrawerContentClassName,
@@ -336,16 +337,11 @@ export function SubscriptionsMutateDrawer({
                     <FormItem>
                       <FormLabel>{t('Plan Price')}</FormLabel>
                       <FormControl>
-                        <Input
+                        <DraftNumberInput
+                          onValueChange={field.onChange}
                           {...field}
-                          type='number'
                           step='0.01'
                           min={0}
-                          onChange={(e) =>
-                            field.onChange(
-                              Number.parseFloat(e.target.value) || 0
-                            )
-                          }
                         />
                       </FormControl>
                       <FormDescription>
@@ -367,9 +363,9 @@ export function SubscriptionsMutateDrawer({
                         {t('Quota ({{currency}})', { currency: currencyLabel })}
                       </FormLabel>
                       <FormControl>
-                        <Input
+                        <DraftNumberInput
+                          onValueChange={field.onChange}
                           {...field}
-                          type='number'
                           min={0}
                           step={tokensOnly ? 1 : 0.01}
                           placeholder={
@@ -378,11 +374,6 @@ export function SubscriptionsMutateDrawer({
                               : t('Enter quota in {{currency}}', {
                                   currency: currencyLabel,
                                 })
-                          }
-                          onChange={(e) =>
-                            field.onChange(
-                              Number.parseFloat(e.target.value) || 0
-                            )
                           }
                         />
                       </FormControl>
@@ -469,15 +460,11 @@ export function SubscriptionsMutateDrawer({
                     <FormItem>
                       <FormLabel>{t('Purchase Limit')}</FormLabel>
                       <FormControl>
-                        <Input
+                        <DraftNumberInput
+                          onValueChange={field.onChange}
+                          integer
                           {...field}
-                          type='number'
                           min={0}
-                          onChange={(e) =>
-                            field.onChange(
-                              Number.parseInt(e.target.value, 10) || 0
-                            )
-                          }
                         />
                       </FormControl>
                       <FormDescription>
@@ -496,14 +483,10 @@ export function SubscriptionsMutateDrawer({
                   <FormItem>
                     <FormLabel>{t('Sort Order')}</FormLabel>
                     <FormControl>
-                      <Input
+                      <DraftNumberInput
+                        onValueChange={field.onChange}
+                        integer
                         {...field}
-                        type='number'
-                        onChange={(e) =>
-                          field.onChange(
-                            Number.parseInt(e.target.value, 10) || 0
-                          )
-                        }
                       />
                     </FormControl>
                     <FormMessage />
@@ -620,15 +603,11 @@ export function SubscriptionsMutateDrawer({
                       <FormItem>
                         <FormLabel>{t('Custom Seconds')}</FormLabel>
                         <FormControl>
-                          <Input
+                          <DraftNumberInput
+                            onValueChange={field.onChange}
+                            integer
                             {...field}
-                            type='number'
                             min={1}
-                            onChange={(e) =>
-                              field.onChange(
-                                Number.parseInt(e.target.value, 10) || 0
-                              )
-                            }
                           />
                         </FormControl>
                         <FormMessage />
@@ -643,15 +622,11 @@ export function SubscriptionsMutateDrawer({
                       <FormItem>
                         <FormLabel>{t('Duration Value')}</FormLabel>
                         <FormControl>
-                          <Input
+                          <DraftNumberInput
+                            onValueChange={field.onChange}
+                            integer
                             {...field}
-                            type='number'
                             min={1}
-                            onChange={(e) =>
-                              field.onChange(
-                                Number.parseInt(e.target.value, 10) || 0
-                              )
-                            }
                           />
                         </FormControl>
                         <FormMessage />
@@ -713,16 +688,12 @@ export function SubscriptionsMutateDrawer({
                     <FormItem>
                       <FormLabel>{t('Custom Seconds')}</FormLabel>
                       <FormControl>
-                        <Input
+                        <DraftNumberInput
+                          onValueChange={field.onChange}
+                          integer
                           {...field}
-                          type='number'
                           min={0}
                           disabled={resetPeriod !== 'custom'}
-                          onChange={(e) =>
-                            field.onChange(
-                              Number.parseInt(e.target.value, 10) || 0
-                            )
-                          }
                         />
                       </FormControl>
                       <FormMessage />

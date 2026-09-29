@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { Link } from '@tanstack/react-router'
 import type { ColumnDef } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
 
@@ -34,6 +35,7 @@ import { REDEMPTION_FILTER_EXPIRED, REDEMPTION_STATUSES } from '../constants'
 import { isRedemptionExpired, isTimestampExpired } from '../lib'
 import type { Redemption } from '../types'
 import { DataTableRowActions } from './data-table-row-actions'
+import { RedemptionTemplateCopyButton } from './redemption-template-copy-button'
 
 export function useRedemptionsColumns(): ColumnDef<Redemption>[] {
   const { t } = useTranslation()
@@ -142,17 +144,20 @@ export function useRedemptionsColumns(): ColumnDef<Redemption>[] {
         const maskedKey = `${key.slice(0, 8)}${'*'.repeat(16)}${key.slice(-8)}`
 
         return (
-          <MaskedValueDisplay
-            label={t('Full Code')}
-            fullValue={key}
-            maskedValue={maskedKey}
-            copyTooltip={t('Copy code')}
-            copyAriaLabel={t('Copy redemption code')}
-          />
+          <div className='flex min-w-0 items-center gap-1'>
+            <MaskedValueDisplay
+              label={t('Full Code')}
+              fullValue={key}
+              maskedValue={maskedKey}
+              copyTooltip={t('Copy code')}
+              copyAriaLabel={t('Copy redemption code')}
+            />
+            <RedemptionTemplateCopyButton redemption={redemption} />
+          </div>
         )
       },
       enableSorting: false,
-      size: 320,
+      size: 360,
     },
     {
       accessorKey: 'quota',
@@ -226,12 +231,27 @@ export function useRedemptionsColumns(): ColumnDef<Redemption>[] {
           <Tooltip>
             <TooltipTrigger
               render={
-                <StatusBadge
-                  label={t('User {{id}}', { id: userId })}
-                  variant='neutral'
-                  copyable={false}
-                  className='cursor-help'
-                />
+                // "=name" asks user search for an exact username match, so
+                // the user list opens filtered to this one account.
+                <Link
+                  to='/users'
+                  search={{
+                    filter: redemption.used_username
+                      ? `=${redemption.used_username}`
+                      : String(userId),
+                  }}
+                  className='hover:underline'
+                >
+                  <StatusBadge
+                    label={
+                      redemption.used_username ||
+                      t('User {{id}}', { id: userId })
+                    }
+                    variant='neutral'
+                    copyable={false}
+                    className='cursor-pointer'
+                  />
+                </Link>
               }
             ></TooltipTrigger>
             <TooltipContent>

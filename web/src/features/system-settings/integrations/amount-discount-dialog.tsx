@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
 import * as z from 'zod'
 
 import { Dialog } from '@/components/dialog'
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -33,7 +34,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
 
 const createAmountDiscountDialogSchema = (t: (key: string) => string) =>
   z.object({
@@ -149,15 +149,13 @@ export function AmountDiscountDialog({
               <FormItem>
                 <FormLabel>{t('Recharge Amount (USD)')}</FormLabel>
                 <FormControl>
-                  <Input
-                    type='number'
+                  <DraftNumberInput
+                    onValueChange={field.onChange}
+                    integer
                     step='1'
                     min='1'
                     placeholder={t('e.g., 100')}
                     {...field}
-                    onChange={(e) =>
-                      field.onChange(parseInt(e.target.value) || 0)
-                    }
                     disabled={isEditMode}
                   />
                 </FormControl>
@@ -180,16 +178,13 @@ export function AmountDiscountDialog({
               <FormItem>
                 <FormLabel>{t('Discount Rate')}</FormLabel>
                 <FormControl>
-                  <Input
-                    type='number'
+                  <DraftNumberInput
+                    onValueChange={field.onChange}
                     step='0.01'
                     min='0.01'
                     max='1'
                     placeholder={t('e.g., 0.95')}
                     {...field}
-                    onChange={(e) =>
-                      field.onChange(parseFloat(e.target.value) || 0)
-                    }
                   />
                 </FormControl>
                 <FormDescription>

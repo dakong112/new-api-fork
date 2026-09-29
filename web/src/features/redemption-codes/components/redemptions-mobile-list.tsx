@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { Link } from '@tanstack/react-router'
 import type { Table as TanstackTable } from '@tanstack/react-table'
 import { Database } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -38,6 +39,7 @@ import { REDEMPTION_STATUS, REDEMPTION_STATUSES } from '../constants'
 import { isRedemptionExpired } from '../lib'
 import type { Redemption } from '../types'
 import { DataTableRowActions } from './data-table-row-actions'
+import { RedemptionTemplateCopyButton } from './redemption-template-copy-button'
 
 const MOBILE_SKELETON_KEYS = [
   'redemption-mobile-skeleton-1',
@@ -158,6 +160,7 @@ export function RedemptionsMobileList(props: RedemptionsMobileListProps) {
                   copyAriaLabel={t('Copy redemption code')}
                 />
               </div>
+              <RedemptionTemplateCopyButton redemption={redemption} />
               <DataTableRowActions row={row} />
             </div>
 
@@ -167,6 +170,26 @@ export function RedemptionsMobileList(props: RedemptionsMobileListProps) {
                 {formatQuota(redemption.quota)}
               </span>
             </div>
+
+            {redemption.used_user_id !== 0 && (
+              <div className='flex items-center justify-between gap-2 text-xs'>
+                <span className='text-muted-foreground'>
+                  {t('Redeemed By')}
+                </span>
+                <Link
+                  to='/users'
+                  search={{
+                    filter: redemption.used_username
+                      ? `=${redemption.used_username}`
+                      : String(redemption.used_user_id),
+                  }}
+                  className='text-primary truncate font-medium hover:underline'
+                >
+                  {redemption.used_username ||
+                    t('User {{id}}', { id: redemption.used_user_id })}
+                </Link>
+              </div>
+            )}
           </div>
         )
       })}

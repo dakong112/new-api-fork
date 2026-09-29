@@ -24,6 +24,7 @@ import { toast } from 'sonner'
 import { StaticDataTable } from '@/components/data-table/static/static-data-table'
 import { StaticRowActions } from '@/components/data-table/static/static-row-actions'
 import { Dialog } from '@/components/dialog'
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -265,31 +266,20 @@ export function WaffoSettingsSection({
           </div>
           <div className='grid gap-1.5'>
             <Label>{t('Unit price (USD)')}</Label>
-            <Input
-              type='number'
+            <DraftNumberInput
               step={0.1}
               min={0}
               value={values.WaffoUnitPrice}
-              onChange={(event) =>
-                onValueChange(
-                  'WaffoUnitPrice',
-                  event.target.value === '' ? 0 : event.target.valueAsNumber
-                )
-              }
+              onValueChange={(next) => onValueChange('WaffoUnitPrice', next)}
             />
           </div>
           <div className='grid gap-1.5'>
             <Label>{t('Minimum top-up quantity')}</Label>
-            <Input
-              type='number'
+            <DraftNumberInput
               min={1}
               value={values.WaffoMinTopUp}
-              onChange={(event) =>
-                onValueChange(
-                  'WaffoMinTopUp',
-                  event.target.value === '' ? 1 : event.target.valueAsNumber
-                )
-              }
+              onValueChange={(next) => onValueChange('WaffoMinTopUp', next)}
+              emptyValue={1}
             />
           </div>
         </div>

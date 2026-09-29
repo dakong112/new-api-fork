@@ -21,8 +21,8 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Dialog } from '@/components/dialog'
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   formatQuota,
@@ -128,11 +128,10 @@ export function TransferDialog({
           >
             {t('Transfer Amount')}
           </Label>
-          <Input
+          <DraftNumberInput
             id='transfer-amount'
-            type='number'
             value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
+            onValueChange={setAmount}
             min={minimumAmount}
             max={maximumAmount}
             step={minimumAmount}

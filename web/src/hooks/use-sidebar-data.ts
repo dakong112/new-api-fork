@@ -32,7 +32,6 @@ import {
   ServerCog,
   Settings,
   ShieldCheck,
-  ShoppingCart,
   Ticket,
   User,
   Users,
@@ -113,14 +112,9 @@ export function useSidebarData(): SidebarData {
         title: t('Personal'),
         items: [
           {
-            title: t('Wallet'),
+            title: t('Top Up & Redeem'),
             url: '/wallet',
             icon: Wallet,
-          },
-          {
-            title: t('Buy Redemption Code'),
-            url: '/redeem-shop',
-            icon: ShoppingCart,
           },
           {
             title: t('Profile'),
@@ -142,6 +136,11 @@ export function useSidebarData(): SidebarData {
             title: t('Channels'),
             url: '/channels',
             icon: Radio,
+          },
+          {
+            title: t('Supplier Cache Test'),
+            url: '/channel-cost',
+            icon: FlaskConical,
           },
           {
             title: t('Models'),

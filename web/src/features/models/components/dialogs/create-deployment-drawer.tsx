@@ -24,6 +24,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
+import { DraftNumberInput } from '@/components/draft-number-input'
 import {
   SideDrawerSection,
   sideDrawerContentClassName,
@@ -529,14 +530,9 @@ export function CreateDeploymentDrawer({
                     <FormItem>
                       <FormLabel>{t('GPU count')}</FormLabel>
                       <FormControl>
-                        <Input
-                          type='number'
+                        <DraftNumberInput
+                          onValueChange={field.onChange}
                           value={toNumber(field.value, gpuCount)}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === '' ? 0 : Number(e.target.value)
-                            )
-                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -551,14 +547,9 @@ export function CreateDeploymentDrawer({
                     <FormItem>
                       <FormLabel>{t('Replica count')}</FormLabel>
                       <FormControl>
-                        <Input
-                          type='number'
+                        <DraftNumberInput
+                          onValueChange={field.onChange}
                           value={toNumber(field.value, replicaCount)}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === '' ? 0 : Number(e.target.value)
-                            )
-                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -575,14 +566,9 @@ export function CreateDeploymentDrawer({
                     <FormItem>
                       <FormLabel>{t('Duration (hours)')}</FormLabel>
                       <FormControl>
-                        <Input
-                          type='number'
+                        <DraftNumberInput
+                          onValueChange={field.onChange}
                           value={toNumber(field.value, durationHours)}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === '' ? 0 : Number(e.target.value)
-                            )
-                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -597,14 +583,9 @@ export function CreateDeploymentDrawer({
                     <FormItem>
                       <FormLabel>{t('Port')}</FormLabel>
                       <FormControl>
-                        <Input
-                          type='number'
+                        <DraftNumberInput
+                          onValueChange={field.onChange}
                           value={toNumber(field.value, trafficPort)}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === '' ? 0 : Number(e.target.value)
-                            )
-                          }
                         />
                       </FormControl>
                       <FormMessage />

@@ -17,7 +17,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import {
-  useEffect,
   useState,
   type ChangeEvent,
   type FocusEvent,
@@ -27,59 +26,70 @@ import {
 
 import { Input } from '@/components/ui/input'
 
-function formatNumberDraft(value: number | string): string {
-  if (value === '') return ''
+function formatNumberDraft(value: number | string | undefined): string {
+  if (value === '' || value === undefined) return ''
   if (typeof value === 'number') {
     return Number.isFinite(value) ? String(value) : '0'
   }
   return value
 }
 
-function parseNumberDraft(value: string): number {
-  if (value.trim() === '') return 0
+function parseNumberDraft(
+  value: string,
+  emptyValue: number,
+  integer: boolean
+): number {
+  if (value.trim() === '') return emptyValue
   const next = Number(value)
-  return Number.isFinite(next) ? next : 0
+  if (!Number.isFinite(next)) return emptyValue
+  return integer ? Math.trunc(next) : next
 }
 
 function isZeroDraft(value: string): boolean {
-  return value.trim() !== '' && parseNumberDraft(value) === 0
+  return value.trim() !== '' && Number(value) === 0
 }
 
 type DraftNumberInputProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
   'type' | 'value' | 'onChange'
 > & {
-  value: number | string
+  value: number | string | undefined
   onValueChange: (next: number) => void
   selectZeroOnFocus?: boolean
+  /** Value reported while the field is empty, and restored on blur. */
+  emptyValue?: number
+  /** Drop the fractional part, like parseInt. */
+  integer?: boolean
 }
 
+/**
+ * Number input that keeps the typed text while focused, so clearing the field
+ * shows it empty instead of snapping back to 0. Use it instead of an Input
+ * whose onChange coerces `''` to a number.
+ */
 export function DraftNumberInput({
   value,
   onValueChange,
   selectZeroOnFocus = true,
+  emptyValue = 0,
+  integer = false,
   onBlur,
   onFocus,
   onMouseUp,
   ...props
 }: DraftNumberInputProps) {
-  const [draft, setDraft] = useState(() => formatNumberDraft(value))
-  const [focused, setFocused] = useState(false)
-
-  useEffect(() => {
-    if (!focused) {
-      setDraft(formatNumberDraft(value))
-    }
-  }, [focused, value])
+  // The draft only exists while editing; otherwise the field shows the form
+  // value directly, so async resets (loaded records) appear immediately.
+  const [draft, setDraft] = useState<string | null>(null)
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextDraft = event.target.value
     setDraft(nextDraft)
-    onValueChange(parseNumberDraft(nextDraft))
+    onValueChange(parseNumberDraft(nextDraft, emptyValue, integer))
   }
 
   const handleFocus = (event: FocusEvent<HTMLInputElement>) => {
-    setFocused(true)
+    setDraft(formatNumberDraft(value))
     onFocus?.(event)
     if (selectZeroOnFocus && isZeroDraft(event.currentTarget.value)) {
       event.currentTarget.select()
@@ -95,9 +105,12 @@ export function DraftNumberInput({
   }
 
   const handleBlur = (event: FocusEvent<HTMLInputElement>) => {
-    const normalized = parseNumberDraft(event.currentTarget.value)
-    setFocused(false)
-    setDraft(String(normalized))
+    const normalized = parseNumberDraft(
+      event.currentTarget.value,
+      emptyValue,
+      integer
+    )
+    setDraft(null)
     onValueChange(normalized)
     onBlur?.(event)
   }
@@ -106,7 +119,7 @@ export function DraftNumberInput({
     <Input
       {...props}
       type='number'
-      value={draft}
+      value={draft ?? formatNumberDraft(value)}
       onChange={handleChange}
       onFocus={handleFocus}
       onMouseUp={handleMouseUp}

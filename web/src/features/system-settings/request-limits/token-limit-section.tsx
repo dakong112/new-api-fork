@@ -22,6 +22,7 @@ import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import * as z from 'zod'
 
+import { DraftNumberInput } from '@/components/draft-number-input'
 import {
   Form,
   FormControl,
@@ -31,7 +32,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
 
 import { SettingsForm } from '../components/settings-form-layout'
 import { SettingsPageFormActions } from '../components/settings-page-context'
@@ -107,14 +107,13 @@ export function TokenLimitSection({ defaultValues }: TokenLimitSectionProps) {
               <FormItem>
                 <FormLabel>{t('Maximum tokens per user')}</FormLabel>
                 <FormControl>
-                  <Input
-                    type='number'
+                  <DraftNumberInput
+                    onValueChange={field.onChange}
+                    emptyValue={1}
+                    integer
                     min={1}
                     step={1}
                     {...field}
-                    onChange={(e) =>
-                      field.onChange(Number.parseInt(e.target.value) || 1)
-                    }
                   />
                 </FormControl>
                 <FormDescription>

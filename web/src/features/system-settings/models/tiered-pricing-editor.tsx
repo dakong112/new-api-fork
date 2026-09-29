@@ -29,6 +29,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -101,7 +102,6 @@ import {
   BillingTimeProbeFields,
   BillingTimeRangeFields,
 } from './billing-time-fields'
-import { DraftNumberInput } from './draft-number-input'
 import { RequestSimulation } from './request-simulation'
 import { VisualBillingDocumentEditor } from './visual-billing-document-editor'
 

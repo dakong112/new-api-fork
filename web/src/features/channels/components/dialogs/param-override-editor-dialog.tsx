@@ -37,6 +37,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { Dialog } from '@/components/dialog'
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { JsonCodeEditor } from '@/components/json-code-editor'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -2717,14 +2718,16 @@ function ReturnErrorEditor(returnErrorEditorProps: ReturnErrorEditorProps) {
           <div className='mt-3 grid gap-3 sm:grid-cols-3'>
             <div className='space-y-1'>
               <label className='text-xs font-medium'>{t('Status Code')}</label>
-              <Input
-                value={String(draft.statusCode ?? '')}
-                onChange={(e) =>
+              <DraftNumberInput
+                value={draft.statusCode ?? ''}
+                onValueChange={(statusCode) =>
                   returnErrorEditorProps.updateDraft(
                     returnErrorEditorProps.operationId,
-                    { statusCode: Number.parseInt(e.target.value, 10) || 400 }
+                    { statusCode }
                   )
                 }
+                emptyValue={400}
+                integer
                 placeholder='400'
                 className='h-8 text-xs'
               />

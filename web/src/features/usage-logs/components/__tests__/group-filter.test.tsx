@@ -76,6 +76,12 @@ async function renderFilter(
         },
       }
     }
+    if (url === '/api/user/models') {
+      return { data: { success: true, data: ['user-model-b', 'user-model-a'] } }
+    }
+    if (url === '/api/channel/models_enabled') {
+      return { data: { success: true, data: ['admin-model'] } }
+    }
     return { data: { success: true, data: { quota: 0, rpm: 0, tpm: 0 } } }
   })
   const root = createRootRoute()
@@ -301,4 +307,32 @@ it('keeps historical auto values editable when auto is the only available group'
   await waitFor(() =>
     expect(router.state.location.search).toMatchObject({ group: 'retired' })
   )
+})
+
+it('offers the models a user can call and submits the chosen one on Search', async () => {
+  const router = await renderFilter()
+  const input = screen.getByRole('combobox', { name: 'Model Name' })
+  await userEvent.click(input)
+  expect(
+    await screen.findByRole('option', { name: 'user-model-a' })
+  ).toBeVisible()
+  await userEvent.click(screen.getByRole('option', { name: 'user-model-b' }))
+  expect(input).toHaveValue('user-model-b')
+  await userEvent.click(screen.getByRole('button', { name: 'Search' }))
+  await waitFor(() =>
+    expect(router.state.location.search).toMatchObject({
+      model: 'user-model-b',
+    })
+  )
+  expect(api.get).not.toHaveBeenCalledWith('/api/channel/models_enabled')
+})
+
+it('offers every enabled model in the administrator view', async () => {
+  useAuthStore.getState().auth.setUser({ id: 1, username: 'admin', role: 10 })
+  await renderFilter()
+  await userEvent.click(screen.getByRole('combobox', { name: 'Model Name' }))
+  expect(
+    await screen.findByRole('option', { name: 'admin-model' })
+  ).toBeVisible()
+  expect(api.get).not.toHaveBeenCalledWith('/api/user/models')
 })

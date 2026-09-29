@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
 import * as z from 'zod'
 
 import { Dialog } from '@/components/dialog'
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -165,15 +166,13 @@ export function RateLimitDialog({
                 <FormLabel>{t('Max Requests (including failures)')}</FormLabel>
                 <FormControl>
                   <div className='flex items-center gap-2'>
-                    <Input
-                      type='number'
+                    <DraftNumberInput
+                      onValueChange={field.onChange}
+                      integer
                       min={0}
                       max={2147483647}
                       step={1}
                       {...field}
-                      onChange={(e) =>
-                        field.onChange(parseInt(e.target.value) || 0)
-                      }
                     />
                     <span className='text-muted-foreground text-sm'>
                       {t('times')}
@@ -196,15 +195,14 @@ export function RateLimitDialog({
                 <FormLabel>{t('Max Successful Requests')}</FormLabel>
                 <FormControl>
                   <div className='flex items-center gap-2'>
-                    <Input
-                      type='number'
+                    <DraftNumberInput
+                      onValueChange={field.onChange}
+                      emptyValue={1}
+                      integer
                       min={1}
                       max={2147483647}
                       step={1}
                       {...field}
-                      onChange={(e) =>
-                        field.onChange(parseInt(e.target.value) || 1)
-                      }
                     />
                     <span className='text-muted-foreground text-sm'>
                       {t('times')}

@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { formatQuota } from '@/lib/format'
 
 import { FormDirtyIndicator } from '../components/form-dirty-indicator'
@@ -56,6 +57,7 @@ const quotaSchema = z.object({
   QuotaForInviter: z.coerce.number().min(0),
   QuotaForInvitee: z.coerce.number().min(0),
   TopUpLink: z.string(),
+  RedemptionCopyTemplate: z.string(),
   quota_setting: z.object({
     enable_free_model_pre_consume: z.boolean(),
     trust_quota_usd: z.preprocess(
@@ -319,6 +321,31 @@ export function QuotaSettingsSection({
                   </FormControl>
                   <FormDescription>
                     {t('External link for users to purchase quota')}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='RedemptionCopyTemplate'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Redemption code copy template')}</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={4}
+                      placeholder={t(
+                        'e.g. Code: {code}\nValue: {quota}\nRedeem at: https://example.com/wallet'
+                      )}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Text copied by the template button in Redemption Codes. Placeholders: {code}, {name}, {quota}, {expires}. Leave empty to hide the button.'
+                    )}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

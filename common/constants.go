@@ -17,6 +17,10 @@ var Footer = ""
 var Logo = ""
 var TopUpLink = ""
 
+// RedemptionCopyTemplate is the admin-defined text copied for a redemption
+// code; placeholders like {code} are filled in by the web UI.
+var RedemptionCopyTemplate = ""
+
 // var ChatLink = ""
 // var ChatLink2 = ""
 var QuotaPerUnit = 500 * 1000.0 // $0.002 / 1K tokens

@@ -21,6 +21,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { PasswordInput } from '@/components/password-input'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -133,14 +134,11 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
       {/* Warning Threshold */}
       <div className='space-y-1.5'>
         <Label htmlFor='threshold'>{t('Quota Warning Threshold')}</Label>
-        <Input
+        <DraftNumberInput
           id='threshold'
-          type='number'
           className='h-9'
           value={settings.quota_warning_threshold}
-          onChange={(e) =>
-            updateField('quota_warning_threshold', Number(e.target.value))
-          }
+          onValueChange={(next) => updateField('quota_warning_threshold', next)}
           placeholder={t('Enter threshold')}
         />
         <p className='text-muted-foreground text-xs'>
@@ -238,16 +236,13 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
           </div>
           <div className='space-y-1.5'>
             <Label htmlFor='gotifyPriority'>{t('Message Priority')}</Label>
-            <Input
+            <DraftNumberInput
               id='gotifyPriority'
-              type='number'
               className='h-9'
               min='0'
               max='10'
               value={settings.gotify_priority}
-              onChange={(e) =>
-                updateField('gotify_priority', Number(e.target.value))
-              }
+              onValueChange={(next) => updateField('gotify_priority', next)}
               placeholder='5'
             />
             <p className='text-muted-foreground text-xs'>

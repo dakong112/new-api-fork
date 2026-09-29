@@ -43,3 +43,16 @@ export function isRedemptionExpired(
 ): boolean {
   return status === 1 && isTimestampExpired(expired_time)
 }
+
+/**
+ * Fill the admin-defined copy template (System Settings) for one code.
+ * Unknown placeholders are left as typed so mistakes stay visible.
+ */
+export function fillRedemptionTemplate(
+  template: string,
+  values: { code: string; name: string; quota: string; expires: string }
+): string {
+  return template.replaceAll(/\{(code|name|quota|expires)\}/g, (_, key) => {
+    return values[key as keyof typeof values]
+  })
+}

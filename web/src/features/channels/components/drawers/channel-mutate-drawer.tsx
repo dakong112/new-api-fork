@@ -54,6 +54,7 @@ import { type SubmitErrorHandler, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { DraftNumberInput } from '@/components/draft-number-input'
 import {
   sideDrawerContentClassName,
   sideDrawerFooterClassName,
@@ -2182,11 +2183,10 @@ export function ChannelMutateDrawer({
             <FormItem>
               <FormLabel>{t('Priority')}</FormLabel>
               <FormControl>
-                <Input
-                  type='number'
+                <DraftNumberInput
+                  onValueChange={field.onChange}
                   placeholder='0'
                   {...field}
-                  onChange={(e) => field.onChange(Number(e.target.value))}
                 />
               </FormControl>
               <FormDescription>
@@ -2204,11 +2204,10 @@ export function ChannelMutateDrawer({
             <FormItem>
               <FormLabel>{t('Weight')}</FormLabel>
               <FormControl>
-                <Input
-                  type='number'
+                <DraftNumberInput
+                  onValueChange={field.onChange}
                   placeholder='0'
                   {...field}
-                  onChange={(e) => field.onChange(Number(e.target.value))}
                 />
               </FormControl>
               <FormDescription>{t(FIELD_DESCRIPTIONS.WEIGHT)}</FormDescription>

@@ -479,6 +479,11 @@ func SearchUsers(keyword string, group string, role *int, status *int, startIdx 
 		likeCondition = "id = ? OR " + likeCondition
 		likeArgs = append([]any{keywordInt}, likeArgs...)
 	}
+	// "=name" matches exactly one username; links from other admin pages use it.
+	if exact, ok := strings.CutPrefix(keyword, "="); ok && exact != "" {
+		likeCondition = "username = ?"
+		likeArgs = []any{exact}
+	}
 
 	query = query.Where("("+likeCondition+")", likeArgs...)
 	if group != "" {

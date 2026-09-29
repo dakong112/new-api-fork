@@ -23,7 +23,7 @@ func TestSearchRedemptionsFiltersAndPaginates(t *testing.T) {
 		{Id: 2, Name: "alpha-future", Key: "00000000000000000000000000000002", Status: common.RedemptionCodeStatusEnabled, ExpiredTime: now + 3600},
 		{Id: 3, Name: "alpha-expired", Key: "00000000000000000000000000000003", Status: common.RedemptionCodeStatusEnabled, ExpiredTime: now - 10},
 		{Id: 4, Name: "beta-disabled", Key: "00000000000000000000000000000004", Status: common.RedemptionCodeStatusDisabled, ExpiredTime: 0},
-		{Id: 5, Name: "beta-used", Key: "00000000000000000000000000000005", Status: common.RedemptionCodeStatusUsed, ExpiredTime: 0},
+		{Id: 5, Name: "beta-used", Key: "abcd0000000000000000000000000005", Status: common.RedemptionCodeStatusUsed, ExpiredTime: 0},
 	}
 	require.NoError(t, DB.Create(&redemptions).Error)
 
@@ -48,6 +48,13 @@ func TestSearchRedemptionsFiltersAndPaginates(t *testing.T) {
 			num:       10,
 			wantTotal: 3,
 			wantIds:   []int{3, 2, 1},
+		},
+		{
+			name:      "keyword filters by code prefix",
+			keyword:   "abcd",
+			num:       10,
+			wantTotal: 1,
+			wantIds:   []int{5},
 		},
 		{
 			name:      "enabled status excludes expired rows",
@@ -207,4 +214,48 @@ func TestRedeemConcurrentSingleSuccess(t *testing.T) {
 	var user User
 	require.NoError(t, DB.First(&user, "id = ?", userId).Error)
 	assert.Equal(t, 300, user.Quota, "quota must be credited exactly once")
+}
+
+func TestSearchRedemptionsResolvesRedeemerUsername(t *testing.T) {
+	require.NoError(t, DB.AutoMigrate(&Redemption{}))
+	require.NoError(t, DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Unscoped().Delete(&Redemption{}).Error)
+	t.Cleanup(func() {
+		require.NoError(t, DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Unscoped().Delete(&Redemption{}).Error)
+		DB.Exec("DELETE FROM users")
+	})
+	user := &User{Username: "redeemer", Password: "password", Status: common.UserStatusEnabled}
+	require.NoError(t, DB.Create(user).Error)
+	require.NoError(t, DB.Create(&[]Redemption{
+		{Id: 1, Name: "used", Key: "00000000000000000000000000000011", Status: common.RedemptionCodeStatusUsed, UsedUserId: user.Id},
+		{Id: 2, Name: "unused", Key: "00000000000000000000000000000012", Status: common.RedemptionCodeStatusEnabled},
+	}).Error)
+
+	rows, _, err := SearchRedemptions("", "", 0, 10)
+	require.NoError(t, err)
+	require.Len(t, rows, 2)
+	assert.Equal(t, "", rows[0].UsedUsername)
+	assert.Equal(t, "redeemer", rows[1].UsedUsername)
+
+	all, _, err := GetAllRedemptions(0, 10)
+	require.NoError(t, err)
+	assert.Equal(t, "redeemer", all[1].UsedUsername)
+}
+
+func TestSearchUsersExactUsernameMatchesOneUser(t *testing.T) {
+	t.Cleanup(func() { DB.Exec("DELETE FROM users") })
+	require.NoError(t, DB.Create(&[]User{
+		{Username: "alice", Password: "password", Status: common.UserStatusEnabled, AffCode: "aff1"},
+		{Username: "alice2", Password: "password", Status: common.UserStatusEnabled, AffCode: "aff2"},
+	}).Error)
+
+	fuzzy, fuzzyTotal, err := SearchUsers("alice", "", nil, nil, 0, 10)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), fuzzyTotal)
+	assert.Len(t, fuzzy, 2)
+
+	exact, exactTotal, err := SearchUsers("=alice", "", nil, nil, 0, 10)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), exactTotal)
+	require.Len(t, exact, 1)
+	assert.Equal(t, "alice", exact[0].Username)
 }
