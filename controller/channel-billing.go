@@ -117,6 +117,19 @@ type SiliconFlowUsageResponse struct {
 	} `json:"data"`
 }
 
+// Sub2APIUsageResponse is the key-scoped GET /v1/usage reply of a Sub2API
+// upstream; remaining is the spendable amount in unit.
+type Sub2APIUsageResponse struct {
+	IsValid   bool     `json:"isValid"`
+	Remaining *float64 `json:"remaining"`
+	Balance   *float64 `json:"balance"`
+	Unit      string   `json:"unit"`
+}
+
+// newAPIUnlimitedQuotaUSD is the limit a New API upstream reports for an
+// unlimited-quota token; it carries no real balance.
+const newAPIUnlimitedQuotaUSD = 100000000
+
 type DeepSeekUsageResponse struct {
 	IsAvailable  bool `json:"is_available"`
 	BalanceInfos []struct {
@@ -355,6 +368,102 @@ func updateChannelDeepSeekBalance(channel *model.Channel) (float64, error) {
 	return balance, nil
 }
 
+// upstreamAPIBaseURL is the channel base URL without a trailing "/v1", so
+// "/v1/..." paths are not doubled when the base URL already includes it.
+func upstreamAPIBaseURL(channel *model.Channel) string {
+	return strings.TrimSuffix(strings.TrimRight(channel.GetBaseURL(), "/"), "/v1")
+}
+
+func getSub2APIBalanceUSD(response Sub2APIUsageResponse) (float64, error) {
+	if !response.IsValid {
+		return 0, errors.New("sub2api reports the key as invalid")
+	}
+	if response.Unit != "" && !strings.EqualFold(response.Unit, "USD") {
+		return 0, fmt.Errorf("sub2api balance unit %q is not USD", response.Unit)
+	}
+	balance := response.Remaining
+	if balance == nil {
+		balance = response.Balance
+	}
+	if balance == nil {
+		return 0, errors.New("sub2api usage response has no remaining balance")
+	}
+	if math.IsNaN(*balance) || math.IsInf(*balance, 0) {
+		return 0, errors.New("sub2api balance must be finite")
+	}
+	return *balance, nil
+}
+
+// fetchSub2APIBalanceUSD reads the key balance from a Sub2API upstream.
+func fetchSub2APIBalanceUSD(channel *model.Channel) (float64, error) {
+	headers := GetAuthHeader(channel.Key)
+	// Cloudflare-fronted Sub2API sites reject requests without a User-Agent.
+	headers.Set("User-Agent", "new-api")
+	body, err := GetResponseBody("GET", upstreamAPIBaseURL(channel)+"/v1/usage", channel, headers)
+	if err != nil {
+		return 0, err
+	}
+	response := Sub2APIUsageResponse{}
+	if err := common.Unmarshal(body, &response); err != nil {
+		return 0, err
+	}
+	return getSub2APIBalanceUSD(response)
+}
+
+func updateChannelSub2APIBalance(channel *model.Channel) (float64, error) {
+	balance, err := fetchSub2APIBalanceUSD(channel)
+	if err != nil {
+		return 0, err
+	}
+	channel.UpdateBalance(balance)
+	return balance, nil
+}
+
+func getNewAPIBalanceUSD(subscription OpenAISubscriptionResponse, usage OpenAIUsageResponse) (float64, error) {
+	if subscription.HardLimitUSD >= newAPIUnlimitedQuotaUSD {
+		return 0, errors.New("the upstream token has unlimited quota, so it reports no balance")
+	}
+	balance := subscription.HardLimitUSD - usage.TotalUsage/100
+	if math.IsNaN(balance) || math.IsInf(balance, 0) {
+		return 0, errors.New("new api balance must be finite")
+	}
+	return balance, nil
+}
+
+// fetchNewAPIBalanceUSD reads the token balance from a New API upstream,
+// whose dashboard billing endpoints report total and used quota.
+func fetchNewAPIBalanceUSD(channel *model.Channel) (float64, error) {
+	baseURL := upstreamAPIBaseURL(channel)
+	headers := GetAuthHeader(channel.Key)
+	headers.Set("User-Agent", "new-api")
+	body, err := GetResponseBody("GET", baseURL+"/v1/dashboard/billing/subscription", channel, headers)
+	if err != nil {
+		return 0, err
+	}
+	subscription := OpenAISubscriptionResponse{}
+	if err := common.Unmarshal(body, &subscription); err != nil {
+		return 0, err
+	}
+	body, err = GetResponseBody("GET", baseURL+"/v1/dashboard/billing/usage", channel, headers)
+	if err != nil {
+		return 0, err
+	}
+	usage := OpenAIUsageResponse{}
+	if err := common.Unmarshal(body, &usage); err != nil {
+		return 0, err
+	}
+	return getNewAPIBalanceUSD(subscription, usage)
+}
+
+func updateChannelNewAPIBalance(channel *model.Channel) (float64, error) {
+	balance, err := fetchNewAPIBalanceUSD(channel)
+	if err != nil {
+		return 0, err
+	}
+	channel.UpdateBalance(balance)
+	return balance, nil
+}
+
 func updateChannelAIGC2DBalance(channel *model.Channel) (float64, error) {
 	url := "https://api.aigc2d.com/dashboard/billing/credit_grants"
 	body, err := GetResponseBody("GET", url, channel, GetAuthHeader(channel.Key))
@@ -543,6 +652,10 @@ func updateStandardChannelBalance(channel *model.Channel) (float64, error) {
 		return updateChannelOpenRouterBalance(channel)
 	case constant.ChannelTypeMoonshot:
 		return updateChannelMoonshotBalance(channel)
+	case constant.ChannelTypeSub2API:
+		return updateChannelSub2APIBalance(channel)
+	case constant.ChannelTypeNewAPI:
+		return updateChannelNewAPIBalance(channel)
 	default:
 		return 0, errors.New("尚未实现")
 	}
