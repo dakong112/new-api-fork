@@ -373,6 +373,7 @@ export type OperationsSettings = {
   DemoSiteEnabled: boolean
   SelfUseModeEnabled: boolean
   QuotaRemindThreshold: string
+  ChannelBalanceAlertThreshold: string
   SMTPServer: string
   SMTPPort: string
   SMTPAccount: string

@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"maps"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -147,6 +148,7 @@ func InitOptionMap() {
 	common.OptionMap["QuotaForInviter"] = strconv.Itoa(common.QuotaForInviter)
 	common.OptionMap["QuotaForInvitee"] = strconv.Itoa(common.QuotaForInvitee)
 	common.OptionMap["QuotaRemindThreshold"] = strconv.Itoa(common.QuotaRemindThreshold)
+	common.OptionMap["ChannelBalanceAlertThreshold"] = strconv.FormatFloat(common.ChannelBalanceAlertThreshold, 'f', -1, 64)
 	common.OptionMap["PreConsumedQuota"] = strconv.Itoa(common.PreConsumedQuota)
 	common.OptionMap["ModelRequestRateLimitCount"] = strconv.Itoa(setting.ModelRequestRateLimitCount)
 	common.OptionMap["ModelRequestRateLimitDurationMinutes"] = strconv.Itoa(setting.ModelRequestRateLimitDurationMinutes)
@@ -251,6 +253,11 @@ func validateOptionValue(key string, value string) error {
 		return setting.ValidateMaxTokenAutoGroups(value)
 	}
 	switch key {
+	case "ChannelBalanceAlertThreshold":
+		threshold, err := strconv.ParseFloat(value, 64)
+		if err != nil || math.IsNaN(threshold) || math.IsInf(threshold, 0) || threshold < 0 {
+			return fmt.Errorf("%s must be a non-negative number", key)
+		}
 	case "RedemptionTestQuota", "RedemptionTestRepeatQuota":
 		quota, err := strconv.Atoi(value)
 		if err != nil || quota <= 0 {
@@ -647,6 +654,8 @@ func updateOptionMap(key string, value string) (err error) {
 		common.QuotaForInvitee, _ = strconv.Atoi(value)
 	case "QuotaRemindThreshold":
 		common.QuotaRemindThreshold, _ = strconv.Atoi(value)
+	case "ChannelBalanceAlertThreshold":
+		common.ChannelBalanceAlertThreshold, _ = strconv.ParseFloat(value, 64)
 	case "PreConsumedQuota":
 		common.PreConsumedQuota, _ = strconv.Atoi(value)
 	case "ModelRequestRateLimitCount":

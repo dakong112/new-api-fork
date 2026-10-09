@@ -62,6 +62,7 @@ const numericString = z.string().refine((value) => {
 
 const monitoringSchema = z.object({
   QuotaRemindThreshold: numericString,
+  ChannelBalanceAlertThreshold: numericString,
   perf_metrics_setting: z.object({
     enabled: z.boolean(),
     flush_interval: z.coerce.number().min(1),
@@ -75,6 +76,7 @@ type MonitoringFormValues = z.output<typeof monitoringSchema>
 
 type FlatMonitoringDefaults = {
   QuotaRemindThreshold: string
+  ChannelBalanceAlertThreshold: string
   'perf_metrics_setting.enabled': boolean
   'perf_metrics_setting.flush_interval': number
   'perf_metrics_setting.bucket_time': 'minute' | '5min' | 'hour'
@@ -89,6 +91,7 @@ const buildFormDefaults = (
   defaults: MonitoringSettingsSectionProps['defaultValues']
 ): MonitoringFormInput => ({
   QuotaRemindThreshold: defaults.QuotaRemindThreshold ?? '',
+  ChannelBalanceAlertThreshold: defaults.ChannelBalanceAlertThreshold ?? '',
   perf_metrics_setting: {
     enabled: defaults['perf_metrics_setting.enabled'],
     flush_interval: defaults['perf_metrics_setting.flush_interval'],
@@ -101,6 +104,9 @@ const normalizeDefaults = (
   defaults: MonitoringSettingsSectionProps['defaultValues']
 ): FlatMonitoringDefaults => ({
   QuotaRemindThreshold: (defaults.QuotaRemindThreshold ?? '').trim(),
+  // The server stores 0 for "off"; an empty field means the same.
+  ChannelBalanceAlertThreshold:
+    (defaults.ChannelBalanceAlertThreshold ?? '').trim() || '0',
   'perf_metrics_setting.enabled': defaults['perf_metrics_setting.enabled'],
   'perf_metrics_setting.flush_interval':
     defaults['perf_metrics_setting.flush_interval'],
@@ -114,6 +120,8 @@ const normalizeFormValues = (
   values: MonitoringFormValues
 ): FlatMonitoringDefaults => ({
   QuotaRemindThreshold: values.QuotaRemindThreshold.trim(),
+  ChannelBalanceAlertThreshold:
+    values.ChannelBalanceAlertThreshold.trim() || '0',
   'perf_metrics_setting.enabled': values.perf_metrics_setting.enabled,
   'perf_metrics_setting.flush_interval':
     values.perf_metrics_setting.flush_interval,
@@ -203,6 +211,32 @@ export function MonitoringSettingsSection({
                 </FormControl>
                 <FormDescription>
                   {t('Send email alerts when a user falls below this quota')}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name='ChannelBalanceAlertThreshold'
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('Channel balance alert (USD)')}</FormLabel>
+                <FormControl>
+                  <Input
+                    type='number'
+                    min={0}
+                    step={0.01}
+                    placeholder='0'
+                    value={field.value}
+                    onChange={(event) => field.onChange(event.target.value)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  {t(
+                    'Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or "Update All Balances". Each channel is notified once until its balance recovers. 0 or empty turns it off.'
+                  )}
                 </FormDescription>
                 <FormMessage />
               </FormItem>

@@ -6968,6 +6968,8 @@
     "Network retry for {{group}}": "{{group}} のネットワーク再試行",
     "Retry upstream 502, 504 and 524 on an untried channel of this group, then on its fallback groups when the token allows it.": "上流の 502・504・524 をグループ内の未試行チャネルで再試行し、トークンが許可していれば予備グループへ進みます。",
     "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "ネットワーク再試行：上流が 502・504・524 を返した場合、リクエストは同じグループ内の未試行チャネルに切り替わります。予備グループがなくても機能します。グループに予備グループがあり、トークンで予備グループ再試行が有効な場合は、グループ内の全チャネルが失敗した後に予備グループへ進みます。タイムアウトした上流がすでにリクエストを実行している可能性があり、上流コストが重複することがありますが、ユーザーへの課金は 1 回のみです。",
-    "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "予備グループは、予備グループ再試行が有効なトークンにのみ適用されます。上流の 502・504・524 は、価格グループでそのグループのネットワーク再試行が有効な場合にのみ予備グループへ進みます。"
+    "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "予備グループは、予備グループ再試行が有効なトークンにのみ適用されます。上流の 502・504・524 は、価格グループでそのグループのネットワーク再試行が有効な場合にのみ予備グループへ進みます。",
+    "Channel balance alert (USD)": "チャネル残高アラート（USD）",
+    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "定期的な残高更新（CHANNEL_UPDATE_FREQUENCY）または「すべての残高を更新」の際、チャネル残高がこの金額を下回るとスーパー管理者に通知します。各チャネルは残高が回復するまで 1 回のみ通知されます。0 または空欄で無効になります。"
   }
 }

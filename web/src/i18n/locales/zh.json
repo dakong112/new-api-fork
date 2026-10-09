@@ -6967,6 +6967,8 @@
     "Network retry for {{group}}": "{{group}} 的网络重试",
     "Retry upstream 502, 504 and 524 on an untried channel of this group, then on its fallback groups when the token allows it.": "上游返回 502、504、524 时，改走本分组中未尝试过的渠道；令牌允许时再进入备选分组。",
     "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "网络重试：上游返回 502、504 或 524 时，请求会改走同一分组中尚未尝试过的渠道。不配置备选分组也能生效；如果该分组配置了备选分组，且令牌开启了「备选分组重试」，本分组渠道全部失败后会继续转到备选分组。超时的上游可能已经执行过请求，上游成本可能重复产生，但用户只计费一次。",
-    "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "备选分组只对开启了「备选分组重试」的令牌生效。上游返回 502、504、524 时，只有在「定价分组」中为该分组开启了「网络重试」，才会转到备选分组。"
+    "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "备选分组只对开启了「备选分组重试」的令牌生效。上游返回 502、504、524 时，只有在「定价分组」中为该分组开启了「网络重试」，才会转到备选分组。",
+    "Channel balance alert (USD)": "渠道余额预警阈值（美元）",
+    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "定时刷新余额（CHANNEL_UPDATE_FREQUENCY）或点击「更新所有余额」时，渠道余额低于该金额就通知超级管理员。每个渠道在余额恢复前只提醒一次。填 0 或留空表示关闭。"
   }
 }

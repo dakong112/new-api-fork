@@ -212,3 +212,26 @@ func TestFetchUpstreamBalanceRequests(t *testing.T) {
 		}
 	}
 }
+
+func TestShouldAlertLowBalanceOncePerLowPeriod(t *testing.T) {
+	const channelID = 987654
+	t.Cleanup(func() { lowBalanceAlerted.Delete(channelID) })
+	steps := []struct {
+		name      string
+		balance   float64
+		threshold float64
+		want      bool
+	}{
+		{name: "above the threshold stays quiet", balance: 12, threshold: 5, want: false},
+		{name: "first refresh below the threshold alerts", balance: 3, threshold: 5, want: true},
+		{name: "a later refresh still below the threshold does not repeat", balance: 2.5, threshold: 5, want: false},
+		{name: "recovering to the threshold resets the alert", balance: 5, threshold: 5, want: false},
+		{name: "dropping again alerts again", balance: 4, threshold: 5, want: true},
+		{name: "an empty balance is left to auto-disable", balance: 0, threshold: 5, want: false},
+		{name: "a positive balance after auto-disable alerts again", balance: 1, threshold: 5, want: true},
+		{name: "a zero threshold turns the alert off", balance: 1, threshold: 0, want: false},
+	}
+	for _, step := range steps {
+		assert.Equal(t, step.want, shouldAlertLowBalance(channelID, step.balance, step.threshold), step.name)
+	}
+}

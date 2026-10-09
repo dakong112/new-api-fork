@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -730,6 +731,33 @@ func UpdateChannelBalance(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// lowBalanceAlerted holds the channels already warned about, so a low balance
+// is reported once until it recovers to the threshold.
+// ponytail: in memory, so a restart may repeat one alert per low channel.
+var lowBalanceAlerted sync.Map
+
+// shouldAlertLowBalance reports whether this refresh should warn about the
+// channel. Balances at or below zero are left to the auto-disable path.
+func shouldAlertLowBalance(channelID int, balance, threshold float64) bool {
+	if threshold <= 0 || balance <= 0 || balance >= threshold {
+		lowBalanceAlerted.Delete(channelID)
+		return false
+	}
+	_, alreadyAlerted := lowBalanceAlerted.LoadOrStore(channelID, true)
+	return !alreadyAlerted
+}
+
+func alertLowChannelBalance(channel *model.Channel, balance float64) {
+	threshold := common.ChannelBalanceAlertThreshold
+	if !shouldAlertLowBalance(channel.Id, balance, threshold) {
+		return
+	}
+	subject := fmt.Sprintf("渠道「%s」（#%d）余额不足", channel.Name, channel.Id)
+	content := fmt.Sprintf("渠道「%s」（#%d）当前余额 %.4f USD，低于预警阈值 %.2f USD，请及时充值。", channel.Name, channel.Id, balance, threshold)
+	common.SysLog(subject)
+	service.NotifyRootUser(dto.NotifyTypeChannelUpdate, subject, content)
+}
+
 func updateAllChannelsBalance() error {
 	channels, err := model.GetAllChannels(0, 0, true, false)
 	if err != nil {
@@ -754,6 +782,7 @@ func updateAllChannelsBalance() error {
 			if result.Balance <= 0 {
 				service.DisableChannel(*types.NewChannelError(channel.Id, channel.Type, channel.Name, channel.ChannelInfo.IsMultiKey, "", channel.GetAutoBan()), "余额不足")
 			}
+			alertLowChannelBalance(channel, result.Balance)
 		}
 		time.Sleep(common.RequestInterval)
 	}

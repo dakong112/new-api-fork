@@ -36,3 +36,12 @@ func TestValidateOptionValueRejectsInvalidGroupDisplayOrder(t *testing.T) {
 	require.NoError(t, validateOptionValue("GroupDisplayOrder", `["vip","default"]`))
 	require.NoError(t, validateOptionValue("GroupDisplayOrder", `[]`))
 }
+
+func TestChannelBalanceAlertThresholdRequiresNonNegativeNumber(t *testing.T) {
+	for _, value := range []string{"", "-1", "abc", "NaN", "Inf"} {
+		assert.Error(t, validateOptionValue("ChannelBalanceAlertThreshold", value), value)
+	}
+	for _, value := range []string{"0", "5", "2.5"} {
+		assert.NoError(t, validateOptionValue("ChannelBalanceAlertThreshold", value), value)
+	}
+}

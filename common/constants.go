@@ -152,6 +152,10 @@ var AutomaticDisableChannelEnabled = false
 var AutomaticEnableChannelEnabled = false
 var QuotaRemindThreshold = 1000
 
+// ChannelBalanceAlertThreshold notifies the root user when a channel balance
+// (USD) falls below it on a scheduled refresh; 0 disables the alert.
+var ChannelBalanceAlertThreshold float64 = 0
+
 // PreConsumedQuota is retained for old option clients; token reservations now
 // use quota_setting.pre_consume_multiplier and the estimated input cost.
 var PreConsumedQuota = 500
