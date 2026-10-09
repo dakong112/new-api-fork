@@ -6961,11 +6961,13 @@
     "Next announcement": "Thông báo tiếp theo",
     "Add fallback group for {{group}}": "Thêm nhóm dự phòng cho {{group}}",
     "When every channel of a group fails for a model, requests move to its fallback groups from top to bottom. Drag or use the arrows to change the order. Fallback groups the user cannot select are skipped, and the request is billed at the ratio of the group that served it.": "Khi mọi kênh của một nhóm đều lỗi với một mô hình, yêu cầu chuyển sang các nhóm dự phòng theo thứ tự từ trên xuống. Kéo hoặc dùng mũi tên để đổi thứ tự. Nhóm dự phòng mà người dùng không được chọn sẽ bị bỏ qua, và yêu cầu được tính phí theo hệ số của nhóm đã phục vụ.",
-    "Retry 502/504/524 on another channel": "Thử lại 502/504/524 trên kênh khác",
-    "With network retry on, an upstream 502, 504 or 524 moves the request to an untried channel of the group, then to its fallback groups when the token allows cross-group retry. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "Khi bật thử lại mạng, lỗi 502, 504 hoặc 524 từ upstream sẽ chuyển yêu cầu sang kênh chưa thử trong nhóm, sau đó sang các nhóm dự phòng nếu token cho phép thử lại liên nhóm. Upstream bị hết thời gian có thể đã xử lý yêu cầu, nên chi phí upstream có thể lặp lại; người dùng chỉ bị tính phí một lần.",
     "An upstream 502, 504 or 524 moved this request to another channel.": "Lỗi 502, 504 hoặc 524 từ upstream đã chuyển yêu cầu này sang kênh khác.",
     "Network retry": "Thử lại mạng",
     "Upstream network error, retrying on an untried channel": "Lỗi mạng upstream, thử lại trên kênh chưa thử",
-    "Group setting": "Cài đặt nhóm"
+    "Group setting": "Cài đặt nhóm",
+    "Network retry for {{group}}": "Thử lại mạng cho {{group}}",
+    "Retry upstream 502, 504 and 524 on an untried channel of this group, then on its fallback groups when the token allows it.": "Thử lại lỗi 502, 504 và 524 từ upstream trên kênh chưa thử của nhóm, sau đó sang nhóm dự phòng nếu token cho phép.",
+    "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "Thử lại mạng: khi upstream trả về 502, 504 hoặc 524, yêu cầu chuyển sang kênh chưa thử trong cùng nhóm. Hoạt động cả khi không có nhóm dự phòng; nếu nhóm có nhóm dự phòng và token bật thử lại nhóm dự phòng, yêu cầu sẽ chuyển sang đó sau khi mọi kênh của nhóm đều lỗi. Upstream bị hết thời gian có thể đã xử lý yêu cầu, nên chi phí upstream có thể lặp lại; người dùng chỉ bị tính phí một lần.",
+    "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "Nhóm dự phòng chỉ áp dụng cho token đã bật thử lại nhóm dự phòng. Lỗi 502, 504 và 524 từ upstream chỉ chuyển sang nhóm dự phòng khi nhóm đó đã bật Thử lại mạng trong Nhóm định giá."
   }
 }

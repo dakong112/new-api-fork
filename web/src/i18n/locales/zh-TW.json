@@ -6960,11 +6960,13 @@
     "Next announcement": "下一則公告",
     "Add fallback group for {{group}}": "為 {{group}} 新增備選分組",
     "When every channel of a group fails for a model, requests move to its fallback groups from top to bottom. Drag or use the arrows to change the order. Fallback groups the user cannot select are skipped, and the request is billed at the ratio of the group that served it.": "某分組下該模型的渠道全部失敗時，請求按從上到下的順序依次改走備選分組，可拖動或點擊箭頭調整順序。使用者無權使用的備選分組會被跳過，並按實際服務請求的分組倍率計費。",
-    "Retry 502/504/524 on another channel": "502/504/524 時換渠道重試",
-    "With network retry on, an upstream 502, 504 or 524 moves the request to an untried channel of the group, then to its fallback groups when the token allows cross-group retry. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "開啟「換渠道重試」後，上游返回 502、504 或 524 時，請求會改走本分組中尚未嘗試過的渠道；令牌開啟跨分組重試時，再依次進入備選分組。逾時的上游可能已經執行過請求，上游成本可能重複產生，但使用者只計費一次。",
     "An upstream 502, 504 or 524 moved this request to another channel.": "上游返回 502、504 或 524，本次請求已切換到其他渠道。",
     "Network retry": "網路重試",
     "Upstream network error, retrying on an untried channel": "上游網路錯誤，改走未嘗試的渠道",
-    "Group setting": "分組設定"
+    "Group setting": "分組設定",
+    "Network retry for {{group}}": "{{group}} 的網路重試",
+    "Retry upstream 502, 504 and 524 on an untried channel of this group, then on its fallback groups when the token allows it.": "上游返回 502、504、524 時，改走本分組中未嘗試過的渠道；令牌允許時再進入備選分組。",
+    "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "網路重試：上游返回 502、504 或 524 時，請求會改走同一分組中尚未嘗試過的渠道。不設定備選分組也能生效；如果該分組設定了備選分組，且令牌開啟了「備選分組重試」，本分組渠道全部失敗後會繼續轉到備選分組。逾時的上游可能已經執行過請求，上游成本可能重複產生，但使用者只計費一次。",
+    "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "備選分組只對開啟了「備選分組重試」的令牌生效。上游返回 502、504、524 時，只有在「定價分組」中為該分組開啟了「網路重試」，才會轉到備選分組。"
   }
 }

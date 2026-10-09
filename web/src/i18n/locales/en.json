@@ -6960,11 +6960,13 @@
     "Next announcement": "Next announcement",
     "Add fallback group for {{group}}": "Add fallback group for {{group}}",
     "When every channel of a group fails for a model, requests move to its fallback groups from top to bottom. Drag or use the arrows to change the order. Fallback groups the user cannot select are skipped, and the request is billed at the ratio of the group that served it.": "When every channel of a group fails for a model, requests move to its fallback groups from top to bottom. Drag or use the arrows to change the order. Fallback groups the user cannot select are skipped, and the request is billed at the ratio of the group that served it.",
-    "Retry 502/504/524 on another channel": "Retry 502/504/524 on another channel",
-    "With network retry on, an upstream 502, 504 or 524 moves the request to an untried channel of the group, then to its fallback groups when the token allows cross-group retry. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "With network retry on, an upstream 502, 504 or 524 moves the request to an untried channel of the group, then to its fallback groups when the token allows cross-group retry. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.",
     "An upstream 502, 504 or 524 moved this request to another channel.": "An upstream 502, 504 or 524 moved this request to another channel.",
     "Network retry": "Network retry",
     "Upstream network error, retrying on an untried channel": "Upstream network error, retrying on an untried channel",
-    "Group setting": "Group setting"
+    "Group setting": "Group setting",
+    "Network retry for {{group}}": "Network retry for {{group}}",
+    "Retry upstream 502, 504 and 524 on an untried channel of this group, then on its fallback groups when the token allows it.": "Retry upstream 502, 504 and 524 on an untried channel of this group, then on its fallback groups when the token allows it.",
+    "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.",
+    "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups."
   }
 }

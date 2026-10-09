@@ -234,17 +234,21 @@ describe('group settings workspace', () => {
     ).toEqual({ default: ['svip', 'vip'] })
   })
 
-  it('saves the network retry switch of a group', async () => {
+  it('saves the network retry switch from the pricing groups table', async () => {
     const user = userEvent.setup()
     const onSave = vi.fn(async (_values: typeof defaults) => {})
     render(<Fixture onSave={onSave} />)
-    await user.click(screen.getByRole('tab', { name: 'Fallback groups' }))
-    const switches = screen.getAllByRole('switch', {
-      name: 'Retry 502/504/524 on another channel',
+    const vipSwitch = screen.getByRole('switch', {
+      name: 'Network retry for vip',
     })
-    expect(switches).toHaveLength(2)
-    await user.click(switches[1])
-    expect(switches[1]).toBeChecked()
+    expect(vipSwitch).not.toBeChecked()
+    await user.click(vipSwitch)
+    expect(vipSwitch).toBeChecked()
+
+    await user.click(screen.getByRole('tab', { name: 'Fallback groups' }))
+    expect(
+      screen.queryByRole('switch', { name: /Network retry/ })
+    ).not.toBeInTheDocument()
 
     await user.click(
       screen.getByRole('button', { name: 'Save group settings' })
@@ -253,6 +257,44 @@ describe('group settings workspace', () => {
     expect(
       JSON.parse(onSave.mock.calls[0]?.[0].GroupNetworkRetryGroups ?? '')
     ).toEqual(['vip'])
+  })
+
+  it('keeps the network retry switch on a renamed new group and drops it for a deleted group', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn(async (_values: typeof defaults) => {})
+    render(
+      <Fixture
+        onSave={onSave}
+        initial={{ GroupNetworkRetryGroups: '["vip"]' }}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'Add group' }))
+    await user.click(
+      screen.getByRole('switch', { name: 'Network retry for group_1' })
+    )
+    const newName = screen.getByDisplayValue('group_1')
+    await user.clear(newName)
+    await user.type(newName, 'gold')
+    expect(
+      screen.getByRole('switch', { name: 'Network retry for gold' })
+    ).toBeChecked()
+
+    const rowsBefore = screen
+      .getAllByRole('textbox', { name: 'Group name' })
+      .map((input) => (input as HTMLInputElement).value)
+    await user.click(
+      screen.getAllByRole('button', { name: 'Delete' })[
+        rowsBefore.indexOf('vip')
+      ]
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Save group settings' })
+    )
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+    expect(
+      JSON.parse(onSave.mock.calls[0]?.[0].GroupNetworkRetryGroups ?? '')
+    ).toEqual(['gold'])
   })
 
   it('reorders from the drag handle with arrow keys, preserves unknown groups and saves the new order', async () => {

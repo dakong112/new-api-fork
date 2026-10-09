@@ -433,6 +433,7 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
           userUsableGroups={userUsableGroups}
           topupGroupRatio={topupGroupRatio}
           groupDisplayOrder={groupDisplayOrder}
+          networkRetryGroups={groupNetworkRetryGroups}
           hasUnsavedChanges={hasUnsavedChanges}
           onChange={onChange}
           onShowDetail={setDetailGroup}
@@ -524,10 +525,6 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
           groupNames={registryNames}
           value={groupFallbackGroups}
           onChange={(value) => onChange('GroupFallbackGroups', value)}
-          networkRetryGroups={groupNetworkRetryGroups}
-          onNetworkRetryChange={(value) =>
-            onChange('GroupNetworkRetryGroups', value)
-          }
         />
       </TabsContent>
 
@@ -551,8 +548,6 @@ type GroupFallbackEditorProps = {
   groupNames: string[]
   value: string
   onChange: (value: string) => void
-  networkRetryGroups: string
-  onNetworkRetryChange: (value: string) => void
 }
 
 /**
@@ -571,21 +566,7 @@ function GroupFallbackEditor(props: GroupFallbackEditorProps) {
       }),
     [props.value]
   )
-  const networkRetryGroups = useMemo(
-    () =>
-      safeJsonParse<string[]>(props.networkRetryGroups, {
-        fallback: [],
-        context: 'network retry groups',
-      }),
-    [props.networkRetryGroups]
-  )
   const groups = props.groupNames.filter((name) => name !== 'auto')
-
-  const toggleNetworkRetry = (group: string, enabled: boolean) => {
-    const next = networkRetryGroups.filter((name) => name !== group)
-    if (enabled) next.push(group)
-    props.onNetworkRetryChange(JSON.stringify(next, null, 2))
-  }
 
   const update = (group: string, list: string[]) => {
     const next = { ...fallbacks, [group]: list }
@@ -603,7 +584,7 @@ function GroupFallbackEditor(props: GroupFallbackEditorProps) {
           )}
           <span className='mt-1 block'>
             {t(
-              'With network retry on, an upstream 502, 504 or 524 moves the request to an untried channel of the group, then to its fallback groups when the token allows cross-group retry. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.'
+              'Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.'
             )}
           </span>
         </CardDescription>
@@ -624,23 +605,14 @@ function GroupFallbackEditor(props: GroupFallbackEditorProps) {
             return (
               <div
                 key={group}
-                className='grid gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[12rem_minmax(0,1fr)]'
+                className='grid gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[10rem_minmax(0,1fr)]'
               >
-                <div className='flex min-w-0 flex-col gap-2 pt-2'>
-                  <span className='truncate text-sm font-medium' title={group}>
-                    {group}
-                  </span>
-                  <Label className='text-muted-foreground flex items-center gap-2 text-xs font-normal'>
-                    <Switch
-                      size='sm'
-                      checked={networkRetryGroups.includes(group)}
-                      onCheckedChange={(checked) =>
-                        toggleNetworkRetry(group, checked)
-                      }
-                    />
-                    {t('Retry 502/504/524 on another channel')}
-                  </Label>
-                </div>
+                <span
+                  className='truncate pt-2 text-sm font-medium'
+                  title={group}
+                >
+                  {group}
+                </span>
                 <div className='flex min-w-0 flex-col gap-2'>
                   <GroupNameSelect
                     options={groups.filter(
@@ -707,6 +679,8 @@ type GroupPricingTableProps = {
   topupGroupRatio: string
   /** JSON array of group names; the row order users see groups in. */
   groupDisplayOrder: string
+  /** JSON array of groups that retry 502/504/524 on another channel. */
+  networkRetryGroups: string
   hasUnsavedChanges: boolean
   onChange: (field: string, value: string) => void
   onShowDetail: (name: string) => void
@@ -717,11 +691,25 @@ function GroupPricingTable({
   userUsableGroups,
   topupGroupRatio,
   groupDisplayOrder,
+  networkRetryGroups,
   hasUnsavedChanges,
   onChange,
   onShowDetail,
 }: GroupPricingTableProps) {
   const { t } = useTranslation()
+  const networkRetryList = useMemo(
+    () =>
+      safeJsonParse<string[]>(networkRetryGroups, {
+        fallback: [],
+        context: 'network retry groups',
+      }),
+    [networkRetryGroups]
+  )
+  const emitNetworkRetry = useCallback(
+    (next: string[]) =>
+      onChange('GroupNetworkRetryGroups', JSON.stringify(next, null, 2)),
+    [onChange]
+  )
   const [search, setSearch] = useState('')
   const [renamingGroup, setRenamingGroup] = useState<string | null>(null)
   const [rows, setRows] = useState<GroupPricingRow[]>(() =>
@@ -794,11 +782,25 @@ function GroupPricingTable({
       field: Exclude<keyof GroupPricingRow, '_id'>,
       value: string | number | boolean
     ) => {
+      const previousName = rows.find((row) => row._id === id)?.name.trim()
       emitRows(
         rows.map((row) => (row._id === id ? { ...row, [field]: value } : row))
       )
+      // The network retry switch follows a renamed group, including through
+      // an empty name while the old one is deleted and a new one typed.
+      if (
+        field === 'name' &&
+        previousName !== undefined &&
+        networkRetryList.includes(previousName)
+      ) {
+        emitNetworkRetry(
+          networkRetryList.map((name) =>
+            name === previousName ? String(value).trim() : name
+          )
+        )
+      }
     },
-    [emitRows, rows]
+    [emitRows, rows, networkRetryList, emitNetworkRetry]
   )
 
   const addRow = useCallback(() => {
@@ -826,9 +828,15 @@ function GroupPricingTable({
 
   const removeRow = useCallback(
     (id: string) => {
+      const removedName = rows.find((row) => row._id === id)?.name.trim()
       emitRows(rows.filter((row) => row._id !== id))
+      if (removedName !== undefined && networkRetryList.includes(removedName)) {
+        emitNetworkRetry(
+          networkRetryList.filter((name) => name !== removedName)
+        )
+      }
     },
-    [emitRows, rows]
+    [emitRows, rows, networkRetryList, emitNetworkRetry]
   )
 
   const duplicateNames = useMemo(() => {
@@ -879,6 +887,11 @@ function GroupPricingTable({
               {t(
                 'All group names live here. Ratio applies when calls are billed as this group; top-up ratio applies to users whose account is in this group.'
               )}
+              <span className='mt-1 block'>
+                {t(
+                  'Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.'
+                )}
+              </span>
             </CardDescription>
           </div>
           <Button onClick={addRow} size='sm' className='sm:self-start'>
@@ -1047,6 +1060,44 @@ function GroupPricingTable({
                     />
                   </div>
                 ),
+              },
+              {
+                id: 'network-retry',
+                header: (
+                  <span
+                    title={t(
+                      'Retry upstream 502, 504 and 524 on an untried channel of this group, then on its fallback groups when the token allows it.'
+                    )}
+                  >
+                    {t('Network retry')}
+                  </span>
+                ),
+                className: 'w-28 text-center',
+                cell: (row) => {
+                  const name = row.name.trim()
+                  return (
+                    <div className='flex justify-center'>
+                      <Switch
+                        size='sm'
+                        disabled={!name}
+                        checked={!!name && networkRetryList.includes(name)}
+                        onCheckedChange={(checked) =>
+                          emitNetworkRetry(
+                            checked
+                              ? [
+                                  ...networkRetryList.filter((g) => g !== name),
+                                  name,
+                                ]
+                              : networkRetryList.filter((g) => g !== name)
+                          )
+                        }
+                        aria-label={t('Network retry for {{group}}', {
+                          group: name,
+                        })}
+                      />
+                    </div>
+                  )
+                },
               },
               {
                 id: 'channels',

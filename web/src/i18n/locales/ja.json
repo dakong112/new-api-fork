@@ -6961,11 +6961,13 @@
     "Next announcement": "次のお知らせ",
     "Add fallback group for {{group}}": "{{group}} の予備グループを追加",
     "When every channel of a group fails for a model, requests move to its fallback groups from top to bottom. Drag or use the arrows to change the order. Fallback groups the user cannot select are skipped, and the request is billed at the ratio of the group that served it.": "グループ内のモデルのチャネルがすべて失敗した場合、リクエストは上から順に予備グループへ切り替わります。ドラッグまたは矢印で順序を変更できます。ユーザーが選択できない予備グループはスキップされ、実際にリクエストを処理したグループの倍率で課金されます。",
-    "Retry 502/504/524 on another channel": "502/504/524 で別チャネルに再試行",
-    "With network retry on, an upstream 502, 504 or 524 moves the request to an untried channel of the group, then to its fallback groups when the token allows cross-group retry. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "ネットワーク再試行を有効にすると、上流が 502・504・524 を返した場合、リクエストはグループ内の未試行チャネルに切り替わり、トークンがグループ間再試行を許可していれば予備グループへ進みます。タイムアウトした上流がすでにリクエストを実行している可能性があり、上流コストが重複することがありますが、ユーザーへの課金は 1 回のみです。",
     "An upstream 502, 504 or 524 moved this request to another channel.": "上流の 502・504・524 により、このリクエストは別のチャネルに切り替わりました。",
     "Network retry": "ネットワーク再試行",
     "Upstream network error, retrying on an untried channel": "上流のネットワークエラー、未試行のチャネルで再試行",
-    "Group setting": "グループ設定"
+    "Group setting": "グループ設定",
+    "Network retry for {{group}}": "{{group}} のネットワーク再試行",
+    "Retry upstream 502, 504 and 524 on an untried channel of this group, then on its fallback groups when the token allows it.": "上流の 502・504・524 をグループ内の未試行チャネルで再試行し、トークンが許可していれば予備グループへ進みます。",
+    "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "ネットワーク再試行：上流が 502・504・524 を返した場合、リクエストは同じグループ内の未試行チャネルに切り替わります。予備グループがなくても機能します。グループに予備グループがあり、トークンで予備グループ再試行が有効な場合は、グループ内の全チャネルが失敗した後に予備グループへ進みます。タイムアウトした上流がすでにリクエストを実行している可能性があり、上流コストが重複することがありますが、ユーザーへの課金は 1 回のみです。",
+    "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "予備グループは、予備グループ再試行が有効なトークンにのみ適用されます。上流の 502・504・524 は、価格グループでそのグループのネットワーク再試行が有効な場合にのみ予備グループへ進みます。"
   }
 }
