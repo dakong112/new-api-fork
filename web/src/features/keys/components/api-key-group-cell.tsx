@@ -33,6 +33,8 @@ import { GroupRatioBadge, type GroupRatio } from './auto-group-visuals'
 
 type ApiKeyGroupCellProps = {
   crossGroupRetry: boolean
+  /** Fallback groups of a non-auto group, used when crossGroupRetry is on. */
+  fallbackGroups?: string[]
   group: string
   ratio?: GroupRatio
   shouldReduceMotion: boolean
@@ -46,11 +48,19 @@ export function ApiKeyGroupCell(props: ApiKeyGroupCellProps) {
   if (group !== 'auto') {
     const ratio =
       group && typeof props.ratio === 'number' ? props.ratio : undefined
+    const chain =
+      group && props.crossGroupRetry && props.fallbackGroups?.length
+        ? [group, ...props.fallbackGroups]
+        : null
     return (
       <TruncatedCell
         className={isMobile ? 'w-full' : 'max-w-50'}
         tabIndex={0}
-        tooltipContent={group || t('Follow user group')}
+        tooltipContent={
+          chain
+            ? `${t('Execution chain')}: ${chain.join(' → ')}`
+            : group || t('Follow user group')
+        }
         tooltipClassName='break-all'
       >
         <GroupBadge
@@ -60,6 +70,14 @@ export function ApiKeyGroupCell(props: ApiKeyGroupCellProps) {
           className='px-0'
           containerClassName={cn('gap-3', isMobile && 'w-full justify-between')}
         />
+        {chain && (
+          <StatusBadge
+            label={t('Fallback +{{count}}', { count: chain.length - 1 })}
+            variant='info'
+            copyable={false}
+            className='ml-2 px-0'
+          />
+        )}
       </TruncatedCell>
     )
   }

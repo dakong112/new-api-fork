@@ -16,12 +16,23 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { assert, expect, test } from 'vitest'
 
+import type { GroupUsage } from '../../api'
 import { GroupRatioVisualEditor } from '../group-ratio-visual-editor'
+
+/** Query client with group usage pre-seeded, so the table never fetches it. */
+function seededQueryClient(usage: GroupUsage[] = []) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  })
+  client.setQueryData(['group-usage'], usage)
+  return client
+}
 
 function PricingFixture() {
   const [settings, setSettings] = useState<Record<string, string>>({
@@ -29,8 +40,9 @@ function PricingFixture() {
     TopupGroupRatio: '{}',
     UserUsableGroups: '{}',
   })
+  const [queryClient] = useState(() => seededQueryClient())
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <GroupRatioVisualEditor
         section='pricing'
         onSectionChange={() => {}}
@@ -40,6 +52,10 @@ function PricingFixture() {
         userUsableGroups={settings.UserUsableGroups}
         groupGroupRatio='{}'
         autoGroups='[]'
+        groupDisplayOrder='[]'
+        groupFallbackGroups='{}'
+        groupNetworkRetryGroups='[]'
+        hasUnsavedChanges={false}
         maxTokenAutoGroupsField={null}
         groupSpecialUsableGroup='{}'
         onChange={(field, value) =>
@@ -47,7 +63,7 @@ function PricingFixture() {
         }
       />
       <output aria-label='Saved ratios'>{JSON.stringify(settings)}</output>
-    </>
+    </QueryClientProvider>
   )
 }
 

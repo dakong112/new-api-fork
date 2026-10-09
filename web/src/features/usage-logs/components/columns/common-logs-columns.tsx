@@ -53,7 +53,7 @@ import { formatLogQuota, formatTimestampToDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useSystemConfigStore } from '@/stores/system-config-store'
 
-import { LOG_TYPE_ALL_VALUE } from '../../constants'
+import { LOG_TYPE_ALL_VALUE, LOG_TYPE_ENUM } from '../../constants'
 import type { UsageLog } from '../../data/schema'
 import {
   formatModelName,
@@ -64,6 +64,7 @@ import {
   isViolationFeeLog,
   renderAuditContent,
 } from '../../lib/format'
+import { describeRetryChain } from '../../lib/retry-chain'
 import {
   isDisplayableLogType,
   isTimingLogType,
@@ -403,9 +404,14 @@ export function useCommonLogsColumns(
               ? rawUseChannel.map(String).filter(Boolean)
               : []
             const hasRetryChain = useChannel.length > 1
-            const channelChain = hasRetryChain
-              ? useChannel.join(' → ')
+            const retryChain = hasRetryChain
+              ? describeRetryChain(
+                  useChannel,
+                  other?.admin_info?.request_policy,
+                  log.type !== LOG_TYPE_ENUM.ERROR
+                )
               : undefined
+            const channelChain = retryChain?.label
             const channelDisplay = log.channel_name
               ? `${log.channel_name} #${log.channel}`
               : `#${log.channel}`
@@ -472,9 +478,25 @@ export function useCommonLogsColumns(
                               <p className='text-muted-foreground font-mono break-all'>
                                 {channelChain}
                               </p>
+                              {retryChain?.networkRetry && (
+                                <p className='text-warning'>
+                                  {t(
+                                    'An upstream 502, 504 or 524 moved this request to another channel.'
+                                  )}
+                                </p>
+                              )}
                             </div>
                           </PopoverContent>
                         </Popover>
+                      )}
+                      {retryChain?.networkRetry && (
+                        <StatusBadge
+                          label={t('Network retry')}
+                          variant='warning'
+                          size='sm'
+                          showDot={false}
+                          copyable={false}
+                        />
                       )}
                       {affinity && (
                         <button

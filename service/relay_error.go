@@ -2,6 +2,8 @@ package service
 
 import (
 	"fmt"
+	"net/http"
+	"slices"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -42,6 +44,12 @@ func DecideRelayRetry(c *gin.Context, err *types.NewAPIError, retryTimes int) Po
 		return PolicyDecision{Action: "stop", Reason: "attempt_budget_exhausted", Source: "global"}
 	}
 	code := err.StatusCode
+	// Checked before the timeout exclusion below: the group explicitly accepts
+	// that a timed-out upstream may have run the request already.
+	if IsGroupNetworkRetry(RequestPolicy(c).SelectedGroup, code) {
+		common.SetContextKey(c, constant.ContextKeyNetworkRetry, true)
+		return PolicyDecision{Action: "retry", Reason: "network_error_retry", Source: "group"}
+	}
 	if code >= 200 && code < 300 {
 		return PolicyDecision{Action: "stop", Reason: "system_retry_exclusion", Source: "system"}
 	}
@@ -55,6 +63,16 @@ func DecideRelayRetry(c *gin.Context, err *types.NewAPIError, retryTimes int) Po
 		return PolicyDecision{Action: "retry", Reason: "retry_status_matched", Source: "global"}
 	}
 	return PolicyDecision{Action: "stop", Reason: "status_not_retryable", Source: "global"}
+}
+
+// networkRetryStatusCodes are upstream gateway failures (bad gateway and
+// gateway timeouts, including Cloudflare's 524) a group can opt into retrying.
+var networkRetryStatusCodes = []int{http.StatusBadGateway, http.StatusGatewayTimeout, 524}
+
+// IsGroupNetworkRetry reports whether a failure in group may move to another
+// channel because the group retries upstream gateway failures.
+func IsGroupNetworkRetry(group string, statusCode int) bool {
+	return slices.Contains(networkRetryStatusCodes, statusCode) && slices.Contains(common.GroupNetworkRetryGroups, group)
 }
 
 func ShouldRetryRelayError(c *gin.Context, openaiErr *types.NewAPIError, retryTimes int) bool {

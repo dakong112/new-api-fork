@@ -11,17 +11,21 @@ import (
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -214,6 +218,87 @@ func TestRequestPolicyRoutingDatabaseMatrix(t *testing.T) {
 					}
 				}
 			}
+		})
+	}
+}
+
+func TestGroupNetworkRetryMovesToAnotherChannel(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		groupSwitch    bool
+		backupStatus   int
+		wantStatus     int
+		wantBackupHits int64
+	}{
+		{name: "524 moves to the untried channel", groupSwitch: true, backupStatus: http.StatusOK, wantStatus: http.StatusOK, wantBackupHits: 1},
+		{name: "524 stops in a group without the switch", groupSwitch: false, backupStatus: http.StatusOK, wantStatus: 524, wantBackupHits: 0},
+		{name: "running out of channels keeps the upstream error", groupSwitch: true, backupStatus: http.StatusBadGateway, wantStatus: http.StatusBadGateway, wantBackupHits: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(*websocket.Conn, *http.Request) {})
+			previousRetries, previousGroups := common.RetryTimes, common.GroupNetworkRetryGroups
+			common.RetryTimes = 3
+			common.GroupNetworkRetryGroups = nil
+			if tc.groupSwitch {
+				common.GroupNetworkRetryGroups = []string{"default"}
+			}
+			t.Cleanup(func() { common.RetryTimes, common.GroupNetworkRetryGroups = previousRetries, previousGroups })
+
+			stub := func(status int, hits *atomic.Int64) *httptest.Server {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					hits.Add(1)
+					w.Header().Set("Content-Type", "application/json")
+					if status != http.StatusOK {
+						w.WriteHeader(status)
+						_, _ = fmt.Fprint(w, `{"error":{"type":"upstream_error","message":"origin timeout"}}`)
+						return
+					}
+					_, _ = fmt.Fprint(w, `{"id":"completed","status":"completed","usage":{"input_tokens":10,"output_tokens":1,"total_tokens":11}}`)
+				}))
+				t.Cleanup(server.Close)
+				return server
+			}
+			var primaryHits, backupHits atomic.Int64
+			primary := stub(524, &primaryHits)
+			backup := stub(tc.backupStatus, &backupHits)
+			// The fixture channel is the primary: the higher priority is tried first.
+			require.NoError(t, model.DB.Model(fixture.channel).Updates(map[string]any{"base_url": primary.URL, "priority": 10}).Error)
+			require.NoError(t, model.DB.Model(&model.Ability{}).Where("channel_id = ?", fixture.channel.Id).Update("priority", 10).Error)
+			mapping := `{"ws-billing":"gpt-4o"}`
+			backupChannel := &model.Channel{Name: "network-retry-backup", Key: "backup-key", Status: common.ChannelStatusEnabled, Type: constant.ChannelTypeOpenAI, Group: "default", Models: "ws-billing", BaseURL: &backup.URL, ModelMapping: &mapping}
+			require.NoError(t, model.DB.Create(backupChannel).Error)
+			require.NoError(t, model.DB.Create(&model.Ability{ChannelId: backupChannel.Id, Model: "ws-billing", Group: "default", Enabled: true}).Error)
+			t.Cleanup(func() {
+				require.NoError(t, model.DB.Where("channel_id = ?", backupChannel.Id).Delete(&model.Ability{}).Error)
+				require.NoError(t, model.DB.Delete(backupChannel).Error)
+			})
+
+			request, err := http.NewRequest(http.MethodPost, fixture.gatewayURL+"/v1/responses", strings.NewReader(`{"model":"ws-billing","input":"hello"}`))
+			require.NoError(t, err)
+			request.Header.Set("Authorization", "Bearer sk-"+fixture.token.Key)
+			request.Header.Set("Content-Type", "application/json")
+			response, err := http.DefaultClient.Do(request)
+			require.NoError(t, err)
+			_, err = io.Copy(io.Discard, response.Body)
+			require.NoError(t, err)
+			require.NoError(t, response.Body.Close())
+			select {
+			case <-fixture.httpDone:
+			case <-time.After(5 * time.Second):
+				t.Fatal("HTTP request did not finish")
+			}
+			fixture.closeAndWait(t)
+
+			assert.Equal(t, tc.wantStatus, response.StatusCode)
+			assert.Equal(t, int64(1), primaryHits.Load(), "a failed channel is never retried")
+			assert.Equal(t, tc.wantBackupHits, backupHits.Load())
+			if tc.wantStatus != http.StatusOK {
+				return
+			}
+			var log model.Log
+			require.NoError(t, model.LOG_DB.Where("token_id = ? AND type = ?", fixture.token.Id, model.LogTypeConsume).Order("id desc").First(&log).Error)
+			assert.Contains(t, log.Other, `"network_error_retry"`, "the log shows the network retry decision")
+			assert.Contains(t, log.Other, fmt.Sprintf(`"use_channel":["%d","%d"]`, fixture.channel.Id, backupChannel.Id))
 		})
 	}
 }

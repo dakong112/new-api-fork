@@ -39,6 +39,8 @@ const (
 	FilterRequestPath        ChannelFilterKind = "request_path"
 	FilterTaskPluginIdentity ChannelFilterKind = "task_plugin_identity"
 	FilterResponsesWebSocket ChannelFilterKind = "responses_websocket"
+	// FilterExcludeChannels drops channels this request already failed on.
+	FilterExcludeChannels ChannelFilterKind = "exclude_channels"
 )
 
 type ChannelFilter struct {
@@ -47,6 +49,7 @@ type ChannelFilter struct {
 	TaskPluginKey          string
 	TaskPluginKeys         []string
 	TaskPluginChannelTypes []int
+	ExcludeChannelIDs      []int
 }
 
 type ChannelConstraints struct {

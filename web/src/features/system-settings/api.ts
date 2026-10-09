@@ -111,6 +111,43 @@ export async function resetModelRatios() {
   return res.data
 }
 
+/** How many channels, tokens and users reference each group name. */
+export type GroupUsage = {
+  name: string
+  channels: number
+  enabled_channels: number
+  tokens: number
+  users: number
+}
+
+export async function getGroupUsage() {
+  const res = await api.get<{
+    success: boolean
+    message?: string
+    data?: GroupUsage[]
+  }>('/api/group/usage')
+  return res.data
+}
+
+export type GroupRenameResult = {
+  channels: number
+  users: number
+  tokens: number
+  subscription_plans: number
+  user_subscriptions: number
+  options: string[]
+}
+
+/** Rename a group everywhere it is stored, in one server transaction. */
+export async function renameGroup(oldName: string, newName: string) {
+  const res = await api.post<{
+    success: boolean
+    message?: string
+    data?: GroupRenameResult
+  }>('/api/group/rename', { old_name: oldName, new_name: newName })
+  return res.data
+}
+
 export async function getUpstreamChannels() {
   const res = await api.get<UpstreamChannelsResponse>(
     '/api/ratio_sync/channels'

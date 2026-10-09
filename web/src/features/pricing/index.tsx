@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 
 import { PublicLayout } from '@/components/layout'
 import { PageTransition } from '@/components/page-transition'
+import { sortGroupNames, useGroupDisplayOrder } from '@/lib/group-order'
 
 import {
   LoadingSkeleton,
@@ -97,12 +98,16 @@ export function Pricing() {
     [models, selectedModelName]
   )
 
+  const groupOrder = useGroupDisplayOrder()
   const availableGroups = useMemo(
     () =>
-      Object.keys(usableGroup || {}).filter(
-        (g) => !EXCLUDED_GROUPS.includes(g)
+      sortGroupNames(
+        Object.keys(usableGroup || {}).filter(
+          (g) => !EXCLUDED_GROUPS.includes(g)
+        ),
+        groupOrder
       ),
-    [usableGroup]
+    [usableGroup, groupOrder]
   )
 
   const handleClearAll = useCallback(() => {

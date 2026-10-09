@@ -148,7 +148,8 @@ describe('API key Auto group form mapping', () => {
       auto_groups: ['vip'],
     }
     expect(transformFormDataToPayload(nonAuto).auto_groups).toEqual([])
-    expect(transformFormDataToPayload(nonAuto).cross_group_retry).toBe(false)
+    // Outside Auto the switch enables the group's fallback groups.
+    expect(transformFormDataToPayload(nonAuto).cross_group_retry).toBe(true)
   })
 
   test('rejects snapshots over the configured limit', () => {

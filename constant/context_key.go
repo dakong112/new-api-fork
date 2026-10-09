@@ -43,6 +43,13 @@ const (
 	ContextKeyAutoGroup           ContextKey = "auto_group"
 	ContextKeyAutoGroupIndex      ContextKey = "auto_group_index"
 	ContextKeyAutoGroupRetryIndex ContextKey = "auto_group_retry_index"
+	// ContextKeyGroupSwitchPending marks that the next attempt moves to the next
+	// group. It lives on the request because the distributor and the relay loop
+	// use separate RetryParams.
+	ContextKeyGroupSwitchPending ContextKey = "group_switch_pending"
+	// ContextKeyNetworkRetry marks that an upstream gateway failure triggered a
+	// group network retry; later attempts skip channels already tried.
+	ContextKeyNetworkRetry ContextKey = "network_retry"
 
 	/* user related keys */
 	ContextKeyUserId      ContextKey = "id"

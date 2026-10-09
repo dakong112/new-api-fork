@@ -56,6 +56,7 @@ import {
   getSuccessRateTextClass,
 } from '@/features/performance-metrics/lib/format'
 import { PluginIcon } from '@/features/task-plugins/components/plugin-icon'
+import { sortGroupNames, useGroupDisplayOrder } from '@/lib/group-order'
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { requireServerSuccess } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
@@ -1057,9 +1058,14 @@ function ProviderGroupPricingSection(
   const { t, i18n } = useTranslation()
   const showRechargePrice = props.showRechargePrice ?? false
 
+  const groupOrder = useGroupDisplayOrder()
   const availableGroups = useMemo(
-    () => getAvailableGroups(props.model, props.usableGroup || {}),
-    [props.model, props.usableGroup]
+    () =>
+      sortGroupNames(
+        getAvailableGroups(props.model, props.usableGroup || {}),
+        groupOrder
+      ),
+    [props.model, props.usableGroup, groupOrder]
   )
 
   const isTokenBased = isTokenBasedModel(props.model)

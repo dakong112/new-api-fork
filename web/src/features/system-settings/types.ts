@@ -214,6 +214,8 @@ export type ContentSettings = {
   'console_setting.announcements_enabled': boolean
   'console_setting.faq_enabled': boolean
   'console_setting.uptime_kuma_enabled': boolean
+  'console_setting.contact_links': string
+  'console_setting.contact_links_enabled': boolean
   DataExportEnabled: boolean
   DataExportDefaultTime: string
   DataExportInterval: number
@@ -263,6 +265,9 @@ export type ModelSettings = {
   UserUsableGroups: string
   GroupGroupRatio: string
   AutoGroups: string
+  GroupDisplayOrder: string
+  GroupFallbackGroups: string
+  GroupNetworkRetryGroups: string
   MaxTokenAutoGroups: number
   DefaultUseAutoGroup: boolean
   'group_ratio_setting.group_special_usable_group': string
@@ -276,6 +281,8 @@ export type BillingSettings = {
   QuotaForInvitee: number
   TopUpLink: string
   RedemptionCopyTemplate: string
+  RedemptionTestQuota: number
+  RedemptionTestRepeatQuota: number
   'quota_setting.enable_free_model_pre_consume': boolean
   'quota_setting.trust_quota_usd': number
   'quota_setting.pre_consume_multiplier': number
@@ -304,6 +311,9 @@ export type BillingSettings = {
   UserUsableGroups: string
   GroupGroupRatio: string
   AutoGroups: string
+  GroupDisplayOrder: string
+  GroupFallbackGroups: string
+  GroupNetworkRetryGroups: string
   MaxTokenAutoGroups: number
   DefaultUseAutoGroup: boolean
   'group_ratio_setting.group_special_usable_group': string

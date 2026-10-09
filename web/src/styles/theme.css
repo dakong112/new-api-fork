@@ -178,6 +178,12 @@ For commercial licensing, please contact support@quantumnous.com
   );
 }
 
+/* The announcement bar lives inside the header; grow the shared height so
+ * the fixed sidebar and content area stay aligned under it. */
+:root:has([data-announcement-bar]) {
+  --app-header-height: 5rem;
+}
+
 .dark {
   /* OpenAI-like dark mode with a crisp charcoal canvas. */
   --background: oklch(0.235 0 0);

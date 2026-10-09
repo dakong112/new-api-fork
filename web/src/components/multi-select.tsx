@@ -71,6 +71,8 @@ interface MultiSelectProps {
   emptyText?: string
   /** Optional `id` to wire labels/aria-describedby to the input. */
   id?: string
+  /** Accessible name for the input. Defaults to the placeholder. */
+  ariaLabel?: string
   /** Disable the entire control. */
   disabled?: boolean
   /**
@@ -412,7 +414,7 @@ export function MultiSelect(props: MultiSelectProps) {
           }
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          aria-label={placeholder}
+          aria-label={props.ariaLabel ?? placeholder}
         />
       </ComboboxChips>
 

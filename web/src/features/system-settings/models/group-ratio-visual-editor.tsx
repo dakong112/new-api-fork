@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -18,10 +19,13 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   Search,
   X,
   Info,
+  Pencil,
   Plus,
   Trash2,
 } from 'lucide-react'
@@ -47,6 +51,7 @@ import {
 } from '@/components/drawer-layout'
 import { EmptyState } from '@/components/empty-state'
 import { StatusBadge } from '@/components/status-badge'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -78,11 +83,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toIntlLocale } from '@/i18n/languages'
 import { formatNumber } from '@/lib/format'
+import { sortGroupNames } from '@/lib/group-order'
+import { requireServerSuccess } from '@/lib/server-error-message'
 
+import { getGroupUsage } from '../api'
 import { safeJsonParse } from '../utils/json-parser'
+import { GroupRenameDialog } from './group-rename-dialog'
 import { GroupSpecialUsableRulesEditor } from './group-special-usable-editor'
 
 export type GroupSettingsSection =
@@ -90,6 +100,7 @@ export type GroupSettingsSection =
   | 'overrides'
   | 'visibility'
   | 'auto'
+  | 'fallback'
 
 type GroupRatioVisualEditorProps = {
   section: GroupSettingsSection
@@ -100,6 +111,13 @@ type GroupRatioVisualEditorProps = {
   userUsableGroups: string
   groupGroupRatio: string
   autoGroups: string
+  groupDisplayOrder: string
+  /** JSON object: group name -> ordered fallback group names. */
+  groupFallbackGroups: string
+  /** JSON array of groups that retry 502/504/524 on another channel. */
+  groupNetworkRetryGroups: string
+  /** Renaming reloads settings from the server, so it waits for a save. */
+  hasUnsavedChanges: boolean
   maxTokenAutoGroupsField: ReactNode
   groupSpecialUsableGroup: string
   onChange: (field: string, value: string) => void
@@ -107,6 +125,8 @@ type GroupRatioVisualEditorProps = {
 
 type GroupPricingRow = {
   _id: string
+  /** Added in this session; only these names are edited inline. */
+  isNew?: boolean
   name: string
   ratio: string
   topupRatio: string
@@ -180,6 +200,39 @@ function buildGroupPricingRows(
   }))
 }
 
+function normalizeOrderJson(groupDisplayOrder: string): string {
+  try {
+    const parsed: unknown = JSON.parse(groupDisplayOrder || '[]')
+    return JSON.stringify(Array.isArray(parsed) ? parsed : [])
+  } catch {
+    return '[]'
+  }
+}
+
+function orderGroupPricingRows(
+  rows: GroupPricingRow[],
+  groupDisplayOrder: string
+): GroupPricingRow[] {
+  let order: string[] = []
+  try {
+    const parsed: unknown = JSON.parse(groupDisplayOrder || '[]')
+    if (Array.isArray(parsed)) {
+      order = parsed.filter((g) => typeof g === 'string')
+    }
+  } catch {
+    // An unparsable draft (JSON mode) keeps the current order.
+  }
+  const names = [...new Set(rows.map((row) => row.name.trim()))]
+  const rank = new Map(
+    sortGroupNames(names.filter(Boolean), order).map((name, i) => [name, i])
+  )
+  // Stable sort keeps every row, including duplicate names mid-edit; rows
+  // without a name yet (just added) stay at the end.
+  const rankOf = (row: GroupPricingRow) =>
+    rank.get(row.name.trim()) ?? Number.POSITIVE_INFINITY
+  return [...rows].sort((a, b) => rankOf(a) - rankOf(b))
+}
+
 function serializeGroupPricingRows(rows: GroupPricingRow[]) {
   const groupRatio: Record<string, number> = {}
   const userUsableGroups: Record<string, string> = {}
@@ -242,6 +295,8 @@ type GroupNameSelectProps = {
   placeholder: string
   onValueChange: (value: string) => void
   className?: string
+  /** Accessible name when the placeholder is not unique on the page. */
+  ariaLabel?: string
 }
 
 function GroupNameSelect(props: GroupNameSelectProps) {
@@ -261,7 +316,7 @@ function GroupNameSelect(props: GroupNameSelectProps) {
       }}
       className={props.className ?? 'w-48'}
       placeholder={props.placeholder}
-      aria-label={props.placeholder}
+      aria-label={props.ariaLabel ?? props.placeholder}
     />
   )
 }
@@ -275,6 +330,10 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
   userUsableGroups,
   groupGroupRatio,
   autoGroups,
+  groupDisplayOrder,
+  groupFallbackGroups,
+  groupNetworkRetryGroups,
+  hasUnsavedChanges,
   maxTokenAutoGroupsField,
   groupSpecialUsableGroup,
   onChange,
@@ -363,6 +422,9 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
           <TabsTrigger value='auto' className='px-3'>
             {t('Auto group order')}
           </TabsTrigger>
+          <TabsTrigger value='fallback' className='px-3'>
+            {t('Fallback groups')}
+          </TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value='pricing' keepMounted>
@@ -370,6 +432,8 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
           groupRatio={groupRatio}
           userUsableGroups={userUsableGroups}
           topupGroupRatio={topupGroupRatio}
+          groupDisplayOrder={groupDisplayOrder}
+          hasUnsavedChanges={hasUnsavedChanges}
           onChange={onChange}
           onShowDetail={setDetailGroup}
         />
@@ -455,6 +519,18 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
         </Card>
       </TabsContent>
 
+      <TabsContent value='fallback' keepMounted>
+        <GroupFallbackEditor
+          groupNames={registryNames}
+          value={groupFallbackGroups}
+          onChange={(value) => onChange('GroupFallbackGroups', value)}
+          networkRetryGroups={groupNetworkRetryGroups}
+          onNetworkRetryChange={(value) =>
+            onChange('GroupNetworkRetryGroups', value)
+          }
+        />
+      </TabsContent>
+
       <GroupDetailSheet
         groupName={detailGroup}
         onOpenChange={(open) => {
@@ -471,10 +547,167 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
   )
 })
 
+type GroupFallbackEditorProps = {
+  groupNames: string[]
+  value: string
+  onChange: (value: string) => void
+  networkRetryGroups: string
+  onNetworkRetryChange: (value: string) => void
+}
+
+/**
+ * One row per group: the backup groups a request moves to, in order, when
+ * every channel of the group fails. Groups a user cannot select are skipped
+ * at request time, and billing follows the group that served the request.
+ */
+function GroupFallbackEditor(props: GroupFallbackEditorProps) {
+  const { t, i18n } = useTranslation()
+  const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
+  const fallbacks = useMemo(
+    () =>
+      safeJsonParse<Record<string, string[]>>(props.value, {
+        fallback: {},
+        context: 'fallback groups',
+      }),
+    [props.value]
+  )
+  const networkRetryGroups = useMemo(
+    () =>
+      safeJsonParse<string[]>(props.networkRetryGroups, {
+        fallback: [],
+        context: 'network retry groups',
+      }),
+    [props.networkRetryGroups]
+  )
+  const groups = props.groupNames.filter((name) => name !== 'auto')
+
+  const toggleNetworkRetry = (group: string, enabled: boolean) => {
+    const next = networkRetryGroups.filter((name) => name !== group)
+    if (enabled) next.push(group)
+    props.onNetworkRetryChange(JSON.stringify(next, null, 2))
+  }
+
+  const update = (group: string, list: string[]) => {
+    const next = { ...fallbacks, [group]: list }
+    if (list.length === 0) delete next[group]
+    props.onChange(JSON.stringify(next, null, 2))
+  }
+
+  return (
+    <Card className={sectionCardClassName}>
+      <CardHeader className={sectionHeaderClassName}>
+        <CardTitle>{t('Fallback groups')}</CardTitle>
+        <CardDescription>
+          {t(
+            'When every channel of a group fails for a model, requests move to its fallback groups from top to bottom. Drag or use the arrows to change the order. Fallback groups the user cannot select are skipped, and the request is billed at the ratio of the group that served it.'
+          )}
+          <span className='mt-1 block'>
+            {t(
+              'With network retry on, an upstream 502, 504 or 524 moves the request to an untried channel of the group, then to its fallback groups when the token allows cross-group retry. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.'
+            )}
+          </span>
+        </CardDescription>
+      </CardHeader>
+      <CardContent className='flex flex-col divide-y'>
+        {groups.length === 0 ? (
+          <EmptyState className='min-h-40' title={t('No groups configured')} />
+        ) : (
+          groups.map((group) => {
+            const list = fallbacks[group] ?? []
+            const move = (index: number, direction: 'up' | 'down') => {
+              const target = direction === 'up' ? index - 1 : index + 1
+              if (target < 0 || target >= list.length) return
+              const next = [...list]
+              ;[next[index], next[target]] = [next[target], next[index]]
+              update(group, next)
+            }
+            return (
+              <div
+                key={group}
+                className='grid gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[12rem_minmax(0,1fr)]'
+              >
+                <div className='flex min-w-0 flex-col gap-2 pt-2'>
+                  <span className='truncate text-sm font-medium' title={group}>
+                    {group}
+                  </span>
+                  <Label className='text-muted-foreground flex items-center gap-2 text-xs font-normal'>
+                    <Switch
+                      size='sm'
+                      checked={networkRetryGroups.includes(group)}
+                      onCheckedChange={(checked) =>
+                        toggleNetworkRetry(group, checked)
+                      }
+                    />
+                    {t('Retry 502/504/524 on another channel')}
+                  </Label>
+                </div>
+                <div className='flex min-w-0 flex-col gap-2'>
+                  <GroupNameSelect
+                    options={groups.filter(
+                      (name) => name !== group && !list.includes(name)
+                    )}
+                    value={null}
+                    className='w-full sm:w-64'
+                    placeholder={
+                      list.length === 0 ? t('No fallback') : t('Add group')
+                    }
+                    ariaLabel={t('Add fallback group for {{group}}', {
+                      group,
+                    })}
+                    onValueChange={(name) => update(group, [...list, name])}
+                  />
+                  {list.length > 0 && (
+                    <Reorder.Group
+                      as='ol'
+                      axis='y'
+                      values={list}
+                      onReorder={(next) => update(group, next)}
+                      aria-label={t('Fallback groups for {{group}}', {
+                        group,
+                      })}
+                      className='flex flex-col gap-2'
+                    >
+                      {list.map((name, index) => (
+                        <AutoGroupOrderItem
+                          key={name}
+                          group={name}
+                          index={index}
+                          count={list.length}
+                          onMove={move}
+                          onRemove={(removed) =>
+                            update(
+                              group,
+                              list.filter((item) => item !== removed)
+                            )
+                          }
+                          leading={
+                            <span className='text-muted-foreground w-5 shrink-0 text-center text-sm tabular-nums'>
+                              {formatNumber(index + 1, locale)}
+                            </span>
+                          }
+                        >
+                          {!groups.includes(name) && <UnknownGroupBadge />}
+                        </AutoGroupOrderItem>
+                      ))}
+                    </Reorder.Group>
+                  )}
+                </div>
+              </div>
+            )
+          })
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 type GroupPricingTableProps = {
   groupRatio: string
   userUsableGroups: string
   topupGroupRatio: string
+  /** JSON array of group names; the row order users see groups in. */
+  groupDisplayOrder: string
+  hasUnsavedChanges: boolean
   onChange: (field: string, value: string) => void
   onShowDetail: (name: string) => void
 }
@@ -483,13 +716,19 @@ function GroupPricingTable({
   groupRatio,
   userUsableGroups,
   topupGroupRatio,
+  groupDisplayOrder,
+  hasUnsavedChanges,
   onChange,
   onShowDetail,
 }: GroupPricingTableProps) {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
+  const [renamingGroup, setRenamingGroup] = useState<string | null>(null)
   const [rows, setRows] = useState<GroupPricingRow[]>(() =>
-    buildGroupPricingRows(groupRatio, userUsableGroups, topupGroupRatio)
+    orderGroupPricingRows(
+      buildGroupPricingRows(groupRatio, userUsableGroups, topupGroupRatio),
+      groupDisplayOrder
+    )
   )
 
   useEffect(() => {
@@ -500,15 +739,22 @@ function GroupPricingTable({
     )
     setRows((currentRows) => {
       if (groupPricingSignature(currentRows) === incomingSignature) {
-        return currentRows
+        // Our own edits echo back unchanged; only re-sort when the order
+        // changed elsewhere (form reset, JSON mode), so rows never jump
+        // while a name is being retyped.
+        const currentOrder = JSON.stringify(
+          currentRows.map((row) => row.name.trim()).filter(Boolean)
+        )
+        return currentOrder === normalizeOrderJson(groupDisplayOrder)
+          ? currentRows
+          : orderGroupPricingRows(currentRows, groupDisplayOrder)
       }
-      return buildGroupPricingRows(
-        groupRatio,
-        userUsableGroups,
-        topupGroupRatio
+      return orderGroupPricingRows(
+        buildGroupPricingRows(groupRatio, userUsableGroups, topupGroupRatio),
+        groupDisplayOrder
       )
     })
-  }, [groupRatio, userUsableGroups, topupGroupRatio])
+  }, [groupRatio, userUsableGroups, topupGroupRatio, groupDisplayOrder])
 
   const emitRows = useCallback(
     (nextRows: GroupPricingRow[]) => {
@@ -517,8 +763,29 @@ function GroupPricingTable({
       onChange('GroupRatio', serialized.GroupRatio)
       onChange('UserUsableGroups', serialized.UserUsableGroups)
       onChange('TopupGroupRatio', serialized.TopupGroupRatio)
+      // Row order is the display order, so renames and deletes stay in sync.
+      onChange(
+        'GroupDisplayOrder',
+        JSON.stringify(
+          nextRows.map((row) => row.name.trim()).filter(Boolean),
+          null,
+          2
+        )
+      )
     },
     [onChange]
+  )
+
+  const moveRow = useCallback(
+    (id: string, offset: -1 | 1) => {
+      const from = rows.findIndex((row) => row._id === id)
+      const to = from + offset
+      if (from < 0 || to < 0 || to >= rows.length) return
+      const nextRows = [...rows]
+      ;[nextRows[from], nextRows[to]] = [nextRows[to], nextRows[from]]
+      emitRows(nextRows)
+    },
+    [emitRows, rows]
   )
 
   const updateRow = useCallback(
@@ -547,6 +814,7 @@ function GroupPricingTable({
       ...rows,
       {
         _id: createGroupPricingId(),
+        isNew: true,
         name,
         ratio: '1',
         topupRatio: '',
@@ -574,6 +842,24 @@ function GroupPricingTable({
       .filter(([, count]) => count > 1)
       .map(([name]) => name)
   }, [rows])
+
+  // Groups are bound by name, so a renamed or removed group strands every
+  // channel, token and user still on the old name. Compare against the
+  // draft rows so the warning appears before the change is saved.
+  const usageQuery = useQuery({
+    queryKey: ['group-usage'],
+    queryFn: async () => requireServerSuccess(await getGroupUsage()).data ?? [],
+  })
+  const usageByName = useMemo(
+    () => new Map((usageQuery.data ?? []).map((u) => [u.name, u])),
+    [usageQuery.data]
+  )
+  const strandedGroups = useMemo(() => {
+    const names = new Set(rows.map((row) => row.name.trim()))
+    return (usageQuery.data ?? [])
+      .filter((u) => u.name !== 'auto' && !names.has(u.name))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [rows, usageQuery.data])
 
   const query = search.trim().toLowerCase()
   const visibleRows = rows.filter(
@@ -625,8 +911,40 @@ function GroupPricingTable({
               </InputGroupAddon>
             )}
           </InputGroup>
+          {strandedGroups.length > 0 && (
+            <Alert variant='destructive'>
+              <AlertTriangle className='h-4 w-4' />
+              <AlertTitle>
+                {t('Groups in use but missing from this table')}
+              </AlertTitle>
+              <AlertDescription>
+                <p>
+                  {t(
+                    'These group names are still set on channels, tokens or users. Requests using them fail. Rename them back here, or update the channels, tokens and users.'
+                  )}
+                </p>
+                <ul className='mt-2 list-disc space-y-0.5 pl-5'>
+                  {strandedGroups.map((u) => (
+                    <li key={u.name}>
+                      <span className='font-mono font-medium'>{u.name}</span>
+                      {' — '}
+                      {t(
+                        '{{channels}} channels ({{enabled}} enabled), {{tokens}} tokens, {{users}} users',
+                        {
+                          channels: u.channels,
+                          enabled: u.enabled_channels,
+                          tokens: u.tokens,
+                          users: u.users,
+                        }
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
           <StaticDataTable
-            tableClassName='min-w-[760px]'
+            tableClassName='min-w-[860px]'
             tableProps={{ 'aria-label': t('Pricing groups') }}
             data={visibleRows}
             getRowKey={(row) => row._id}
@@ -658,9 +976,20 @@ function GroupPricingTable({
                 header: t('Group name'),
                 className: 'min-w-40',
                 cell: (row) => (
+                  // Existing names are read-only: groups are bound by name, so
+                  // they change through Rename, which updates every reference.
                   <Input
                     value={row.name}
                     aria-label={t('Group name')}
+                    readOnly={!row.isNew}
+                    title={
+                      row.isNew
+                        ? undefined
+                        : t(
+                            'Use the rename button to change an existing group name'
+                          )
+                    }
+                    className={row.isNew ? undefined : 'bg-muted/40'}
                     onChange={(event) =>
                       updateRow(row._id, 'name', event.target.value)
                     }
@@ -720,6 +1049,43 @@ function GroupPricingTable({
                 ),
               },
               {
+                id: 'channels',
+                header: t('Usable channels'),
+                className: 'w-28 text-center',
+                cellClassName: 'text-center',
+                cell: (row) => {
+                  if (!usageQuery.data) {
+                    return <span className='text-muted-foreground'>-</span>
+                  }
+                  const usage = usageByName.get(row.name.trim())
+                  const enabled = usage?.enabled_channels ?? 0
+                  const total = usage?.channels ?? 0
+                  if (enabled === 0) {
+                    return (
+                      <span
+                        title={t(
+                          'No enabled channel serves this group; requests using it fail.'
+                        )}
+                      >
+                        <StatusBadge
+                          label={t('None ({{enabled}}/{{total}})', {
+                            enabled,
+                            total,
+                          })}
+                          variant='danger'
+                          copyable={false}
+                        />
+                      </span>
+                    )
+                  }
+                  return (
+                    <span className='tabular-nums'>
+                      {enabled}/{total}
+                    </span>
+                  )
+                },
+              },
+              {
                 id: 'description',
                 header: t('Description'),
                 className: 'min-w-56',
@@ -749,6 +1115,46 @@ function GroupPricingTable({
                     <Button
                       variant='ghost'
                       size='sm'
+                      onClick={() => moveRow(row._id, -1)}
+                      disabled={Boolean(query) || rows[0]?._id === row._id}
+                      aria-label={t('Move {{group}} up', {
+                        group: row.name.trim(),
+                      })}
+                    >
+                      <ArrowUp className='h-4 w-4' />
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => moveRow(row._id, 1)}
+                      disabled={Boolean(query) || rows.at(-1)?._id === row._id}
+                      aria-label={t('Move {{group}} down', {
+                        group: row.name.trim(),
+                      })}
+                    >
+                      <ArrowDown className='h-4 w-4' />
+                    </Button>
+                    {!row.isNew && (
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => setRenamingGroup(row.name.trim())}
+                        disabled={hasUnsavedChanges}
+                        title={
+                          hasUnsavedChanges
+                            ? t('Save or discard your changes before renaming')
+                            : undefined
+                        }
+                        aria-label={t('Rename {{group}}', {
+                          group: row.name.trim(),
+                        })}
+                      >
+                        <Pencil className='h-4 w-4' />
+                      </Button>
+                    )}
+                    <Button
+                      variant='ghost'
+                      size='sm'
                       onClick={() => onShowDetail(row.name.trim())}
                       disabled={!row.name.trim()}
                       aria-label={t('Details')}
@@ -767,6 +1173,14 @@ function GroupPricingTable({
                 ),
               },
             ]}
+          />
+
+          <GroupRenameDialog
+            groupName={renamingGroup}
+            usage={renamingGroup ? usageByName.get(renamingGroup) : undefined}
+            onOpenChange={(open) => {
+              if (!open) setRenamingGroup(null)
+            }}
           />
 
           {duplicateNames.length > 0 && (

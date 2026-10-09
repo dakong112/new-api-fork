@@ -46,6 +46,8 @@ function Fixture() {
             QuotaForInvitee: 0,
             TopUpLink: '',
             RedemptionCopyTemplate: '',
+            RedemptionTestQuota: 1000000,
+            RedemptionTestRepeatQuota: 750000,
             quota_setting: {
               enable_free_model_pre_consume: true,
               trust_quota_usd: 10,
@@ -146,3 +148,27 @@ test.each(['', '-1'])(
     expect(api.put).not.toHaveBeenCalled()
   }
 )
+
+test('test redemption code values are edited in currency and saved as quota units', async () => {
+  const user = userEvent.setup()
+  await renderSettings()
+  const faceValue = screen.getByRole('spinbutton', {
+    name: 'Test redemption code value (USD)',
+  })
+  expect(faceValue).toHaveValue(2)
+  expect(
+    screen.getByRole('spinbutton', { name: 'Repeat test code credit (USD)' })
+  ).toHaveValue(1.5)
+
+  await user.clear(faceValue)
+  await user.type(faceValue, '3')
+  await user.tab()
+  await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+  await waitFor(() =>
+    expect(api.put).toHaveBeenCalledWith('/api/option/', {
+      key: 'RedemptionTestQuota',
+      value: 1500000,
+    })
+  )
+})

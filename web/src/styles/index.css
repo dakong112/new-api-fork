@@ -152,6 +152,16 @@ For commercial licensing, please contact support@quantumnous.com
   animation: skeleton-shimmer 1.8s ease-in-out infinite;
 }
 
+/* Header announcement ticker; content is rendered twice so -50% loops seamlessly. */
+@keyframes announcement-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @keyframes skeleton-shimmer {
   0% {
     background-position: 100% 50%;

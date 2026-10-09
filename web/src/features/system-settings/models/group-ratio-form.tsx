@@ -71,6 +71,9 @@ type GroupFormValues = {
   UserUsableGroups: string
   GroupGroupRatio: string
   AutoGroups: string
+  GroupDisplayOrder: string
+  GroupFallbackGroups: string
+  GroupNetworkRetryGroups: string
   MaxTokenAutoGroups: number
   DefaultUseAutoGroup: boolean
   GroupSpecialUsableGroup: string
@@ -172,6 +175,10 @@ export const GroupRatioForm = memo(function GroupRatioForm({
             userUsableGroups={values.UserUsableGroups ?? ''}
             groupGroupRatio={values.GroupGroupRatio ?? ''}
             autoGroups={values.AutoGroups ?? ''}
+            groupDisplayOrder={values.GroupDisplayOrder ?? '[]'}
+            groupFallbackGroups={values.GroupFallbackGroups ?? '{}'}
+            groupNetworkRetryGroups={values.GroupNetworkRetryGroups ?? '[]'}
+            hasUnsavedChanges={form.formState.isDirty}
             maxTokenAutoGroupsField={
               <FormField
                 control={form.control}

@@ -47,6 +47,9 @@ const getGroupDefaults = (settings: BillingSettings) => ({
   UserUsableGroups: settings.UserUsableGroups,
   GroupGroupRatio: settings.GroupGroupRatio,
   AutoGroups: settings.AutoGroups,
+  GroupDisplayOrder: settings.GroupDisplayOrder,
+  GroupFallbackGroups: settings.GroupFallbackGroups,
+  GroupNetworkRetryGroups: settings.GroupNetworkRetryGroups,
   MaxTokenAutoGroups: settings.MaxTokenAutoGroups,
   DefaultUseAutoGroup: settings.DefaultUseAutoGroup,
   GroupSpecialUsableGroup:
@@ -65,6 +68,8 @@ const BILLING_SECTIONS = [
           QuotaForInvitee: settings.QuotaForInvitee,
           TopUpLink: settings.TopUpLink,
           RedemptionCopyTemplate: settings.RedemptionCopyTemplate,
+          RedemptionTestQuota: settings.RedemptionTestQuota,
+          RedemptionTestRepeatQuota: settings.RedemptionTestRepeatQuota,
           quota_setting: {
             trust_quota_usd: settings['quota_setting.trust_quota_usd'],
             pre_consume_multiplier:

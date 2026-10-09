@@ -75,6 +75,8 @@ func GetStatus(c *gin.Context) {
 		"turnstile_site_key":          common.TurnstileSiteKey,
 		"docs_link":                   operation_setting.GetGeneralSetting().DocsLink,
 		"redemption_copy_template":    common.RedemptionCopyTemplate,
+		"redemption_test_quota":       common.RedemptionTestQuota,
+		"group_display_order":         common.GroupDisplayOrder,
 		"quota_per_unit":              common.QuotaPerUnit,
 		// 兼容旧前端：保留 display_in_currency，同时提供新的 quota_display_type
 		"display_in_currency":           operation_setting.IsCurrencyDisplay(),
@@ -107,6 +109,7 @@ func GetStatus(c *gin.Context) {
 		"uptime_kuma_enabled":   cs.UptimeKumaEnabled,
 		"announcements_enabled": cs.AnnouncementsEnabled,
 		"faq_enabled":           cs.FAQEnabled,
+		"contact_links_enabled": cs.ContactLinksEnabled,
 
 		// 模块管理配置
 		"HeaderNavModules":    common.OptionMap["HeaderNavModules"],
@@ -138,6 +141,9 @@ func GetStatus(c *gin.Context) {
 	}
 	if cs.FAQEnabled {
 		data["faq"] = console_setting.GetFAQ()
+	}
+	if cs.ContactLinksEnabled {
+		data["contact_links"] = console_setting.GetContactLinks()
 	}
 
 	// Add enabled custom OAuth providers

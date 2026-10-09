@@ -22,6 +22,7 @@ type Redemption struct {
 	RedeemedTime int64          `json:"redeemed_time" gorm:"bigint"`
 	Count        int            `json:"count" gorm:"-:all"` // only for api request
 	UsedUserId   int            `json:"used_user_id"`
+	IsTest       bool           `json:"is_test"`                    // first per user credits face value, later ones RedemptionTestRepeatQuota
 	UsedUsername string         `json:"used_username" gorm:"-:all"` // only for api response
 	DeletedAt    gorm.DeletedAt `gorm:"index"`
 	ExpiredTime  int64          `json:"expired_time" gorm:"bigint"` // 过期时间，0 表示不过期
@@ -170,6 +171,7 @@ func Redeem(key string, userId int) (quota int, err error) {
 		return 0, errors.New("无效的 user id")
 	}
 	redemption := &Redemption{}
+	repeatTest := false
 
 	keyCol := "`key`"
 	if common.UsingMainDatabase(common.DatabaseTypePostgreSQL) {
@@ -203,15 +205,47 @@ func Redeem(key string, userId int) (quota int, err error) {
 		if result.RowsAffected == 0 {
 			return errors.New("该兑换码已被使用")
 		}
-		return creditTopUpQuota(tx, userId, redemption.Quota, nil)
+		quota = redemption.Quota
+		if redemption.IsTest {
+			repeat, err := isRepeatTestRedemption(tx, userId, redemption.Id)
+			if err != nil {
+				return err
+			}
+			if repeat {
+				// Never credit more than the code's face value.
+				quota = min(redemption.Quota, common.RedemptionTestRepeatQuota)
+				repeatTest = true
+			}
+		}
+		return creditTopUpQuota(tx, userId, quota, nil)
 	})
 	if err != nil {
 		common.SysError("redemption failed: " + err.Error())
 		return 0, ErrRedeemFailed
 	}
-	syncCreditUserQuotaCache(userId, redemption.Quota, "redemption")
-	RecordLog(userId, LogTypeTopup, fmt.Sprintf("通过兑换码充值 %s，兑换码ID %d", logger.LogQuota(redemption.Quota), redemption.Id))
-	return redemption.Quota, nil
+	syncCreditUserQuotaCache(userId, quota, "redemption")
+	if repeatTest {
+		RecordLog(userId, LogTypeTopup, fmt.Sprintf("通过测试兑换码充值 %s（已兑换过测试码，面额 %s 按重复兑换额度到账），兑换码ID %d",
+			logger.LogQuota(quota), logger.LogQuota(redemption.Quota), redemption.Id))
+	} else {
+		RecordLog(userId, LogTypeTopup, fmt.Sprintf("通过兑换码充值 %s，兑换码ID %d", logger.LogQuota(quota), redemption.Id))
+	}
+	return quota, nil
+}
+
+// isRepeatTestRedemption reports whether userId already redeemed another test
+// code. It locks the user row first so two test codes redeemed concurrently by
+// the same user are serialized and only one of them credits the face value.
+func isRepeatTestRedemption(tx *gorm.DB, userId int, currentId int) (bool, error) {
+	var user User
+	if err := lockForUpdate(tx).Select("id").Where("id = ?", userId).First(&user).Error; err != nil {
+		return false, err
+	}
+	var used int64
+	err := tx.Model(&Redemption{}).
+		Where("used_user_id = ? AND is_test = ? AND id <> ?", userId, true, currentId).
+		Count(&used).Error
+	return used > 0, err
 }
 
 func (redemption *Redemption) Insert() error {

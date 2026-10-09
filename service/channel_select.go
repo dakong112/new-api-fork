@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
+	"strconv"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -50,6 +52,21 @@ type RetryParam struct {
 	resetNextTry bool
 }
 
+func (p *RetryParam) groupSwitchPending() bool {
+	return p.Ctx != nil && common.GetContextKeyBool(p.Ctx, constant.ContextKeyGroupSwitchPending)
+}
+
+// RemainingRetries is the retry budget left for the current attempt. A pending
+// switch to another group keeps at least one retry so the next group is tried
+// even when RetryTimes is 0.
+func (p *RetryParam) RemainingRetries() int {
+	remaining := common.RetryTimes - p.GetRetry()
+	if p.groupSwitchPending() {
+		remaining = max(remaining, 1)
+	}
+	return remaining
+}
+
 func (p *RetryParam) GetRetry() int {
 	if p.Retry == nil {
 		return 0
@@ -64,6 +81,12 @@ func (p *RetryParam) SetRetry(retry int) {
 func (p *RetryParam) IncreaseRetry() {
 	if p.resetNextTry {
 		p.resetNextTry = false
+		return
+	}
+	// A group switch prepared by another RetryParam (the distributor's) also
+	// starts the next group from its first priority.
+	if p.groupSwitchPending() {
+		p.SetRetry(0)
 		return
 	}
 	if p.Retry == nil {
@@ -117,17 +140,33 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 	selectGroup := param.TokenGroup
 	userGroup := common.GetContextKeyString(param.Ctx, constant.ContextKeyUserGroup)
 	filters := GetChannelConstraints(param.Ctx).Filters
+	common.SetContextKey(param.Ctx, constant.ContextKeyGroupSwitchPending, false)
+	// After a group network retry, skip every channel this request already
+	// tried and take the best remaining priority instead of the next tier.
+	networkRetry := common.GetContextKeyBool(param.Ctx, constant.ContextKeyNetworkRetry)
+	if networkRetry {
+		tried := make([]int, 0)
+		for _, raw := range param.Ctx.GetStringSlice("use_channel") {
+			if id, err := strconv.Atoi(raw); err == nil {
+				tried = append(tried, id)
+			}
+		}
+		filters = append(slices.Clone(filters), dto.ChannelFilter{Kind: dto.FilterExcludeChannels, ExcludeChannelIDs: tried})
+	}
+	groups := GetRequestGroupChain(param.Ctx, param.TokenGroup, userGroup)
 
-	if param.TokenGroup == "auto" {
-		autoGroups := GetRequestAutoGroups(param.Ctx, userGroup)
-		if len(autoGroups) == 0 {
+	if param.TokenGroup == "auto" || len(groups) > 1 {
+		if len(groups) == 0 {
 			return nil, selectGroup, errors.New("auto groups is not enabled")
 		}
 
 		// startGroupIndex: the group index to start searching from
 		// startGroupIndex: 开始搜索的分组索引
 		startGroupIndex := 0
-		crossGroupRetry := common.GetContextKeyBool(param.Ctx, constant.ContextKeyTokenCrossGroupRetry)
+		// Fallback groups are only in the chain when the token enables
+		// cross-group retry; Auto groups always are, but move on after a failure
+		// only with that switch.
+		crossGroupRetry := param.TokenGroup != "auto" || common.GetContextKeyBool(param.Ctx, constant.ContextKeyTokenCrossGroupRetry)
 
 		if lastGroupIndex, exists := common.GetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex); exists {
 			if idx, ok := lastGroupIndex.(int); ok {
@@ -135,14 +174,18 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			}
 		}
 
-		for i := startGroupIndex; i < len(autoGroups); i++ {
-			autoGroup := autoGroups[i]
+		for i := startGroupIndex; i < len(groups); i++ {
+			autoGroup := groups[i]
 			// Calculate priorityRetry for current group
 			// 计算当前分组的 priorityRetry
-			priorityRetry := param.GetRetry()
+			attempt := param.GetRetry()
 			// If moved to a new group, reset priorityRetry and update startRetryIndex
 			// 如果切换到新分组，重置 priorityRetry 并更新 startRetryIndex
 			if i > startGroupIndex {
+				attempt = 0
+			}
+			priorityRetry := attempt
+			if networkRetry {
 				priorityRetry = 0
 			}
 			logger.LogDebug(param.Ctx, "Auto selecting group: %s, priorityRetry: %d", autoGroup, priorityRetry)
@@ -154,6 +197,10 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 				filters,
 			)
 			if channel == nil {
+				// Without cross-group retry a network retry stays in its group.
+				if networkRetry && !crossGroupRetry {
+					break
+				}
 				// Current group has no available channel for this model, try next group
 				// 当前分组没有该模型的可用渠道，尝试下一个分组
 				logger.LogDebug(param.Ctx, "No available channel in group %s for model %s at priorityRetry %d, trying next group", autoGroup, param.ModelName, priorityRetry)
@@ -171,7 +218,9 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 
 			// Prepare state for next retry
 			// 为下一次重试准备状态
-			if crossGroupRetry && priorityRetry >= common.RetryTimes {
+			// The last group keeps its own retries so the final error stays the
+			// upstream one rather than "no channel".
+			if crossGroupRetry && attempt >= common.RetryTimes && i+1 < len(groups) {
 				// Current group has exhausted all retries, prepare to switch to next group
 				// This request still uses current group, but next retry will use next group
 				// 当前分组已用完所有重试次数，准备切换到下一个分组
@@ -182,6 +231,7 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 				// 重置重试计数器，以便外层循环可以为下一个分组继续
 				param.SetRetry(0)
 				param.ResetRetryNextTry()
+				common.SetContextKey(param.Ctx, constant.ContextKeyGroupSwitchPending, true)
 			} else {
 				// Stay in current group, save current state
 				// 保持在当前分组，保存当前状态
@@ -190,10 +240,14 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			break
 		}
 	} else {
+		priorityRetry := param.GetRetry()
+		if networkRetry {
+			priorityRetry = 0
+		}
 		channel, err = model.GetRandomSatisfiedChannel(
 			param.TokenGroup,
 			param.ModelName,
-			param.GetRetry(),
+			priorityRetry,
 			filters,
 		)
 		if err != nil {
@@ -309,7 +363,10 @@ func SelectChannelForRequest(c *gin.Context, modelName string, retry *RetryParam
 	usingGroup := retry.TokenGroup
 	var channel *model.Channel
 	var selectGroup string
-	if retry.GetRetry() == 0 {
+	// Affinity applies to the first attempt only, not to the fresh retry
+	// counter a switch to a fallback group starts with.
+	groupIndex, _ := common.GetContextKey(c, constant.ContextKeyAutoGroupIndex)
+	if switchedGroups, _ := groupIndex.(int); retry.GetRetry() == 0 && switchedGroups == 0 {
 		if preferredChannelID, found := GetPreferredChannelByAffinity(c, modelName, usingGroup); found {
 			affinityUsable := false
 			preferred, err := model.CacheGetChannel(preferredChannelID)

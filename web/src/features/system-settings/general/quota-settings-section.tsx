@@ -23,6 +23,7 @@ import type { Resolver } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import * as z from 'zod'
 
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Form,
@@ -36,7 +37,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { formatQuota } from '@/lib/format'
+import { getCurrencyLabel } from '@/lib/currency'
+import {
+  formatQuota,
+  getEditableQuotaStep,
+  parseQuotaFromDollars,
+  quotaUnitsToEditableAmount,
+} from '@/lib/format'
 
 import { FormDirtyIndicator } from '../components/form-dirty-indicator'
 import { FormNavigationGuard } from '../components/form-navigation-guard'
@@ -58,6 +65,8 @@ const quotaSchema = z.object({
   QuotaForInvitee: z.coerce.number().min(0),
   TopUpLink: z.string(),
   RedemptionCopyTemplate: z.string(),
+  RedemptionTestQuota: z.coerce.number().int().positive(),
+  RedemptionTestRepeatQuota: z.coerce.number().int().positive(),
   quota_setting: z.object({
     enable_free_model_pre_consume: z.boolean(),
     trust_quota_usd: z.preprocess(
@@ -345,6 +354,78 @@ export function QuotaSettingsSection({
                   <FormDescription>
                     {t(
                       'Text copied by the template button in Redemption Codes. Placeholders: {code}, {name}, {quota}, {expires}. Leave empty to hide the button.'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='RedemptionTestQuota'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    {t('Test redemption code value')} ({getCurrencyLabel()})
+                  </FormLabel>
+                  <FormControl>
+                    <DraftNumberInput
+                      value={quotaUnitsToEditableAmount(
+                        Number(field.value) || 0
+                      )}
+                      onValueChange={(amount) =>
+                        field.onChange(parseQuotaFromDollars(amount))
+                      }
+                      step={getEditableQuotaStep()}
+                      min={0}
+                      name={field.name}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Value of new test redemption codes, credited in full on the first test code of each user ({{formattedQuota}})',
+                      {
+                        formattedQuota: formatQuotaInputValue(field.value),
+                      }
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='RedemptionTestRepeatQuota'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    {t('Repeat test code credit')} ({getCurrencyLabel()})
+                  </FormLabel>
+                  <FormControl>
+                    <DraftNumberInput
+                      value={quotaUnitsToEditableAmount(
+                        Number(field.value) || 0
+                      )}
+                      onValueChange={(amount) =>
+                        field.onChange(parseQuotaFromDollars(amount))
+                      }
+                      step={getEditableQuotaStep()}
+                      min={0}
+                      name={field.name}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Credited when a user redeems another test code after their first ({{formattedQuota}})',
+                      {
+                        formattedQuota: formatQuotaInputValue(field.value),
+                      }
                     )}
                   </FormDescription>
                   <FormMessage />

@@ -48,6 +48,8 @@ export type ApiKeyGroupOption = {
   label: string
   desc?: string
   ratio?: number | string
+  /** Groups tried next, in order, when every channel of this group fails. */
+  fallbackGroups?: string[]
 }
 
 type ApiKeyGroupComboboxProps = {

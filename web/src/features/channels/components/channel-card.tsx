@@ -20,10 +20,12 @@ import { flexRender, type Row } from '@tanstack/react-table'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { TruncatedCell } from '@/components/data-table/core/truncated-cell'
 import { GroupBadge } from '@/components/group-badge'
 import { StatusBadgeTypeContext } from '@/components/status-badge'
 
 import { CHANNEL_STATUS } from '../constants'
+import { useChannelGroupRatios } from '../hooks/use-channel-group-ratios'
 import { isTagAggregateRow, parseGroupsList } from '../lib'
 import type { Channel } from '../types'
 import { ChannelRowActionsLayoutContext } from './channel-row-actions-context'
@@ -48,6 +50,7 @@ function ChannelCardComponent({
 }) {
   const { t } = useTranslation()
   const { sensitiveVisible } = useChannels()
+  const groupRatios = useChannelGroupRatios()
   const isTagRow = isTagAggregateRow(row.original)
   const cells = row.getAllCells()
 
@@ -60,6 +63,11 @@ function ChannelCardComponent({
   }
 
   const groups = parseGroupsList(row.original.group ?? '')
+  const baseUrl = row.original.base_url?.trim() ?? ''
+  const models = (row.original.models ?? '')
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean)
 
   const selectCell = renderCell('select')
   const typeCell = renderCell('type')
@@ -149,6 +157,55 @@ function ChannelCardComponent({
           </div>
         </StatusBadgeTypeContext.Provider>
 
+        {/* Address and models; tag rows aggregate several channels, so skip. */}
+        {!isTagRow && (
+          <dl className='grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 text-xs'>
+            <dt className={labelClass}>{t('Base URL')}</dt>
+            <dd className='min-w-0'>
+              {!sensitiveVisible && (
+                <span className='text-muted-foreground'>{SENSITIVE_MASK}</span>
+              )}
+              {sensitiveVisible && baseUrl && (
+                <a
+                  href={baseUrl}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  title={t('Open in new tab')}
+                  className='text-primary block truncate font-mono hover:underline'
+                >
+                  {baseUrl}
+                </a>
+              )}
+              {sensitiveVisible && !baseUrl && (
+                <span className='text-muted-foreground'>{t('Default')}</span>
+              )}
+            </dd>
+            <dt className={labelClass}>{t('Models')}</dt>
+            <dd className='min-w-0'>
+              {models.length === 0 ? (
+                <span className='text-muted-foreground'>-</span>
+              ) : (
+                <TruncatedCell
+                  className='font-mono'
+                  tooltipClassName='max-w-sm'
+                  tooltipContent={
+                    <div className='max-h-64 overflow-y-auto'>
+                      <p className='mb-1 font-medium'>
+                        {t('{{count}} models', { count: models.length })}
+                      </p>
+                      <p className='font-mono break-all whitespace-pre-line'>
+                        {models.join('\n')}
+                      </p>
+                    </div>
+                  }
+                >
+                  {models.join(', ')}
+                </TruncatedCell>
+              )}
+            </dd>
+          </dl>
+        )}
+
         {/* Groups retain their compact, full-width footer. */}
         <div className='min-w-0'>
           {groups.length > 0 ? (
@@ -158,6 +215,7 @@ function ChannelCardComponent({
                   key={g}
                   group={g}
                   label={sensitiveVisible ? undefined : SENSITIVE_MASK}
+                  ratio={sensitiveVisible ? groupRatios[g] : undefined}
                   size='sm'
                 />
               ))}

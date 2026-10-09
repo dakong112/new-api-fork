@@ -33,12 +33,13 @@ export function NoticeDialog() {
   const { notice, unreadNoticeCount } = useNotifications()
   const markNoticeRead = useNotificationStore((s) => s.markNoticeRead)
   const setClosedUntilDate = useNotificationStore((s) => s.setClosedUntilDate)
-  const closedToday = useNotificationStore((s) => s.isNoticeClosed())
+  const closedToday = useNotificationStore((s) => s.isNoticeClosed(notice))
 
   const open = unreadNoticeCount > 0 && !closedToday
 
   const handleClose = () => markNoticeRead(notice)
-  const handleCloseToday = () => setClosedUntilDate(new Date().toDateString())
+  const handleCloseToday = () =>
+    setClosedUntilDate(new Date().toDateString(), notice)
 
   return (
     <Dialog

@@ -67,12 +67,31 @@ function useGroupRatios(): Record<string, number | string> {
   return data ?? EMPTY_GROUP_RATIOS
 }
 
+const EMPTY_GROUP_FALLBACKS: Record<string, string[]> = {}
+
+function useGroupFallbacks(): Record<string, string[]> {
+  const { data } = useQuery({
+    queryKey: ['user-groups'],
+    queryFn: async () => requireServerSuccess(await getUserGroups()),
+    staleTime: 0,
+    select: (res) =>
+      Object.fromEntries(
+        Object.entries(res.data ?? {}).map(([group, info]) => [
+          group,
+          info.fallback_groups ?? [],
+        ])
+      ),
+  })
+  return data ?? EMPTY_GROUP_FALLBACKS
+}
+
 export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
   const { t, i18n } = useTranslation()
   useSystemConfigStore((state) => state.config.currency)
   const { meta: currency } = getCurrencyDisplay()
   const quotaUnit = currency.kind === 'tokens' ? t('Tokens') : currency.symbol
   const groupRatios = useGroupRatios()
+  const groupFallbacks = useGroupFallbacks()
   const shouldReduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
   const justNowLabel = t('Just now')
@@ -159,6 +178,7 @@ export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
               group={group}
               ratio={groupRatios[group]}
               crossGroupRetry={apiKey.cross_group_retry}
+              fallbackGroups={groupFallbacks[group]}
               shouldReduceMotion={shouldReduceMotion}
             />
           )
@@ -233,6 +253,15 @@ export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
         meta: { pinned: 'right' as const },
       },
     ],
-    [t, quotaUnit, now, groupRatios, shouldReduceMotion, locale, justNowLabel]
+    [
+      t,
+      quotaUnit,
+      now,
+      groupRatios,
+      groupFallbacks,
+      shouldReduceMotion,
+      locale,
+      justNowLabel,
+    ]
   )
 }

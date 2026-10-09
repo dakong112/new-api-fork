@@ -18,7 +18,13 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, KeyRound, Settings2, WalletCards } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  KeyRound,
+  Settings2,
+  WalletCards,
+} from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm, type SubmitErrorHandler } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -35,6 +41,7 @@ import {
   sideDrawerHeaderClassName,
   sideDrawerSwitchItemClassName,
 } from '@/components/drawer-layout'
+import { GroupBadge } from '@/components/group-badge'
 import { MultiSelect } from '@/components/multi-select'
 import { Button } from '@/components/ui/button'
 import {
@@ -67,6 +74,7 @@ import { RelatedPolicyLink } from '@/features/system-settings/request-policies/r
 import { useStatus } from '@/hooks/use-status'
 import { getUserModels, getUserGroups } from '@/lib/api'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
+import { sortGroupNames, useGroupDisplayOrder } from '@/lib/group-order'
 import { handleServerError } from '@/lib/handle-server-error'
 import { requireServerSuccess } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
@@ -160,16 +168,17 @@ export function ApiKeysMutateDrawer({
   })
 
   const models = modelsData?.data || []
-  const groups = useMemo<ApiKeyGroupOption[]>(
-    () =>
-      Object.entries(groupsData?.data || {}).map(([key, info]) => ({
-        value: key,
-        label: key,
-        desc: info.desc || key,
-        ratio: info.ratio,
-      })),
-    [groupsData]
-  )
+  const groupOrder = useGroupDisplayOrder()
+  const groups = useMemo<ApiKeyGroupOption[]>(() => {
+    const data = groupsData?.data || {}
+    return sortGroupNames(Object.keys(data), groupOrder).map((key) => ({
+      value: key,
+      label: key,
+      desc: data[key].desc || key,
+      ratio: data[key].ratio,
+      fallbackGroups: data[key].fallback_groups ?? [],
+    }))
+  }, [groupsData, groupOrder])
   const backendHasAuto = groups.some((g) => g.value === 'auto')
   const availableAutoGroupNames = useMemo(
     () => groups.filter((group) => group.value !== 'auto').map((g) => g.value),
@@ -263,6 +272,8 @@ export function ApiKeysMutateDrawer({
     isUpdate && currentRow ? `update:${currentRow.id}` : 'create'
   const isFormInitialized = initializedTarget === formTarget
   const selectedGroup = form.watch('group')
+  const fallbackGroups =
+    groups.find((g) => g.value === selectedGroup)?.fallbackGroups ?? []
 
   // Correct group after groups load: if the form value is not in available groups, fall back
   useEffect(() => {
@@ -427,18 +438,7 @@ export function ApiKeysMutateDrawer({
                       <ApiKeyGroupCombobox
                         options={groups}
                         value={field.value}
-                        onValueChange={(group) => {
-                          field.onChange(group)
-                          if (group === 'auto') {
-                            form.setValue('cross_group_retry', true, {
-                              shouldDirty: true,
-                            })
-                            return
-                          }
-                          form.setValue('cross_group_retry', false, {
-                            shouldDirty: true,
-                          })
-                        }}
+                        onValueChange={field.onChange}
                         placeholder={t('Select a group')}
                       />
                     </FormControl>
@@ -483,6 +483,40 @@ export function ApiKeysMutateDrawer({
                         />
                       </FormControl>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {selectedGroup !== 'auto' && fallbackGroups.length > 0 && (
+                <FormField
+                  control={form.control}
+                  name='cross_group_retry'
+                  render={({ field }) => (
+                    <FormItem className={sideDrawerSwitchItemClassName()}>
+                      <div className='flex min-w-0 flex-col gap-1'>
+                        <FormLabel className='text-sm'>
+                          {t('Fallback group retry')}
+                        </FormLabel>
+                        <FormDescription className='text-xs'>
+                          {t(
+                            'When enabled, requests retry the channels of this group first, then move to the fallback groups in order, and fail only after every group fails.'
+                          )}
+                        </FormDescription>
+                        <GroupExecutionChain
+                          groups={
+                            field.value
+                              ? [selectedGroup ?? '', ...fallbackGroups]
+                              : [selectedGroup ?? '']
+                          }
+                        />
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={!!field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
@@ -765,5 +799,29 @@ export function ApiKeysMutateDrawer({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+  )
+}
+
+/** The groups a request walks through, in order, shown as a chain. */
+function GroupExecutionChain(props: { groups: string[] }) {
+  const { t } = useTranslation()
+  return (
+    <div
+      className='flex flex-wrap items-center gap-1 pt-1 text-xs'
+      aria-label={t('Group execution chain')}
+    >
+      <span className='text-muted-foreground'>{t('Execution chain')}:</span>
+      {props.groups.map((group, index) => (
+        <span key={group} className='inline-flex items-center gap-1'>
+          {index > 0 && (
+            <ChevronRight
+              className='text-muted-foreground size-3'
+              aria-hidden='true'
+            />
+          )}
+          <GroupBadge group={group} />
+        </span>
+      ))}
+    </div>
   )
 }

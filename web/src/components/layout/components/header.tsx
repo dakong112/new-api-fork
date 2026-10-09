@@ -19,21 +19,25 @@ For commercial licensing, please contact support@quantumnous.com
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 
-type HeaderProps = React.HTMLAttributes<HTMLElement>
+type HeaderProps = React.HTMLAttributes<HTMLElement> & {
+  /** Full-width strip rendered under the header row. */
+  banner?: React.ReactNode
+}
 
-export function Header({ className, children, ...props }: HeaderProps) {
+export function Header({ className, children, banner, ...props }: HeaderProps) {
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 h-[var(--app-header-height,3rem)] w-full shrink-0 bg-transparent',
+        'sticky top-0 z-40 flex h-[var(--app-header-height,3rem)] w-full shrink-0 flex-col bg-transparent',
         className
       )}
       {...props}
     >
-      <div className='flex h-full items-center gap-1.5 px-2 sm:gap-2 sm:px-3'>
+      <div className='flex h-12 shrink-0 items-center gap-1.5 px-2 sm:gap-2 sm:px-3'>
         <SidebarTrigger variant='ghost' className='size-8' />
         {children}
       </div>
+      {banner}
     </header>
   )
 }

@@ -32,6 +32,7 @@ const STATUS_RELATED_KEYS = new Set([
   'SidebarModulesAdmin',
   'Notice',
   'RedemptionCopyTemplate',
+  'RedemptionTestQuota',
   'LogConsumeEnabled',
   'QuotaPerUnit',
   'USDExchangeRate',

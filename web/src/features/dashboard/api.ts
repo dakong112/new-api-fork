@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { api } from '@/lib/api'
 
+import type { buildQueryParams } from './lib/filters'
 import type {
   FlowQuotaDataItem,
   QuotaDataItem,
@@ -32,15 +33,13 @@ import type {
 // Quota & Usage Data
 // ----------------------------------------------------------------------------
 
+/** Time range plus the optional model / group / API key / channel filters. */
+type DashboardQueryParams = ReturnType<typeof buildQueryParams>
+
 // Get user quota data within a time range
 // Admin users get all users' data by default.
 export async function getUserQuotaDates(
-  params: {
-    start_timestamp: number
-    end_timestamp: number
-    default_time?: string
-    username?: string
-  },
+  params: DashboardQueryParams,
   isAdmin = false
 ) {
   const endpoint = isAdmin ? '/api/data' : '/api/data/self'
@@ -67,12 +66,7 @@ export async function getUserQuotaDataByUsers(params: {
 }
 
 export async function getFlowQuotaDates(
-  params: {
-    start_timestamp: number
-    end_timestamp: number
-    default_time?: string
-    username?: string
-  },
+  params: DashboardQueryParams,
   isAdmin = false
 ) {
   const endpoint = isAdmin ? '/api/data/flow' : '/api/data/flow/self'

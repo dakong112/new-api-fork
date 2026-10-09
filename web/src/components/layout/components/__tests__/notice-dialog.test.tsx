@@ -57,6 +57,7 @@ describe('NoticeDialog', () => {
       lastReadNotice: '',
       readAnnouncementKeys: [],
       closedUntilDate: null,
+      closedNotice: '',
     })
   })
 
@@ -116,6 +117,21 @@ describe('NoticeDialog', () => {
 
     expect(await screen.findByRole('dialog')).toBeTruthy()
     expect(screen.getByText('New notice')).toBeTruthy()
+  })
+
+  it('opens a newly published notice even after Close Today on the previous one', async () => {
+    mockNotice('Maintenance on Friday')
+    const view = renderDialog()
+    await screen.findByRole('dialog')
+    await userEvent.click(footerButton('Close Today'))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+
+    view.unmount()
+    mockNotice('Maintenance moved to Saturday')
+    renderDialog()
+
+    expect(await screen.findByRole('dialog')).toBeTruthy()
+    expect(screen.getByText('Maintenance moved to Saturday')).toBeTruthy()
   })
 
   it('does not open when the notice is empty', async () => {

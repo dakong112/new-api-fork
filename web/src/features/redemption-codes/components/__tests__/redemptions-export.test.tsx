@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   fireEvent,
   render,
@@ -28,6 +29,7 @@ import { useState } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import { api } from '@/lib/api'
+import { STATUS_QUERY_KEY } from '@/lib/status-query'
 import {
   DEFAULT_CURRENCY_CONFIG,
   useSystemConfigStore,
@@ -71,16 +73,26 @@ function readDownload(download: Download): Promise<string> {
   })
 }
 
+// The drawer reads the test-code value from the status query. Seed it so the
+// tests never fetch a status, which would overwrite their currency config.
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+})
+
 function CreateDrawer() {
+  queryClient.setQueryData(STATUS_QUERY_KEY, { redemption_test_quota: 0 })
   const [open, setOpen] = useState(true)
   return (
-    <RedemptionsProvider>
-      <RedemptionsMutateDrawer open={open} onOpenChange={setOpen} />
-    </RedemptionsProvider>
+    <QueryClientProvider client={queryClient}>
+      <RedemptionsProvider>
+        <RedemptionsMutateDrawer open={open} onOpenChange={setOpen} />
+      </RedemptionsProvider>
+    </QueryClientProvider>
   )
 }
 
 afterEach(() => {
+  queryClient.clear()
   vi.unstubAllGlobals()
   useSystemConfigStore
     .getState()

@@ -320,7 +320,7 @@ func AddToken(c *gin.Context) {
 			return
 		}
 	} else {
-		token.CrossGroupRetry = false
+		// For other groups cross-group retry moves on to the fallback groups.
 		_ = token.SetAutoGroups(nil)
 	}
 	key, err := common.GenerateKey()
@@ -440,7 +440,6 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.Group = token.Group
 		cleanToken.CrossGroupRetry = token.CrossGroupRetry
 		if token.Group != "auto" {
-			cleanToken.CrossGroupRetry = false
 			_ = cleanToken.SetAutoGroups(nil)
 		} else if request.AutoGroups.Set {
 			if !setTokenAutoGroups(c, cleanToken, request.AutoGroups.Groups) {

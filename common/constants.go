@@ -21,6 +21,18 @@ var TopUpLink = ""
 // code; placeholders like {code} are filled in by the web UI.
 var RedemptionCopyTemplate = ""
 
+// GroupDisplayOrder lists group names in the order users should see them.
+// Groups missing from it follow alphabetically; "auto" is always shown first.
+var GroupDisplayOrder = []string{}
+
+// GroupFallbackGroups maps a group to the backup groups tried, in order, once
+// a request exhausts the group's channels for the model.
+var GroupFallbackGroups = map[string][]string{}
+
+// GroupNetworkRetryGroups lists groups whose requests retry upstream gateway
+// failures (502/504/524) on another channel instead of stopping.
+var GroupNetworkRetryGroups = []string{}
+
 // var ChatLink = ""
 // var ChatLink2 = ""
 var QuotaPerUnit = 500 * 1000.0 // $0.002 / 1K tokens
@@ -127,6 +139,12 @@ var TelegramBotToken = ""
 var TelegramBotName = ""
 
 var QuotaForNewUser = 0
+
+// Test redemption codes (quota units, 500,000 = $1 by default): new test
+// codes are created with RedemptionTestQuota; a user's second and later test
+// codes credit RedemptionTestRepeatQuota instead of their face value.
+var RedemptionTestQuota = 1000000
+var RedemptionTestRepeatQuota = 750000
 var QuotaForInviter = 0
 var QuotaForInvitee = 0
 var ChannelDisableThreshold = 5.0

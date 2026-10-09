@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useQueryClient, useIsFetching, useQuery } from '@tanstack/react-query'
+import { useQueryClient, useIsFetching } from '@tanstack/react-query'
 import { useNavigate, getRouteApi } from '@tanstack/react-router'
 import type { Table } from '@tanstack/react-table'
 import { Eye, EyeOff } from 'lucide-react'
@@ -39,11 +39,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { getEnabledModels } from '@/features/channels/api'
-import { getGroups } from '@/features/users/api'
 import { useMediaQuery } from '@/hooks'
-import { getUserGroups, getUserModels } from '@/lib/api'
-import { requireServerSuccess } from '@/lib/server-error-message'
+import { useModelGroupOptions } from '@/hooks/use-model-group-options'
 
 import { LOG_TYPE_ALL_VALUE, LOG_TYPE_FILTERS } from '../constants'
 import { buildSearchParams } from '../lib/filter'
@@ -127,39 +124,7 @@ export function CommonLogsFilterBar<TData>(
   const { isAdminView: isAdmin } = useLogsViewScope()
   const { sensitiveVisible, setSensitiveVisible } = useUsageLogsContext()
   const fetchingLogs = useIsFetching({ queryKey: ['logs'] })
-  const { data: adminGroups } = useQuery({
-    queryKey: ['groups'],
-    queryFn: async () => requireServerSuccess(await getGroups()),
-    enabled: isAdmin,
-  })
-  const { data: userGroups } = useQuery({
-    queryKey: ['user-groups'],
-    queryFn: async () => requireServerSuccess(await getUserGroups()),
-    enabled: !isAdmin,
-  })
-  // Admins filter across every enabled model; users only see models they can call.
-  const { data: modelList } = useQuery({
-    queryKey: ['log-filter-models', isAdmin],
-    queryFn: async () =>
-      requireServerSuccess(
-        await (isAdmin ? getEnabledModels() : getUserModels())
-      ),
-  })
-  const modelOptions = useMemo(
-    () =>
-      [...new Set(Array.isArray(modelList?.data) ? modelList.data : [])]
-        .sort()
-        .map((model) => ({ label: model, value: model })),
-    [modelList]
-  )
-  const groupOptions = useMemo(() => {
-    const groups = isAdmin
-      ? (adminGroups?.data ?? [])
-      : Object.keys(userGroups?.data ?? {})
-    return groups
-      .filter((group) => group !== 'auto')
-      .map((group) => ({ label: group, value: group }))
-  }, [isAdmin, adminGroups, userGroups])
+  const { modelOptions, groupOptions } = useModelGroupOptions(isAdmin)
 
   const searchState = useMemo<CommonLogDraft>(() => {
     const { start, end } = getDefaultTimeRange()

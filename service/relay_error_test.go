@@ -129,6 +129,13 @@ func TestDecideRelayRetryReasons(t *testing.T) {
 	upstream := func(status int) *types.NewAPIError {
 		return types.NewOpenAIError(errors.New("upstream"), types.ErrorCodeBadResponseStatusCode, status)
 	}
+	originalNetworkRetryGroups := common.GroupNetworkRetryGroups
+	t.Cleanup(func() { common.GroupNetworkRetryGroups = originalNetworkRetryGroups })
+	common.GroupNetworkRetryGroups = []string{"vip"}
+	inGroup := func(group string) func(*gin.Context) {
+		return func(c *gin.Context) { RequestPolicy(c).SelectedGroup = group }
+	}
+	networkRetry := PolicyDecision{Action: "retry", Reason: "network_error_retry", Source: "group"}
 	for _, tc := range []struct {
 		name    string
 		err     *types.NewAPIError
@@ -151,6 +158,12 @@ func TestDecideRelayRetryReasons(t *testing.T) {
 			RequestPolicy(c).SessionModeSource = "global"
 		}, want: PolicyDecision{Action: "stop", Reason: "strict_session", Source: "global"}},
 		{name: "nil error", retries: 1, want: PolicyDecision{Action: "stop", Reason: "request_completed", Source: "system"}},
+		{name: "group network retry overrides the 524 timeout exclusion", err: upstream(524), retries: 1, setup: inGroup("vip"), want: networkRetry},
+		{name: "group network retry covers 504", err: upstream(http.StatusGatewayTimeout), retries: 1, setup: inGroup("vip"), want: networkRetry},
+		{name: "group network retry covers 502", err: upstream(http.StatusBadGateway), retries: 1, setup: inGroup("vip"), want: networkRetry},
+		{name: "524 still stops in a group without the switch", err: upstream(524), retries: 1, setup: inGroup("default"), want: PolicyDecision{Action: "stop", Reason: "system_retry_exclusion", Source: "system"}},
+		{name: "group network retry keeps the attempt budget", err: upstream(524), retries: 0, setup: inGroup("vip"), want: PolicyDecision{Action: "stop", Reason: "attempt_budget_exhausted", Source: "global"}},
+		{name: "group network retry ignores other statuses", err: upstream(http.StatusBadRequest), retries: 1, setup: inGroup("vip"), want: PolicyDecision{Action: "stop", Reason: "status_not_retryable", Source: "global"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c, _ := gin.CreateTestContext(httptest.NewRecorder())
@@ -159,6 +172,7 @@ func TestDecideRelayRetryReasons(t *testing.T) {
 			}
 			decision := DecideRelayRetry(c, tc.err, tc.retries)
 			assert.Equal(t, tc.want, decision)
+			assert.Equal(t, tc.want == networkRetry, common.GetContextKeyBool(c, constant.ContextKeyNetworkRetry), "only a network retry excludes tried channels")
 			assert.Equal(t, tc.want.Action == "retry", ShouldRetryRelayError(c, tc.err, tc.retries))
 		})
 	}

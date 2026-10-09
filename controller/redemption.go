@@ -86,6 +86,10 @@ func AddRedemption(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgRedemptionCountMax)
 		return
 	}
+	if redemption.IsTest {
+		// A test code's value comes from settings, never from the request.
+		redemption.Quota = common.RedemptionTestQuota
+	}
 	if redemption.Quota <= 0 {
 		common.ApiError(c, errors.New("redemption quota must be positive"))
 		return
@@ -108,6 +112,7 @@ func AddRedemption(c *gin.Context) {
 			CreatedTime: common.GetTimestamp(),
 			Quota:       redemption.Quota,
 			ExpiredTime: redemption.ExpiredTime,
+			IsTest:      redemption.IsTest,
 		}
 		err = cleanRedemption.Insert()
 		if err != nil {
@@ -176,7 +181,10 @@ func UpdateRedemption(c *gin.Context) {
 		}
 		// If you add more fields, please also update redemption.Update()
 		cleanRedemption.Name = redemption.Name
-		cleanRedemption.Quota = redemption.Quota
+		if !cleanRedemption.IsTest {
+			// A test code keeps the value it was created with.
+			cleanRedemption.Quota = redemption.Quota
+		}
 		cleanRedemption.ExpiredTime = redemption.ExpiredTime
 	}
 	if statusOnly != "" {

@@ -27,6 +27,7 @@ import { useTopNavLinks } from '@/hooks/use-top-nav-links'
 
 import { defaultTopNavLinks } from '../config/top-nav.config'
 import type { TopNavLink } from '../types'
+import { AnnouncementBar, HeaderContactLinks } from './announcement-bar'
 import { Header } from './header'
 import { SystemBrand } from './system-brand'
 import { TopNav } from './top-nav'
@@ -112,10 +113,18 @@ export function AppHeader({
   const notifications = useNotifications()
 
   return (
-    <Header>
+    <Header
+      banner={
+        <AnnouncementBar
+          notice={notifications.notice}
+          onOpenNotice={() => notifications.openPopover('notice')}
+        />
+      }
+    >
       <div className='@container/system-brand flex min-w-0 flex-1 items-center gap-1'>
         <SystemBrand variant='inline' />
         <SystemUpdateAction presentation='version' />
+        <HeaderContactLinks className='mx-auto px-2' />
       </div>
 
       {leftContent ? (

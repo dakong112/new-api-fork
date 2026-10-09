@@ -189,6 +189,13 @@ export interface DashboardFilters {
   end_timestamp?: Date
   time_granularity?: TimeGranularity
   username?: string
+  model_name?: string
+  group?: string
+  token_id?: number
+  /** Display label for the selected API key; not sent to the server. */
+  token_name?: string
+  /** Admin only. */
+  channel_id?: number
 }
 
 export type ConsumptionDistributionChartType = 'bar' | 'area'

@@ -126,8 +126,18 @@ export function RedemptionsMobileList(props: RedemptionsMobileListProps) {
           >
             <div className='flex items-start justify-between gap-3'>
               <div className='min-w-0'>
-                <div className='truncate text-sm font-semibold'>
-                  {redemption.name}
+                <div className='flex min-w-0 items-center gap-1.5'>
+                  <span className='truncate text-sm font-semibold'>
+                    {redemption.name}
+                  </span>
+                  {redemption.is_test && (
+                    <StatusBadge
+                      label={t('Test')}
+                      variant='info'
+                      copyable={false}
+                      size='sm'
+                    />
+                  )}
                 </div>
                 <div className='text-muted-foreground text-[11px]'>
                   {t('Redemption Code')}

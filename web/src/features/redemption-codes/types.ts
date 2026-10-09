@@ -34,6 +34,7 @@ export const redemptionSchema = z.object({
   expired_time: z.number(), // 0 for never expires
   used_user_id: z.number(),
   used_username: z.string().optional(),
+  is_test: z.boolean().optional(),
 })
 
 export type Redemption = z.infer<typeof redemptionSchema>
@@ -78,6 +79,7 @@ export interface RedemptionFormData {
   expired_time: number
   count?: number // Only for create
   status?: number // Only for status update
+  is_test?: boolean // Only for create; the server sets a test code's quota
 }
 
 // ============================================================================

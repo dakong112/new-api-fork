@@ -22,6 +22,7 @@ import {
   type FocusEvent,
   type InputHTMLAttributes,
   type MouseEvent as ReactMouseEvent,
+  type Ref,
 } from 'react'
 
 import { Input } from '@/components/ui/input'
@@ -55,6 +56,8 @@ type DraftNumberInputProps = Omit<
 > & {
   value: number | string | undefined
   onValueChange: (next: number) => void
+  /** Forwarded to the input so forms can focus it on a validation error. */
+  ref?: Ref<HTMLInputElement>
   selectZeroOnFocus?: boolean
   /** Value reported while the field is empty, and restored on blur. */
   emptyValue?: number

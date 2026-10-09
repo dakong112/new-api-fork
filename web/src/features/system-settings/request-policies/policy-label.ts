@@ -32,6 +32,8 @@ export function policyLabel(t: TFunction, value: string): string {
       return t('Status is outside the retry rules')
     case 'retry_status_matched':
       return t('Status matches the retry rules')
+    case 'network_error_retry':
+      return t('Upstream network error, retrying on an untried channel')
     case 'session_rule_matched':
       return t('Session rule matched')
     case 'channel_selected':
@@ -60,6 +62,8 @@ export function policyLabel(t: TFunction, value: string): string {
       return t('Local check')
     case 'channel_constraint':
       return t('Fixed channel constraint')
+    case 'group':
+      return t('Group setting')
     case 'unchanged':
       return t('Unchanged')
     case 'channel_disable_requested':

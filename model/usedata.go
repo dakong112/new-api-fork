@@ -138,10 +138,36 @@ func increaseQuotaData(quotaData *QuotaData) {
 	}
 }
 
-func GetQuotaDataByUsername(username string, startTime int64, endTime int64) (quotaData []*QuotaData, err error) {
+// QuotaDataFilter narrows dashboard queries over quota_data. Zero values
+// mean "no filter". The dimensions are recorded per hourly row, so filtering
+// here stays cheap compared with scanning logs.
+type QuotaDataFilter struct {
+	ModelName string
+	Group     string
+	TokenId   int
+	ChannelId int
+}
+
+func (f QuotaDataFilter) apply(query *gorm.DB) *gorm.DB {
+	if f.ModelName != "" {
+		query = query.Where("model_name = ?", f.ModelName)
+	}
+	if f.Group != "" {
+		query = query.Where("use_group = ?", f.Group)
+	}
+	if f.TokenId > 0 {
+		query = query.Where("token_id = ?", f.TokenId)
+	}
+	if f.ChannelId > 0 {
+		query = query.Where("channel_id = ?", f.ChannelId)
+	}
+	return query
+}
+
+func GetQuotaDataByUsername(username string, startTime int64, endTime int64, filter QuotaDataFilter) (quotaData []*QuotaData, err error) {
 	var quotaDatas []*QuotaData
 	// 从quota_data表中查询数据
-	err = DB.Table("quota_data").
+	err = filter.apply(DB.Table("quota_data")).
 		Select("user_id, username, model_name, created_at, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used").
 		Where("username = ? and created_at >= ? and created_at <= ?", username, startTime, endTime).
 		Group("user_id, username, model_name, created_at").
@@ -149,10 +175,10 @@ func GetQuotaDataByUsername(username string, startTime int64, endTime int64) (qu
 	return quotaDatas, err
 }
 
-func GetQuotaDataByUserId(userId int, startTime int64, endTime int64) (quotaData []*QuotaData, err error) {
+func GetQuotaDataByUserId(userId int, startTime int64, endTime int64, filter QuotaDataFilter) (quotaData []*QuotaData, err error) {
 	var quotaDatas []*QuotaData
 	// 从quota_data表中查询数据
-	err = DB.Table("quota_data").
+	err = filter.apply(DB.Table("quota_data")).
 		Select("user_id, username, model_name, created_at, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used").
 		Where("user_id = ? and created_at >= ? and created_at <= ?", userId, startTime, endTime).
 		Group("user_id, username, model_name, created_at").
@@ -160,9 +186,9 @@ func GetQuotaDataByUserId(userId int, startTime int64, endTime int64) (quotaData
 	return quotaDatas, err
 }
 
-func GetQuotaDataGroupByUser(startTime int64, endTime int64) (quotaData []*QuotaData, err error) {
+func GetQuotaDataGroupByUser(startTime int64, endTime int64, filter QuotaDataFilter) (quotaData []*QuotaData, err error) {
 	var quotaDatas []*QuotaData
-	err = DB.Table("quota_data").
+	err = filter.apply(DB.Table("quota_data")).
 		Select("username, created_at, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used").
 		Where("created_at >= ? and created_at <= ?", startTime, endTime).
 		Group("username, created_at").
@@ -170,14 +196,14 @@ func GetQuotaDataGroupByUser(startTime int64, endTime int64) (quotaData []*Quota
 	return quotaDatas, err
 }
 
-func GetAllQuotaDates(startTime int64, endTime int64, username string) (quotaData []*QuotaData, err error) {
+func GetAllQuotaDates(startTime int64, endTime int64, username string, filter QuotaDataFilter) (quotaData []*QuotaData, err error) {
 	if username != "" {
-		return GetQuotaDataByUsername(username, startTime, endTime)
+		return GetQuotaDataByUsername(username, startTime, endTime, filter)
 	}
 	var quotaDatas []*QuotaData
 	// 从quota_data表中查询数据
 	// only select model_name, sum(count) as count, sum(quota) as quota, model_name, created_at from quota_data group by model_name, created_at;
 	//err = DB.Table("quota_data").Where("created_at >= ? and created_at <= ?", startTime, endTime).Find(&quotaDatas).Error
-	err = DB.Table("quota_data").Select("model_name, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used, created_at").Where("created_at >= ? and created_at <= ?", startTime, endTime).Group("model_name, created_at").Find(&quotaDatas).Error
+	err = filter.apply(DB.Table("quota_data")).Select("model_name, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used, created_at").Where("created_at >= ? and created_at <= ?", startTime, endTime).Group("model_name, created_at").Find(&quotaDatas).Error
 	return quotaDatas, err
 }

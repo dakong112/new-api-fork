@@ -125,7 +125,9 @@ export function getApiKeyFormDefaultValues(
     group: defaultUseAutoGroup ? 'auto' : DEFAULT_GROUP,
     auto_groups_mode: 'inherit',
     auto_groups: [],
-    cross_group_retry: defaultUseAutoGroup,
+    // On by default: auto moves to the next auto group, other groups to
+    // their fallback groups.
+    cross_group_retry: true,
   }
 }
 
@@ -156,7 +158,7 @@ export function transformFormDataToPayload(
       data.group === 'auto' && data.auto_groups_mode === 'custom'
         ? data.auto_groups
         : [],
-    cross_group_retry: data.group === 'auto' ? !!data.cross_group_retry : false,
+    cross_group_retry: !!data.cross_group_retry,
   }
 }
 

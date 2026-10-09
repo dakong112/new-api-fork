@@ -155,6 +155,7 @@ import {
   MODEL_FETCHABLE_TYPES,
   OPENAI_FIELD_PASSTHROUGH_TYPES,
 } from '../../constants'
+import { useChannelGroupRatios } from '../../hooks/use-channel-group-ratios'
 import { useChannelKeyDisclosure } from '../../hooks/use-channel-key-disclosure'
 import {
   useChannelModelDiscovery,
@@ -739,15 +740,20 @@ export function ChannelMutateDrawer({
     [prefillGroupsData]
   )
 
+  const groupRatios = useChannelGroupRatios()
+
   // Transform groups to multi-select options
   const groupOptions = useMemo(() => {
     if (!groupsData?.data) return []
     const allGroups = new Set([...groupsData.data, ...(currentGroups || [])])
     return [...allGroups].map((group) => ({
       value: group,
-      label: group,
+      label:
+        groupRatios[group] == null
+          ? group
+          : `${group} (${groupRatios[group]}x)`,
     }))
-  }, [groupsData, currentGroups])
+  }, [groupsData, currentGroups, groupRatios])
 
   // Parse current models as array
   const currentModelsArray = useMemo(

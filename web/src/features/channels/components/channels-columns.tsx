@@ -65,6 +65,7 @@ import {
   CHANNEL_TYPE_SGLANG,
   MODEL_FETCHABLE_TYPES,
 } from '../constants'
+import { useChannelGroupRatios } from '../hooks/use-channel-group-ratios'
 import {
   formatRelativeTime,
   formatResponseTime,
@@ -622,10 +623,11 @@ export function useChannelsColumns(
 ): ColumnDef<Channel>[] {
   const { t, i18n } = useTranslation()
   const { sensitiveVisible } = useChannels()
+  const groupRatios = useChannelGroupRatios()
   const enableSelection = options.enableSelection ?? true
   const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
   // The column definitions only depend on the translation function, the active
-  // locale, and sensitive-data visibility. Memoizing keeps the array (and every
+  // locale, sensitive-data visibility, and the group ratios. Memoizing keeps the array (and every
   // cell renderer reference) stable across unrelated re-renders, so react-table
   // does not invalidate the whole row model on each parent render.
   return useMemo<ColumnDef<Channel>[]>(
@@ -1107,6 +1109,7 @@ export function useChannelsColumns(
                   key={g}
                   group={g}
                   label={sensitiveVisible ? undefined : SENSITIVE_MASK}
+                  ratio={sensitiveVisible ? groupRatios[g] : undefined}
                   size='sm'
                 />
               ))}
@@ -1264,6 +1267,6 @@ export function useChannelsColumns(
         meta: { pinned: 'right' as const },
       },
     ],
-    [enableSelection, t, locale, sensitiveVisible]
+    [enableSelection, t, locale, sensitiveVisible, groupRatios]
   )
 }

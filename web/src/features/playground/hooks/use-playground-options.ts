@@ -38,6 +38,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { sortGroupNames, useGroupDisplayOrder } from '@/lib/group-order'
 import { handleServerError } from '@/lib/handle-server-error'
 import { requireServerSuccess } from '@/lib/server-error-message'
 
@@ -131,16 +132,21 @@ export function usePlaygroundOptions({
     }
   }, [modelsData, currentModel, setModels, updateConfig])
 
+  const groupOrder = useGroupDisplayOrder()
   useEffect(() => {
     if (!groupsData) return
 
-    setGroups(groupsData)
-    const fallback = getGroupFallback(groupsData, currentGroup)
+    const byName = new Map(groupsData.map((group) => [group.value, group]))
+    const sorted = sortGroupNames([...byName.keys()], groupOrder).map(
+      (name) => byName.get(name) as GroupOption
+    )
+    setGroups(sorted)
+    const fallback = getGroupFallback(sorted, currentGroup)
 
     if (fallback) {
       updateConfig('group', fallback)
     }
-  }, [groupsData, currentGroup, setGroups, updateConfig])
+  }, [groupsData, groupOrder, currentGroup, setGroups, updateConfig])
 
   return {
     isLoadingModels,

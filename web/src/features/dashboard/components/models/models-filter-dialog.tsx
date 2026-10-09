@@ -16,13 +16,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { useQuery } from '@tanstack/react-query'
 import { Filter, RotateCcw, Calendar, Search } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { DateTimePicker } from '@/components/datetime-picker'
 import { Dialog } from '@/components/dialog'
+import { DraftNumberInput } from '@/components/draft-number-input'
 import { Button } from '@/components/ui/button'
+import { Combobox } from '@/components/ui/combobox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -46,6 +49,9 @@ import type {
   DashboardChartPreferences,
   DashboardFilters,
 } from '@/features/dashboard/types'
+import { getApiKeys } from '@/features/keys/api'
+import { useModelGroupOptions } from '@/hooks/use-model-group-options'
+import { requireServerSuccess } from '@/lib/server-error-message'
 import { getRollingDateRange, type TimeGranularity } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
@@ -110,6 +116,22 @@ export function ModelsFilter(props: ModelsFilterProps) {
   const [selectedRange, setSelectedRange] = useState<number | null>(() =>
     detectQuickRangeDays(props.currentFilters)
   )
+  const { modelOptions, groupOptions } = useModelGroupOptions(Boolean(isAdmin))
+  // /api/token lists the caller's own keys, for users and admins alike.
+  const { data: keysData } = useQuery({
+    queryKey: ['dashboard-filter-keys'],
+    queryFn: async () =>
+      requireServerSuccess(await getApiKeys({ p: 1, size: 100 })),
+    enabled: open,
+  })
+  const keyOptions = useMemo(
+    () =>
+      (keysData?.data?.items ?? []).map((key) => ({
+        value: String(key.id),
+        label: `${key.name} (#${key.id})`,
+      })),
+    [keysData]
+  )
 
   const handleOpenChange = (nextOpen: boolean) => {
     // Sync the editing state from the applied filters every time the dialog
@@ -147,11 +169,12 @@ export function ModelsFilter(props: ModelsFilterProps) {
 
   const handleChange = (
     field: keyof DashboardFilters,
-    value: Date | string | undefined
+    value: Date | string | number | undefined
   ) => {
     setFilters((prev) => ({ ...prev, [field]: value }))
-    if (field === 'start_timestamp' || field === 'end_timestamp')
+    if (field === 'start_timestamp' || field === 'end_timestamp') {
       setSelectedRange(null)
+    }
   }
 
   const handleQuickRange = (days: number) => {
@@ -257,12 +280,10 @@ export function ModelsFilter(props: ModelsFilterProps) {
           <div className='grid gap-2'>
             <Label htmlFor='time_granularity'>{t('Time Granularity')}</Label>
             <Select
-              items={[
-                ...TIME_GRANULARITY_OPTIONS.map((option) => ({
-                  value: option.value,
-                  label: t(option.label),
-                })),
-              ]}
+              items={TIME_GRANULARITY_OPTIONS.map((option) => ({
+                value: option.value,
+                label: t(option.label),
+              }))}
               value={filters.time_granularity}
               onValueChange={(value) =>
                 handleChange('time_granularity', value as TimeGranularity)
@@ -283,6 +304,62 @@ export function ModelsFilter(props: ModelsFilterProps) {
             </Select>
           </div>
 
+          <SectionDivider label={t('Filter Conditions')} />
+
+          <div className='grid gap-2'>
+            <Label htmlFor='dashboard-model'>{t('Model')}</Label>
+            <Combobox
+              id='dashboard-model'
+              options={modelOptions}
+              allowCustomValue
+              aria-label={t('Model')}
+              placeholder={t('All models')}
+              emptyText={t('No models found')}
+              value={filters.model_name ?? ''}
+              onValueChange={(value) => handleChange('model_name', value ?? '')}
+            />
+          </div>
+
+          <div className='grid gap-2'>
+            <Label htmlFor='dashboard-group'>{t('Group')}</Label>
+            <Combobox
+              id='dashboard-group'
+              options={groupOptions}
+              allowCustomValue
+              aria-label={t('Group')}
+              placeholder={t('All groups')}
+              emptyText={t('No group found.')}
+              value={filters.group ?? ''}
+              onValueChange={(value) => handleChange('group', value ?? '')}
+            />
+          </div>
+
+          <div className='grid gap-2'>
+            <Label htmlFor='dashboard-key'>{t('API Key')}</Label>
+            <Combobox
+              id='dashboard-key'
+              options={keyOptions}
+              allowCustomValue={Boolean(isAdmin)}
+              aria-label={t('API Key')}
+              placeholder={
+                isAdmin
+                  ? t('All API keys, or enter a key ID')
+                  : t('All API keys')
+              }
+              emptyText={t('No API keys found')}
+              value={filters.token_id ? String(filters.token_id) : ''}
+              onValueChange={(value) => {
+                const id = Number.parseInt(value ?? '', 10)
+                const option = keyOptions.find((o) => o.value === value)
+                setFilters((prev) => ({
+                  ...prev,
+                  token_id: id > 0 ? id : undefined,
+                  token_name: option?.label ?? (id > 0 ? `#${id}` : ''),
+                }))
+              }}
+            />
+          </div>
+
           {/* Admin-only fields */}
           {isAdmin && (
             <>
@@ -295,6 +372,20 @@ export function ModelsFilter(props: ModelsFilterProps) {
                   placeholder={t('Filter by username')}
                   value={filters.username}
                   onChange={(e) => handleChange('username', e.target.value)}
+                />
+              </div>
+
+              <div className='grid gap-2'>
+                <Label htmlFor='dashboard-channel'>{t('Channel ID')}</Label>
+                <DraftNumberInput
+                  id='dashboard-channel'
+                  min={0}
+                  integer
+                  placeholder={t('All channels')}
+                  value={filters.channel_id ?? ''}
+                  onValueChange={(value) =>
+                    handleChange('channel_id', value > 0 ? value : undefined)
+                  }
                 />
               </div>
             </>

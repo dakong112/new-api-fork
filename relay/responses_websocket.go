@@ -316,7 +316,7 @@ func (s *responsesWSSession) runCall(c *gin.Context, state *responsesWSCallState
 				apiErr = service.NormalizeViolationFeeError(types.NewError(dialErr, types.ErrorCodeDoRequestFailed))
 				service.ResetStatusCode(apiErr, c.GetString("status_code_mapping"))
 				info.LastError = apiErr
-				decision := service.DecideRelayRetry(c, apiErr, common.RetryTimes-retry.GetRetry())
+				decision := service.DecideRelayRetry(c, apiErr, retry.RemainingRetries())
 				service.RecordPolicyFailure(c, channel.Id, apiErr, decision)
 				service.ProcessChannelError(c, *types.NewChannelError(channel.Id, channel.Type, channel.Name, channel.ChannelInfo.IsMultiKey, info.ApiKey, channel.GetAutoBan()), apiErr, info)
 				if decision.Action == "retry" {
@@ -571,8 +571,8 @@ func (s *responsesWSSession) restoreConnectionContext(c *gin.Context, model stri
 		}
 	} else {
 		group := common.GetContextKeyString(c, appconstant.ContextKeyUsingGroup)
-		if group == "auto" {
-			if !slices.Contains(service.GetRequestAutoGroups(c, common.GetContextKeyString(c, appconstant.ContextKeyUserGroup)), s.lockedGroup) {
+		if chain := service.GetRequestGroupChain(c, group, common.GetContextKeyString(c, appconstant.ContextKeyUserGroup)); group == "auto" || len(chain) > 1 {
+			if !slices.Contains(chain, s.lockedGroup) {
 				return types.NewErrorWithStatusCode(errors.New("the connection group is no longer allowed"), types.ErrorCodeAccessDenied, http.StatusForbidden, types.ErrOptionWithSkipRetry())
 			}
 			group = s.lockedGroup

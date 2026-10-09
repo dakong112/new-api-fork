@@ -79,6 +79,8 @@ func ValidateConsoleSettings(settingsStr string, settingType string) error {
 		return validateFAQ(settingsStr)
 	case "UptimeKumaGroups":
 		return validateUptimeKumaGroups(settingsStr)
+	case "ContactLinks":
+		return validateContactLinks(settingsStr)
 	default:
 		return fmt.Errorf("未知的设置类型：%s", settingType)
 	}
@@ -307,4 +309,62 @@ func validateUptimeKumaGroups(groupsStr string) error {
 
 func GetUptimeKumaGroups() []map[string]interface{} {
 	return getJSONList(GetConsoleSetting().UptimeKumaGroups)
+}
+
+var validContactIcons = map[string]bool{
+	"qq": true, "wechat": true, "telegram": true, "discord": true, "email": true, "link": true,
+}
+
+func validateContactLinks(linksStr string) error {
+	list, err := parseJSONArray(linksStr, "联系方式")
+	if err != nil {
+		return err
+	}
+	if len(list) > 10 {
+		return fmt.Errorf("联系方式数量不能超过10个")
+	}
+	for i, item := range list {
+		icon, _ := item["icon"].(string)
+		if !validContactIcons[icon] {
+			return fmt.Errorf("第%d个联系方式的图标类型不合法", i+1)
+		}
+		label, ok := item["label"].(string)
+		if !ok || label == "" {
+			return fmt.Errorf("第%d个联系方式缺少名称字段", i+1)
+		}
+		value, _ := item["value"].(string)
+		urlStr, _ := item["url"].(string)
+		if value == "" && urlStr == "" {
+			return fmt.Errorf("第%d个联系方式至少需要填写展示值或链接", i+1)
+		}
+		if exceedsMaxCharacters(label, 30) {
+			return fmt.Errorf("第%d个联系方式的名称长度不能超过30字符", i+1)
+		}
+		if exceedsMaxCharacters(value, 100) {
+			return fmt.Errorf("第%d个联系方式的展示值长度不能超过100字符", i+1)
+		}
+		if urlStr != "" {
+			if exceedsMaxCharacters(urlStr, 500) {
+				return fmt.Errorf("第%d个联系方式的链接长度不能超过500字符", i+1)
+			}
+			if address, isMail := strings.CutPrefix(urlStr, "mailto:"); isMail {
+				if address == "" || strings.ContainsAny(address, " <>\"'") {
+					return fmt.Errorf("第%d个联系方式的邮箱链接不正确", i+1)
+				}
+			} else if err := validateURL(urlStr, i+1, "联系方式"); err != nil {
+				return err
+			}
+		}
+		if err := checkDangerousContent(label, i+1, "联系方式"); err != nil {
+			return err
+		}
+		if err := checkDangerousContent(value, i+1, "联系方式"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func GetContactLinks() []map[string]any {
+	return getJSONList(GetConsoleSetting().ContactLinks)
 }

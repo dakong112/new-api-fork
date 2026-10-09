@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"maps"
 	"strconv"
 	"strings"
@@ -141,6 +142,8 @@ func InitOptionMap() {
 	common.OptionMap["TurnstileSiteKey"] = ""
 	common.OptionMap["TurnstileSecretKey"] = ""
 	common.OptionMap["QuotaForNewUser"] = strconv.Itoa(common.QuotaForNewUser)
+	common.OptionMap["RedemptionTestQuota"] = strconv.Itoa(common.RedemptionTestQuota)
+	common.OptionMap["RedemptionTestRepeatQuota"] = strconv.Itoa(common.RedemptionTestRepeatQuota)
 	common.OptionMap["QuotaForInviter"] = strconv.Itoa(common.QuotaForInviter)
 	common.OptionMap["QuotaForInvitee"] = strconv.Itoa(common.QuotaForInvitee)
 	common.OptionMap["QuotaRemindThreshold"] = strconv.Itoa(common.QuotaRemindThreshold)
@@ -162,6 +165,9 @@ func InitOptionMap() {
 	common.OptionMap["AudioCompletionRatio"] = ratio_setting.AudioCompletionRatio2JSONString()
 	common.OptionMap["TopUpLink"] = common.TopUpLink
 	common.OptionMap["RedemptionCopyTemplate"] = common.RedemptionCopyTemplate
+	common.OptionMap["GroupDisplayOrder"] = "[]"
+	common.OptionMap["GroupFallbackGroups"] = "{}"
+	common.OptionMap["GroupNetworkRetryGroups"] = "[]"
 	//common.OptionMap["ChatLink"] = common.ChatLink
 	//common.OptionMap["ChatLink2"] = common.ChatLink2
 	common.OptionMap["QuotaPerUnit"] = strconv.FormatFloat(common.QuotaPerUnit, 'f', -1, 64)
@@ -240,6 +246,29 @@ func validateOptionValue(key string, value string) error {
 	}
 	if key == "MaxTokenAutoGroups" {
 		return setting.ValidateMaxTokenAutoGroups(value)
+	}
+	switch key {
+	case "RedemptionTestQuota", "RedemptionTestRepeatQuota":
+		quota, err := strconv.Atoi(value)
+		if err != nil || quota <= 0 {
+			return fmt.Errorf("%s must be a positive integer", key)
+		}
+		return common.ValidateWalletQuota(quota)
+	case "GroupDisplayOrder":
+		order := []string{}
+		if err := common.UnmarshalJsonStr(value, &order); err != nil {
+			return fmt.Errorf("GroupDisplayOrder must be a JSON array of group names: %w", err)
+		}
+	case "GroupFallbackGroups":
+		fallbacks := map[string][]string{}
+		if err := common.UnmarshalJsonStr(value, &fallbacks); err != nil {
+			return fmt.Errorf("GroupFallbackGroups must map group names to arrays of group names: %w", err)
+		}
+	case "GroupNetworkRetryGroups":
+		groups := []string{}
+		if err := common.UnmarshalJsonStr(value, &groups); err != nil {
+			return fmt.Errorf("GroupNetworkRetryGroups must be a JSON array of group names: %w", err)
+		}
 	}
 	return nil
 }
@@ -605,6 +634,10 @@ func updateOptionMap(key string, value string) (err error) {
 		common.TurnstileSecretKey = value
 	case "QuotaForNewUser":
 		common.QuotaForNewUser, _ = strconv.Atoi(value)
+	case "RedemptionTestQuota":
+		common.RedemptionTestQuota, _ = strconv.Atoi(value)
+	case "RedemptionTestRepeatQuota":
+		common.RedemptionTestRepeatQuota, _ = strconv.Atoi(value)
 	case "QuotaForInviter":
 		common.QuotaForInviter, _ = strconv.Atoi(value)
 	case "QuotaForInvitee":
@@ -653,6 +686,18 @@ func updateOptionMap(key string, value string) (err error) {
 		common.TopUpLink = value
 	case "RedemptionCopyTemplate":
 		common.RedemptionCopyTemplate = value
+	case "GroupDisplayOrder":
+		order := []string{}
+		_ = common.UnmarshalJsonStr(value, &order)
+		common.GroupDisplayOrder = order
+	case "GroupFallbackGroups":
+		fallbacks := map[string][]string{}
+		_ = common.UnmarshalJsonStr(value, &fallbacks)
+		common.GroupFallbackGroups = fallbacks
+	case "GroupNetworkRetryGroups":
+		groups := []string{}
+		_ = common.UnmarshalJsonStr(value, &groups)
+		common.GroupNetworkRetryGroups = groups
 	//case "ChatLink":
 	//	common.ChatLink = value
 	//case "ChatLink2":

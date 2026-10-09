@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -87,7 +88,7 @@ func TestGetFlowQuotaDataUsesQuotaDataRoleSpecificDimensions(t *testing.T) {
 		TokenUsed: 999,
 	})
 
-	rootRows, err := GetFlowQuotaData(900, 2000, "", 0, common.RoleRootUser)
+	rootRows, err := GetFlowQuotaData(900, 2000, "", 0, common.RoleRootUser, QuotaDataFilter{})
 	require.NoError(t, err)
 	require.Len(t, rootRows, 3)
 	// Token 11 was soft-deleted, so its name is intentionally left empty for the
@@ -110,7 +111,7 @@ func TestGetFlowQuotaDataUsesQuotaDataRoleSpecificDimensions(t *testing.T) {
 	require.Equal(t, 22, rootRows[1].TokenID)
 	require.Equal(t, "backup", rootRows[1].TokenName)
 
-	adminRows, err := GetFlowQuotaData(900, 2000, "alice", 0, common.RoleAdminUser)
+	adminRows, err := GetFlowQuotaData(900, 2000, "alice", 0, common.RoleAdminUser, QuotaDataFilter{})
 	require.NoError(t, err)
 	require.Len(t, adminRows, 2)
 	require.Equal(t, 0, adminRows[0].TokenID)
@@ -121,7 +122,7 @@ func TestGetFlowQuotaDataUsesQuotaDataRoleSpecificDimensions(t *testing.T) {
 	require.Equal(t, "east", adminRows[0].ChannelName)
 	require.Equal(t, 150, adminRows[0].Quota)
 
-	selfRows, err := GetFlowQuotaData(900, 2000, "", 1, common.RoleCommonUser)
+	selfRows, err := GetFlowQuotaData(900, 2000, "", 1, common.RoleCommonUser, QuotaDataFilter{})
 	require.NoError(t, err)
 	require.Len(t, selfRows, 1)
 	require.Empty(t, selfRows[0].Username)
@@ -190,4 +191,59 @@ func TestLogQuotaDataSplitsRowsByUseGroupTokenChannelAndNode(t *testing.T) {
 	require.Equal(t, 60, rows[0].TokenUsed)
 	require.Equal(t, "default", rows[1].UseGroup)
 	require.Equal(t, 25, rows[1].Quota)
+}
+
+func TestDashboardQuotaQueriesApplyFilters(t *testing.T) {
+	truncateTables(t)
+	seedFlowLookupData(t)
+	rows := []QuotaData{
+		{UserID: 1, Username: "alice", TokenID: 11, UseGroup: "vip", ModelName: "gpt-a", ChannelID: 1, CreatedAt: 1000, Count: 2, Quota: 100},
+		{UserID: 1, Username: "alice", TokenID: 12, UseGroup: "default", ModelName: "gpt-a", ChannelID: 2, CreatedAt: 1000, Count: 1, Quota: 30},
+		{UserID: 1, Username: "alice", TokenID: 11, UseGroup: "vip", ModelName: "gpt-b", ChannelID: 1, CreatedAt: 1000, Count: 4, Quota: 7},
+		{UserID: 2, Username: "bob", TokenID: 22, UseGroup: "vip", ModelName: "gpt-a", ChannelID: 1, CreatedAt: 1000, Count: 5, Quota: 500},
+	}
+	for _, row := range rows {
+		seedFlowQuotaData(t, row)
+	}
+	totalQuota := func(data []*QuotaData) int {
+		sum := 0
+		for _, d := range data {
+			sum += d.Quota
+		}
+		return sum
+	}
+
+	cases := []struct {
+		name   string
+		filter QuotaDataFilter
+		all    int // admin view across users
+		alice  int // alice's own view
+	}{
+		{name: "no filter", filter: QuotaDataFilter{}, all: 637, alice: 137},
+		{name: "model", filter: QuotaDataFilter{ModelName: "gpt-a"}, all: 630, alice: 130},
+		{name: "group", filter: QuotaDataFilter{Group: "vip"}, all: 607, alice: 107},
+		{name: "token", filter: QuotaDataFilter{TokenId: 11}, all: 107, alice: 107},
+		{name: "channel", filter: QuotaDataFilter{ChannelId: 2}, all: 30, alice: 30},
+		{name: "combined", filter: QuotaDataFilter{ModelName: "gpt-a", Group: "vip"}, all: 600, alice: 100},
+		{name: "another user's token stays hidden from alice", filter: QuotaDataFilter{TokenId: 22}, all: 500, alice: 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			all, err := GetAllQuotaDates(900, 2000, "", tc.filter)
+			require.NoError(t, err)
+			assert.Equal(t, tc.all, totalQuota(all))
+
+			own, err := GetQuotaDataByUserId(1, 900, 2000, tc.filter)
+			require.NoError(t, err)
+			assert.Equal(t, tc.alice, totalQuota(own))
+
+			flow, err := GetFlowQuotaData(900, 2000, "", 1, common.RoleCommonUser, tc.filter)
+			require.NoError(t, err)
+			flowQuota := 0
+			for _, f := range flow {
+				flowQuota += f.Quota
+			}
+			assert.Equal(t, tc.alice, flowQuota)
+		})
+	}
 }

@@ -30,6 +30,7 @@ import {
   sideDrawerFooterClassName,
   sideDrawerFormClassName,
   sideDrawerHeaderClassName,
+  sideDrawerSwitchItemClassName,
 } from '@/components/drawer-layout'
 import { Button } from '@/components/ui/button'
 import {
@@ -51,6 +52,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
+import { useStatus } from '@/hooks/use-status'
 import {
   formatQuotaWithCurrency,
   getCurrencyDisplay,
@@ -60,6 +63,7 @@ import {
   formatQuota,
   getEditableQuotaStep,
   parseQuotaFromDollars,
+  quotaUnitsToEditableAmount,
 } from '@/lib/format'
 import { handleServerError } from '@/lib/handle-server-error'
 import { addTimeToDate } from '@/lib/time'
@@ -110,6 +114,10 @@ export function RedemptionsMutateDrawer({
     resolver: zodResolver(getRedemptionFormSchema(t)),
     defaultValues: REDEMPTION_FORM_DEFAULT_VALUES,
   })
+  const { status } = useStatus()
+  // Test codes take their value from System Settings; the server enforces it.
+  const testQuota = Number(status?.redemption_test_quota) || 0
+  const isTest = form.watch('is_test')
 
   // Load existing data when updating
   useEffect(() => {
@@ -251,6 +259,15 @@ export function RedemptionsMutateDrawer({
   const quotaPlaceholder = tokensOnly
     ? t('Enter quota in tokens')
     : t('Enter quota in {{currency}}', { currency: currencyLabel })
+  let quotaDescription = t('Enter the quota amount in {{currency}}', {
+    currency: currencyLabel,
+  })
+  if (tokensOnly) {
+    quotaDescription = t('Enter the quota amount in tokens')
+  }
+  if (isTest) {
+    quotaDescription = t('Test codes use the fixed value from System Settings.')
+  }
   let submitButtonLabel = t('Save changes')
   if (isLoadingRedemption) {
     submitButtonLabel = t('Loading...')
@@ -318,6 +335,40 @@ export function RedemptionsMutateDrawer({
 
                   <FormField
                     control={form.control}
+                    name='is_test'
+                    render={({ field }) => (
+                      <FormItem className={sideDrawerSwitchItemClassName()}>
+                        <div className='flex flex-col gap-0.5'>
+                          <FormLabel className='text-sm'>
+                            {t('Test redemption code')}
+                          </FormLabel>
+                          <FormDescription className='text-xs'>
+                            {t(
+                              "A user's first test code credits its full value; later test codes credit the repeat value set in System Settings."
+                            )}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            disabled={isUpdate}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked)
+                              if (checked && testQuota > 0) {
+                                form.setValue(
+                                  'quota_dollars',
+                                  quotaUnitsToEditableAmount(testQuota)
+                                )
+                              }
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name='quota_dollars'
                     render={({ field }) => (
                       <FormItem>
@@ -328,15 +379,10 @@ export function RedemptionsMutateDrawer({
                             {...field}
                             step={quotaStep}
                             placeholder={quotaPlaceholder}
+                            disabled={isTest}
                           />
                         </FormControl>
-                        <FormDescription>
-                          {tokensOnly
-                            ? t('Enter the quota amount in tokens')
-                            : t('Enter the quota amount in {{currency}}', {
-                                currency: currencyLabel,
-                              })}
-                        </FormDescription>
+                        <FormDescription>{quotaDescription}</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

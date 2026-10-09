@@ -259,3 +259,81 @@ func TestSearchUsersExactUsernameMatchesOneUser(t *testing.T) {
 	require.Len(t, exact, 1)
 	assert.Equal(t, "alice", exact[0].Username)
 }
+
+func createTestRedemption(t *testing.T, key string, quota int, isTest bool) {
+	t.Helper()
+	require.NoError(t, DB.Create(&Redemption{
+		Name:        "trial",
+		Key:         key,
+		Status:      common.RedemptionCodeStatusEnabled,
+		Quota:       quota,
+		IsTest:      isTest,
+		CreatedTime: common.GetTimestamp(),
+	}).Error)
+}
+
+func TestRedeemTestCodeCreditsFaceValueOnlyOncePerUser(t *testing.T) {
+	userId, _ := setupRedeemFixture(t, 1)
+	originalRepeat := common.RedemptionTestRepeatQuota
+	common.RedemptionTestRepeatQuota = 750000
+	t.Cleanup(func() { common.RedemptionTestRepeatQuota = originalRepeat })
+
+	createTestRedemption(t, "20000000000000000000000000000001", 1000000, true)
+	createTestRedemption(t, "20000000000000000000000000000002", 1000000, true)
+	createTestRedemption(t, "20000000000000000000000000000003", 1000000, true)
+	createTestRedemption(t, "20000000000000000000000000000004", 1000000, false)
+
+	cases := []struct {
+		key  string
+		want int
+	}{
+		{key: "20000000000000000000000000000001", want: 1000000}, // first test code: face value
+		{key: "20000000000000000000000000000002", want: 750000},  // later test codes: repeat quota
+		{key: "20000000000000000000000000000003", want: 750000},
+		{key: "20000000000000000000000000000004", want: 1000000}, // normal codes are unaffected
+	}
+	total := 0
+	for _, tc := range cases {
+		quota, err := Redeem(tc.key, userId)
+		require.NoError(t, err)
+		assert.Equal(t, tc.want, quota, tc.key)
+		total += tc.want
+	}
+
+	var user User
+	require.NoError(t, DB.First(&user, "id = ?", userId).Error)
+	assert.Equal(t, total, user.Quota)
+}
+
+func TestRedeemRepeatTestCodeNeverExceedsFaceValue(t *testing.T) {
+	userId, _ := setupRedeemFixture(t, 1)
+	originalRepeat := common.RedemptionTestRepeatQuota
+	common.RedemptionTestRepeatQuota = 5000000
+	t.Cleanup(func() { common.RedemptionTestRepeatQuota = originalRepeat })
+
+	createTestRedemption(t, "30000000000000000000000000000001", 1000000, true)
+	createTestRedemption(t, "30000000000000000000000000000002", 400000, true)
+
+	_, err := Redeem("30000000000000000000000000000001", userId)
+	require.NoError(t, err)
+	quota, err := Redeem("30000000000000000000000000000002", userId)
+	require.NoError(t, err)
+
+	assert.Equal(t, 400000, quota)
+}
+
+func TestRedeemTestCodeFirstUseIsPerUser(t *testing.T) {
+	firstUser, _ := setupRedeemFixture(t, 1)
+	second := &User{Username: "redeem-user-2", Password: "password", Status: common.UserStatusEnabled, AffCode: "redeem-aff-2"}
+	require.NoError(t, DB.Create(second).Error)
+
+	createTestRedemption(t, "40000000000000000000000000000001", 1000000, true)
+	createTestRedemption(t, "40000000000000000000000000000002", 1000000, true)
+
+	_, err := Redeem("40000000000000000000000000000001", firstUser)
+	require.NoError(t, err)
+	quota, err := Redeem("40000000000000000000000000000002", second.Id)
+	require.NoError(t, err)
+
+	assert.Equal(t, 1000000, quota, "another user's first test code is still full value")
+}

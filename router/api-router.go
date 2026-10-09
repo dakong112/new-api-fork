@@ -351,6 +351,10 @@ func SetApiRouter(router *gin.Engine) {
 		groupRoute.Use(middleware.AdminAuth())
 		{
 			groupRoute.GET("/", controller.GetGroups)
+			groupRoute.GET("/usage", controller.GetGroupUsage)
+			groupRoute.GET("/ratios", controller.GetGroupRatios)
+			// Rewrites system options, so it needs the same access as settings.
+			groupRoute.POST("/rename", middleware.RootAuth(), controller.RenameGroup)
 		}
 
 		prefillGroupRoute := apiRouter.Group("/prefill_group")

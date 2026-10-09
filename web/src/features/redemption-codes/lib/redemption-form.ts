@@ -45,6 +45,7 @@ export function getRedemptionFormSchema(t: TFunction) {
       .min(REDEMPTION_VALIDATION.COUNT_MIN, msg.COUNT_INVALID)
       .max(REDEMPTION_VALIDATION.COUNT_MAX, msg.COUNT_INVALID)
       .optional(),
+    is_test: z.boolean(),
   })
 }
 
@@ -53,6 +54,7 @@ export type RedemptionFormValues = {
   quota_dollars: number
   expired_time?: Date
   count?: number
+  is_test: boolean
 }
 
 // ============================================================================
@@ -64,6 +66,7 @@ export const REDEMPTION_FORM_DEFAULT_VALUES: RedemptionFormValues = {
   quota_dollars: 2,
   expired_time: undefined,
   count: 1,
+  is_test: false,
 }
 
 // ============================================================================
@@ -83,6 +86,7 @@ export function transformFormDataToPayload(
       ? Math.floor(data.expired_time.getTime() / 1000)
       : 0,
     count: data.count || 1,
+    is_test: data.is_test,
   }
 }
 
@@ -100,5 +104,6 @@ export function transformRedemptionToFormDefaults(
         ? new Date(redemption.expired_time * 1000)
         : undefined,
     count: 1,
+    is_test: redemption.is_test ?? false,
   }
 }

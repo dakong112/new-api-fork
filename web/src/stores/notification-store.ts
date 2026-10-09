@@ -24,15 +24,17 @@ interface NotificationState {
   lastReadNotice: string
   // Array of read announcement keys (id or content hash)
   readAnnouncementKeys: string[]
-  // Timestamp of last "Close Today" action
+  // Date of the last "Close Today" action
   closedUntilDate: string | null
+  // Notice content snoozed by "Close Today"; a different notice still pops
+  closedNotice: string
 
   // Actions
   markNoticeRead: (noticeContent: string) => void
   markAnnouncementsRead: (keys: string[]) => void
-  setClosedUntilDate: (date: string | null) => void
+  setClosedUntilDate: (date: string | null, noticeContent?: string) => void
   isAnnouncementRead: (key: string) => boolean
-  isNoticeClosed: () => boolean
+  isNoticeClosed: (noticeContent: string) => boolean
 }
 
 /**
@@ -45,6 +47,7 @@ export const useNotificationStore = create<NotificationState>()(
       lastReadNotice: '',
       readAnnouncementKeys: [],
       closedUntilDate: null,
+      closedNotice: '',
 
       markNoticeRead: (noticeContent: string) => {
         // Persist the full trimmed content so edits beyond 100 chars register
@@ -60,20 +63,22 @@ export const useNotificationStore = create<NotificationState>()(
         }))
       },
 
-      setClosedUntilDate: (date: string | null) => {
-        set({ closedUntilDate: date })
+      setClosedUntilDate: (date: string | null, noticeContent = '') => {
+        set({ closedUntilDate: date, closedNotice: noticeContent.trim() })
       },
 
       isAnnouncementRead: (key: string) => {
         return get().readAnnouncementKeys.includes(key)
       },
 
-      isNoticeClosed: () => {
-        const { closedUntilDate } = get()
+      isNoticeClosed: (noticeContent: string) => {
+        const { closedUntilDate, closedNotice } = get()
         if (!closedUntilDate) return false
 
         const today = new Date().toDateString()
-        return closedUntilDate === today
+        return (
+          closedUntilDate === today && closedNotice === noticeContent.trim()
+        )
       },
     }),
     {
@@ -82,6 +87,7 @@ export const useNotificationStore = create<NotificationState>()(
         lastReadNotice: state.lastReadNotice,
         readAnnouncementKeys: state.readAnnouncementKeys,
         closedUntilDate: state.closedUntilDate,
+        closedNotice: state.closedNotice,
       }),
     }
   )

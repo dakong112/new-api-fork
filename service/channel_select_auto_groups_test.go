@@ -127,3 +127,130 @@ func TestCacheGetRandomSatisfiedChannelUsesTokenAutoGroupsWhenGlobalAutoIsEmpty(
 	assert.Equal(t, "default", selectedGroup)
 	assert.Equal(t, "default", common.GetContextKeyString(ctx, constant.ContextKeyAutoGroup))
 }
+
+func TestCacheGetRandomSatisfiedChannelFallsBackToConfiguredGroups(t *testing.T) {
+	db := setupChannelSelectAutoGroupsTest(t)
+	originalFallbacks := common.GroupFallbackGroups
+	t.Cleanup(func() { common.GroupFallbackGroups = originalFallbacks })
+	// "secret" is not usable by the user, so it must be skipped.
+	common.GroupFallbackGroups = map[string][]string{"default": {"secret", "vip", "default"}}
+
+	const modelName = "fallback-groups-model"
+	const vipOnlyModel = "fallback-groups-vip-only-model"
+	createChannelSelectAutoGroupsChannel(t, db, 2201, "default", modelName)
+	createChannelSelectAutoGroupsChannel(t, db, 2202, "vip", modelName)
+	createChannelSelectAutoGroupsChannel(t, db, 2203, "secret", modelName)
+	createChannelSelectAutoGroupsChannel(t, db, 2204, "vip", vipOnlyModel)
+	model.InitChannelCache()
+	gin.SetMode(gin.TestMode)
+
+	newParam := func(modelName string) (*gin.Context, *RetryParam) {
+		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		common.SetContextKey(ctx, constant.ContextKeyUserGroup, "default")
+		common.SetContextKey(ctx, constant.ContextKeyTokenCrossGroupRetry, true)
+		return ctx, &RetryParam{Ctx: ctx, TokenGroup: "default", ModelName: modelName, Retry: common.GetPointer(0)}
+	}
+
+	// RetryTimes is 0: the own group gets one attempt, then the fallback one.
+	ctx, param := newParam(modelName)
+	first, group, err := CacheGetRandomSatisfiedChannel(param)
+	require.NoError(t, err)
+	require.NotNil(t, first)
+	assert.Equal(t, 2201, first.Id)
+	assert.Equal(t, "default", group)
+	assert.Equal(t, 1, param.RemainingRetries(), "a pending fallback group must keep one retry")
+
+	// The relay loop retries with its own RetryParam, not the distributor's.
+	param = &RetryParam{Ctx: ctx, TokenGroup: "default", ModelName: modelName, Retry: common.GetPointer(0)}
+	require.Equal(t, 1, param.RemainingRetries(), "a pending fallback group must keep one retry")
+	param.IncreaseRetry()
+	require.Equal(t, 0, param.GetRetry(), "the fallback group starts at its first priority")
+	second, group, err := CacheGetRandomSatisfiedChannel(param)
+	require.NoError(t, err)
+	require.NotNil(t, second)
+	assert.Equal(t, 2202, second.Id)
+	assert.Equal(t, "vip", group)
+	assert.Equal(t, "vip", common.GetContextKeyString(ctx, constant.ContextKeyAutoGroup), "billing must use the fallback group")
+	assert.Equal(t, 0, param.RemainingRetries(), "the last group must not switch again")
+
+	// A group without a channel for the model goes straight to its fallback.
+	_, param = newParam(vipOnlyModel)
+	channel, group, err := CacheGetRandomSatisfiedChannel(param)
+	require.NoError(t, err)
+	require.NotNil(t, channel)
+	assert.Equal(t, 2204, channel.Id)
+	assert.Equal(t, "vip", group)
+
+	// With the token switch off, the request stays in its own group.
+	ctx, param = newParam(modelName)
+	common.SetContextKey(ctx, constant.ContextKeyTokenCrossGroupRetry, false)
+	channel, group, err = CacheGetRandomSatisfiedChannel(param)
+	require.NoError(t, err)
+	require.NotNil(t, channel)
+	assert.Equal(t, 2201, channel.Id)
+	assert.Equal(t, "default", group)
+	assert.Equal(t, 0, param.RemainingRetries(), "no fallback group without the token switch")
+	_, param = newParam(vipOnlyModel)
+	common.SetContextKey(param.Ctx, constant.ContextKeyTokenCrossGroupRetry, false)
+	channel, _, err = CacheGetRandomSatisfiedChannel(param)
+	require.NoError(t, err)
+	assert.Nil(t, channel, "a group without the model must not borrow a fallback group")
+}
+
+func TestCacheGetRandomSatisfiedChannelNetworkRetrySkipsTriedChannels(t *testing.T) {
+	db := setupChannelSelectAutoGroupsTest(t)
+	originalFallbacks := common.GroupFallbackGroups
+	t.Cleanup(func() { common.GroupFallbackGroups = originalFallbacks })
+	common.GroupFallbackGroups = map[string][]string{"default": {"vip"}}
+	common.RetryTimes = 5
+
+	const modelName = "network-retry-model"
+	createChannelSelectAutoGroupsChannel(t, db, 2301, "default", modelName)
+	createChannelSelectAutoGroupsChannel(t, db, 2302, "default", modelName)
+	createChannelSelectAutoGroupsChannel(t, db, 2303, "default", modelName)
+	createChannelSelectAutoGroupsChannel(t, db, 2304, "vip", modelName)
+	// 2301 and 2302 share the top tier; 2303 is the lower tier.
+	for _, id := range []int{2301, 2302} {
+		require.NoError(t, db.Model(&model.Channel{}).Where("id = ?", id).Update("priority", 10).Error)
+		require.NoError(t, db.Model(&model.Ability{}).Where("channel_id = ?", id).Update("priority", 10).Error)
+	}
+	model.InitChannelCache()
+	gin.SetMode(gin.TestMode)
+
+	// next simulates a retry after the given channels failed with a network error.
+	next := func(ctx *gin.Context, tokenGroup string, retry int, tried ...string) (int, string) {
+		ctx.Set("use_channel", tried)
+		common.SetContextKey(ctx, constant.ContextKeyNetworkRetry, true)
+		param := &RetryParam{Ctx: ctx, TokenGroup: tokenGroup, ModelName: modelName, Retry: common.GetPointer(retry)}
+		channel, group, err := CacheGetRandomSatisfiedChannel(param)
+		require.NoError(t, err)
+		if channel == nil {
+			return 0, group
+		}
+		return channel.Id, group
+	}
+	newCtx := func(crossGroup bool) *gin.Context {
+		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+		common.SetContextKey(ctx, constant.ContextKeyUserGroup, "default")
+		common.SetContextKey(ctx, constant.ContextKeyTokenCrossGroupRetry, crossGroup)
+		return ctx
+	}
+
+	ctx := newCtx(true)
+	id, group := next(ctx, "default", 1, "2301")
+	assert.Equal(t, 2302, id, "the untried top-tier channel goes before the lower tier")
+	assert.Equal(t, "default", group)
+	id, _ = next(ctx, "default", 2, "2301", "2302")
+	assert.Equal(t, 2303, id)
+	id, group = next(ctx, "default", 3, "2301", "2302", "2303")
+	assert.Equal(t, 2304, id, "an exhausted group moves on to its fallback group")
+	assert.Equal(t, "vip", group)
+
+	id, _ = next(newCtx(false), "default", 3, "2301", "2302", "2303")
+	assert.Zero(t, id, "without cross-group retry the request stays in its group")
+
+	ctx = newCtx(false)
+	common.SetContextKey(ctx, constant.ContextKeyTokenAutoGroups, []string{"default", "vip"})
+	id, _ = next(ctx, "auto", 3, "2301", "2302", "2303")
+	assert.Zero(t, id, "an auto token without cross-group retry stays in its group")
+}

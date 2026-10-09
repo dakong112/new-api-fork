@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   fireEvent,
   render,
@@ -24,6 +25,8 @@ import {
   type RenderResult,
 } from '@testing-library/react'
 import { afterEach, describe, expect, test } from 'vitest'
+
+import { STATUS_QUERY_KEY } from '@/lib/status-query'
 
 import type { Redemption } from '../../types'
 
@@ -93,18 +96,27 @@ function deferred<T>() {
   return { promise, reject, resolve }
 }
 
+// The drawer reads the test-code value from the status query. Seed it so the
+// tests never fetch a status, which would overwrite their currency config.
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+})
+
 function drawerTree(currentRow: Redemption) {
+  queryClient.setQueryData(STATUS_QUERY_KEY, { redemption_test_quota: 0 })
   return (
-    <I18nextProvider i18n={i18n}>
-      <RedemptionsProvider>
-        <RedemptionsMutateDrawer
-          open
-          currentRow={currentRow}
-          onOpenChange={() => undefined}
-        />
-      </RedemptionsProvider>
-      <Toaster duration={60_000} />
-    </I18nextProvider>
+    <QueryClientProvider client={queryClient}>
+      <I18nextProvider i18n={i18n}>
+        <RedemptionsProvider>
+          <RedemptionsMutateDrawer
+            open
+            currentRow={currentRow}
+            onOpenChange={() => undefined}
+          />
+        </RedemptionsProvider>
+        <Toaster duration={60_000} />
+      </I18nextProvider>
+    </QueryClientProvider>
   )
 }
 
@@ -178,6 +190,7 @@ async function waitForLoadedForm(): Promise<void> {
 }
 
 afterEach(() => {
+  queryClient.clear()
   apiClient.get = originalGet
   apiClient.put = originalPut
   Reflect.set(console, 'log', originalConsoleLog)

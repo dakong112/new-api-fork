@@ -1,6 +1,7 @@
 package service
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
@@ -104,6 +105,33 @@ func GetRequestAutoGroups(c *gin.Context, userGroup string) []string {
 		return []string{}
 	}
 	return FilterUserTokenAutoGroups(userGroup, groups)
+}
+
+// GetUserFallbackGroups returns the configured fallback groups of group, in
+// order, that the user may select.
+func GetUserFallbackGroups(userGroup, group string) []string {
+	fallbacks := []string{}
+	for _, fallback := range common.GroupFallbackGroups[group] {
+		if fallback == group || slices.Contains(fallbacks, fallback) || !IsUserSelectableGroup(userGroup, fallback) {
+			continue
+		}
+		fallbacks = append(fallbacks, fallback)
+	}
+	return fallbacks
+}
+
+// GetRequestGroupChain lists the groups a request may route through, in order.
+// "auto" resolves to its Auto groups; any other group is followed by its
+// fallback groups only when the token enables cross-group retry.
+func GetRequestGroupChain(c *gin.Context, tokenGroup, userGroup string) []string {
+	if tokenGroup == "auto" {
+		return GetRequestAutoGroups(c, userGroup)
+	}
+	chain := []string{tokenGroup}
+	if !common.GetContextKeyBool(c, constant.ContextKeyTokenCrossGroupRetry) {
+		return chain
+	}
+	return append(chain, GetUserFallbackGroups(userGroup, tokenGroup)...)
 }
 
 // GetGroupsEnabledModels 按 groups 顺序获取各分组启用的模型并去重

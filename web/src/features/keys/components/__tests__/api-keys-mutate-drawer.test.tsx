@@ -60,7 +60,11 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
             success: true,
             data: {
               auto: { desc: 'Automatic routing', ratio: 'auto' },
-              default: { desc: 'Standard access', ratio: 1 },
+              default: {
+                desc: 'Standard access',
+                ratio: 1,
+                fallback_groups: ['vip'],
+              },
               vip: { desc: 'Priority access', ratio: 2 },
             },
           },
@@ -105,7 +109,11 @@ async function renderCreateDrawer(): Promise<void> {
       success: true,
       data: {
         auto: { desc: 'Automatic routing', ratio: 'auto' },
-        default: { desc: 'Standard access', ratio: 1 },
+        default: {
+          desc: 'Standard access',
+          ratio: 1,
+          fallback_groups: ['vip'],
+        },
         vip: { desc: 'Priority access', ratio: 2 },
       },
     },
@@ -276,5 +284,37 @@ describe('API keys mutate drawer Auto group integration', () => {
     fireEvent.click(findButton('Save changes', true))
     await waitFor(() => expect(createdPayloads).toHaveLength(1))
     expect(createdPayloads[0]?.auto_groups).toEqual(['vip'])
+  })
+
+  test('shows the fallback chain for an ordinary group and saves the switch', async () => {
+    const createdPayloads: Array<Record<string, unknown>> = []
+    installApiFixtures(createdPayloads)
+    await renderCreateDrawer()
+
+    selectComboboxOption(getControlByLabel('Group'), 'Standard access')
+    const chain = () =>
+      document.querySelector('[aria-label="Group execution chain"]')
+        ?.textContent ?? ''
+    await waitFor(() => expect(chain()).toContain('vip'))
+    expect(chain()).toContain('default')
+
+    const toggle = [...document.querySelectorAll('[role="switch"]')].find(
+      (item) =>
+        item
+          .closest('[data-slot="form-item"]')
+          ?.textContent?.includes('Fallback group retry')
+    )
+    if (!(toggle instanceof HTMLElement)) {
+      throw new Error('Expected fallback group retry switch')
+    }
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(toggle)
+    expect(chain()).not.toContain('vip')
+
+    changeInput(getControlByLabel('Name'), 'fallback-off')
+    fireEvent.click(findButton('Save changes', true))
+    await waitFor(() => expect(createdPayloads).toHaveLength(1))
+    expect(createdPayloads[0]?.group).toBe('default')
+    expect(createdPayloads[0]?.cross_group_retry).toBe(false)
   })
 })
