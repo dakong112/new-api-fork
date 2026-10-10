@@ -76,7 +76,10 @@ import { getUserModels, getUserGroups } from '@/lib/api'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
 import { sortGroupNames, useGroupDisplayOrder } from '@/lib/group-order'
 import { handleServerError } from '@/lib/handle-server-error'
-import { requireServerSuccess } from '@/lib/server-error-message'
+import {
+  requireServerSuccess,
+  translateServerText,
+} from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
 
 import {
@@ -174,11 +177,11 @@ export function ApiKeysMutateDrawer({
     return sortGroupNames(Object.keys(data), groupOrder).map((key) => ({
       value: key,
       label: key,
-      desc: data[key].desc || key,
+      desc: data[key].desc ? translateServerText(t, data[key].desc) : key,
       ratio: data[key].ratio,
       fallbackGroups: data[key].fallback_groups ?? [],
     }))
-  }, [groupsData, groupOrder])
+  }, [groupsData, groupOrder, t])
   const backendHasAuto = groups.some((g) => g.value === 'auto')
   const availableAutoGroupNames = useMemo(
     () => groups.filter((group) => group.value !== 'auto').map((g) => g.value),
