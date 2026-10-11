@@ -24,18 +24,56 @@ import { GroupVendorFilter } from '../group-vendor-filter'
 
 const vendors = [{ name: 'DeepSeek', icon: 'DeepSeek.Color' }, { name: '' }]
 
+function setup(value: string | null = null) {
+  const onChange = vi.fn()
+  render(
+    <GroupVendorFilter vendors={vendors} value={value} onChange={onChange} />
+  )
+  return { onChange, user: userEvent.setup() }
+}
+
 describe('GroupVendorFilter', () => {
-  it('selects a vendor and reports it, with All clearing to null', async () => {
-    const user = userEvent.setup()
-    const onChange = vi.fn()
-    render(
-      <GroupVendorFilter vendors={vendors} value={null} onChange={onChange} />
+  it('reports the vendor name when a vendor is clicked', async () => {
+    const { onChange, user } = setup()
+    await user.click(screen.getByRole('button', { name: 'DeepSeek' }))
+    expect(onChange).toHaveBeenCalledWith('DeepSeek')
+  })
+
+  it('reports an empty name when Other is clicked', async () => {
+    const { onChange, user } = setup()
+    await user.click(screen.getByRole('button', { name: 'Other' }))
+    expect(onChange).toHaveBeenCalledWith('')
+  })
+
+  it('reports null when All is clicked after a vendor was selected', async () => {
+    const { onChange, user } = setup('DeepSeek')
+    await user.click(screen.getByRole('button', { name: 'All' }))
+    expect(onChange).toHaveBeenCalledWith(null)
+  })
+
+  it('does not report anything when the selected item is clicked again', async () => {
+    const { onChange, user } = setup('DeepSeek')
+    await user.click(screen.getByRole('button', { name: 'DeepSeek' }))
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('marks only the selected vendor as pressed', () => {
+    setup('DeepSeek')
+    expect(screen.getByRole('button', { name: 'DeepSeek' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
     )
-    expect(screen.getByRole('radio', { name: 'All' })).toBeChecked()
-    await user.click(screen.getByRole('radio', { name: 'DeepSeek' }))
-    expect(onChange).toHaveBeenLastCalledWith('DeepSeek')
-    await user.click(screen.getByRole('radio', { name: 'Other' }))
-    expect(onChange).toHaveBeenLastCalledWith('')
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+  })
+
+  it('moves focus to the next item with the right arrow key', async () => {
+    const { user } = setup()
+    screen.getByRole('button', { name: 'All' }).focus()
+    await user.keyboard('{ArrowRight}')
+    expect(screen.getByRole('button', { name: 'DeepSeek' })).toHaveFocus()
   })
 
   it('renders nothing when fewer than two vendors exist', () => {

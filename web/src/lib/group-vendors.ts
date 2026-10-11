@@ -49,9 +49,14 @@ export function buildGroupVendorIndex(
     }
   }
   const used = new Set([...byGroup.values()].flatMap((set) => [...set]))
-  const ordered: GroupVendor[] = vendors
-    .filter((v) => used.has(v.name))
-    .map((v) => ({ name: v.name, icon: v.icon }))
+  // Skip unnamed and repeated vendors so Other never appears twice.
+  const seen = new Set<string>()
+  const ordered: GroupVendor[] = []
+  for (const v of vendors) {
+    if (!v.name || seen.has(v.name) || !used.has(v.name)) continue
+    seen.add(v.name)
+    ordered.push({ name: v.name, icon: v.icon })
+  }
   if (used.has(OTHER_VENDOR)) ordered.push({ name: OTHER_VENDOR })
   const rank = new Map(ordered.map((v, i) => [v.name, i]))
   const vendorsByGroup = new Map(

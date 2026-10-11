@@ -19,16 +19,13 @@ For commercial licensing, please contact support@quantumnous.com
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 
-import { getPricing } from '@/features/pricing/api'
+import { pricingQueryOptions } from '@/features/pricing/api'
 import { buildGroupVendorIndex } from '@/lib/group-vendors'
-import { requireServerSuccess } from '@/lib/server-error-message'
 
 /** Shares the model square's `['pricing']` cache, so it adds no request there. */
 export function useGroupVendors(enabled = true) {
   const { data } = useQuery({
-    queryKey: ['pricing'],
-    queryFn: async () => requireServerSuccess(await getPricing()),
-    staleTime: 5 * 60 * 1000,
+    ...pricingQueryOptions,
     enabled,
   })
   return useMemo(

@@ -54,6 +54,35 @@ describe('buildGroupVendorIndex', () => {
   })
 })
 
+describe('buildGroupVendorIndex edge cases', () => {
+  it('files vendor_id 0 under Other', () => {
+    const index = buildGroupVendorIndex(
+      [{ vendor_id: 0, enable_groups: ['g'] }],
+      vendors
+    )
+    expect(index.vendorsByGroup.get('g')).toEqual([OTHER_VENDOR])
+  })
+
+  it('files a vendor_id missing from vendors under Other', () => {
+    const index = buildGroupVendorIndex(
+      [{ vendor_id: 99, enable_groups: ['g'] }],
+      vendors
+    )
+    expect(index.vendorsByGroup.get('g')).toEqual([OTHER_VENDOR])
+  })
+
+  it('lists duplicate-named vendors once', () => {
+    const index = buildGroupVendorIndex(
+      [
+        { vendor_id: 1, enable_groups: ['a'] },
+        { vendor_id: 4, enable_groups: ['b'] },
+      ],
+      [...vendors, { id: 4, name: 'DeepSeek' }]
+    )
+    expect(index.vendors.map((v) => v.name)).toEqual(['DeepSeek'])
+  })
+})
+
 describe('filterGroupsByVendor', () => {
   const index = buildGroupVendorIndex(models, vendors)
   const groups = ['auto', 'ds', 'mix', 'misc']
@@ -78,8 +107,11 @@ describe('filterGroupsByVendor', () => {
 describe('isGroupAvailable', () => {
   const index = buildGroupVendorIndex(models, vendors)
 
-  it('treats a group with an enabled model and auto as available', () => {
+  it('treats a group with an enabled model as available', () => {
     expect(isGroupAvailable('mix', index)).toBe(true)
+  })
+
+  it('always treats auto as available', () => {
     expect(isGroupAvailable('auto', index)).toBe(true)
   })
 

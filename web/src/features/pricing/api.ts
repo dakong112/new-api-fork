@@ -16,7 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { queryOptions } from '@tanstack/react-query'
+
 import { api } from '@/lib/api'
+import { requireServerSuccess } from '@/lib/server-error-message'
 
 import type { PricingData } from './types'
 
@@ -29,3 +32,10 @@ export async function getPricing(): Promise<PricingData> {
   const res = await api.get('/api/pricing')
   return res.data
 }
+
+// Shared by the model square and the group vendor filter so both hit one cache entry.
+export const pricingQueryOptions = queryOptions({
+  queryKey: ['pricing'],
+  queryFn: async () => requireServerSuccess(await getPricing()),
+  staleTime: 5 * 60 * 1000,
+})
