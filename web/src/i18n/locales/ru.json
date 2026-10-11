@@ -7380,6 +7380,7 @@
     "Charged {{amount}}": "Списано {{amount}}",
     "Not charged (fully refunded)": "Не списано (полный возврат)",
     "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "Это попытка {{attempt}} запроса. Затем запрос выполнен на #{{channel}}.",
+    "This is attempt {{attempt}} of the request. It then succeeded.": "Это попытка {{attempt}} запроса. Затем запрос выполнен успешно.",
     "This is attempt {{attempt}} of the request. It failed after all retries.": "Это попытка {{attempt}} запроса. Все повторы завершились неудачей.",
     "The final record of this request was not found": "Итоговая запись этого запроса не найдена",
     "View final record": "Открыть итоговую запись",

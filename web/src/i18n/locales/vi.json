@@ -7380,6 +7380,7 @@
     "Charged {{amount}}": "Đã trừ {{amount}}",
     "Not charged (fully refunded)": "Không trừ phí (hoàn toàn bộ)",
     "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "Đây là lần thử {{attempt}} của yêu cầu. Sau đó đã thành công trên #{{channel}}.",
+    "This is attempt {{attempt}} of the request. It then succeeded.": "Đây là lần thử {{attempt}} của yêu cầu. Sau đó đã thành công.",
     "This is attempt {{attempt}} of the request. It failed after all retries.": "Đây là lần thử {{attempt}} của yêu cầu. Yêu cầu vẫn thất bại sau mọi lần thử lại.",
     "The final record of this request was not found": "Không tìm thấy bản ghi cuối của yêu cầu này",
     "View final record": "Xem bản ghi cuối",

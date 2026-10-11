@@ -7380,6 +7380,7 @@
     "Charged {{amount}}": "請求額 {{amount}}",
     "Not charged (fully refunded)": "請求なし（全額返金）",
     "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "これはリクエストの {{attempt}} 回目の試行です。その後 #{{channel}} で成功しました。",
+    "This is attempt {{attempt}} of the request. It then succeeded.": "これはリクエストの {{attempt}} 回目の試行です。その後成功しました。",
     "This is attempt {{attempt}} of the request. It failed after all retries.": "これはリクエストの {{attempt}} 回目の試行です。再試行後も失敗しました。",
     "The final record of this request was not found": "このリクエストの最終記録が見つかりません",
     "View final record": "最終記録を表示",

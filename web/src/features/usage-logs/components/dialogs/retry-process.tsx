@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import type { TFunction } from 'i18next'
 import { ChevronDown } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { StatusBadge, type StatusVariant } from '@/components/status-badge'
@@ -71,6 +72,58 @@ function summaryCharge(t: TFunction, process: RetryProcess): string | null {
   return t('Not charged (fully refunded)')
 }
 
+function bannerText(
+  t: TFunction,
+  process: RetryProcess,
+  attempt: number
+): string {
+  if (!process.summary.succeeded) {
+    return t(
+      'This is attempt {{attempt}} of the request. It failed after all retries.',
+      { attempt }
+    )
+  }
+  const winner = process.attempts.find((a) => a.succeeded)
+  if (!winner) {
+    return t('This is attempt {{attempt}} of the request. It then succeeded.', {
+      attempt,
+    })
+  }
+  return t(
+    'This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.',
+    { attempt, channel: winner.channelId }
+  )
+}
+
+function ErrorSummary(props: { message: string }) {
+  const { t } = useTranslation()
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <div className='mt-1 flex min-w-0 items-start gap-1 text-xs'>
+      <p
+        className={cn(
+          'min-w-0 flex-1',
+          expanded
+            ? 'break-all whitespace-pre-wrap sm:wrap-break-word'
+            : 'truncate'
+        )}
+        title={props.message}
+      >
+        {props.message}
+      </p>
+      <Button
+        variant='link'
+        size='sm'
+        className='h-auto shrink-0 p-0 text-xs'
+        aria-expanded={expanded}
+        onClick={() => setExpanded(!expanded)}
+      >
+        {expanded ? t('Collapse') : t('Expand')}
+      </Button>
+    </div>
+  )
+}
+
 function Banner(props: RetryProcessProps) {
   const { t } = useTranslation()
   const current = props.process.currentAttempt
@@ -83,16 +136,7 @@ function Banner(props: RetryProcessProps) {
       </p>
     )
   }
-  const winner = props.process.attempts.find((a) => a.succeeded)
-  const text = props.process.summary.succeeded
-    ? t(
-        'This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.',
-        { attempt: current, channel: winner?.channelId }
-      )
-    : t(
-        'This is attempt {{attempt}} of the request. It failed after all retries.',
-        { attempt: current }
-      )
+  const text = bannerText(t, props.process, current)
   return (
     <div className='bg-muted/40 flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm'>
       <span>{text}</span>
@@ -124,9 +168,9 @@ function AttemptItem(props: { attempt: RetryAttempt; current: boolean }) {
         props.current && 'border-primary bg-primary/5'
       )}
     >
-      <div className='flex flex-wrap items-center gap-x-2 gap-y-1'>
+      <div className='flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1'>
         <span className='text-muted-foreground tabular-nums'>{a.attempt}.</span>
-        <span className='font-medium'>
+        <span className='min-w-0 font-medium break-all sm:wrap-break-word'>
           #{a.channelId} {a.channelName}
         </span>
         <StatusBadge
@@ -135,17 +179,15 @@ function AttemptItem(props: { attempt: RetryAttempt; current: boolean }) {
           label={a.succeeded ? t('Success') : failureLabel(t, a.status)}
         />
         {raw ? (
-          <span className='text-muted-foreground font-mono text-xs'>{raw}</span>
+          <span className='text-muted-foreground min-w-0 font-mono text-xs break-all sm:wrap-break-word'>
+            {raw}
+          </span>
         ) : null}
       </div>
       <p className='text-muted-foreground mt-1 text-xs'>
         {t('Duration')} {duration} · {charge}
       </p>
-      {a.message ? (
-        <p className='mt-1 truncate text-xs' title={a.message}>
-          {a.message}
-        </p>
-      ) : null}
+      {a.message ? <ErrorSummary message={a.message} /> : null}
       {a.upstreamMayCharge ? (
         <p className='text-warning mt-1 text-xs'>
           {t('Timed out after reaching the upstream, which may have billed it')}

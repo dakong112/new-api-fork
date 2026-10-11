@@ -7379,6 +7379,7 @@
     "Charged {{amount}}": "實際扣費 {{amount}}",
     "Not charged (fully refunded)": "未扣費（已全額退款）",
     "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "這是該請求的第 {{attempt}} 次嘗試（失敗），請求隨後在 #{{channel}} 重試成功。",
+    "This is attempt {{attempt}} of the request. It then succeeded.": "這是該請求的第 {{attempt}} 次嘗試（失敗），請求隨後重試成功。",
     "This is attempt {{attempt}} of the request. It failed after all retries.": "這是該請求的第 {{attempt}} 次嘗試（失敗），請求在重試後仍然失敗。",
     "The final record of this request was not found": "找不到該請求的最終記錄",
     "View final record": "查看最終記錄",

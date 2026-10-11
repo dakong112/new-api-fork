@@ -7379,6 +7379,7 @@
     "Charged {{amount}}": "Charged {{amount}}",
     "Not charged (fully refunded)": "Not charged (fully refunded)",
     "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.",
+    "This is attempt {{attempt}} of the request. It then succeeded.": "This is attempt {{attempt}} of the request. It then succeeded.",
     "This is attempt {{attempt}} of the request. It failed after all retries.": "This is attempt {{attempt}} of the request. It failed after all retries.",
     "The final record of this request was not found": "The final record of this request was not found",
     "View final record": "View final record",

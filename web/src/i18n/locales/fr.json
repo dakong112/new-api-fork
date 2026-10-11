@@ -7380,6 +7380,7 @@
     "Charged {{amount}}": "Facturé {{amount}}",
     "Not charged (fully refunded)": "Non facturé (entièrement remboursé)",
     "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "Ceci est la tentative {{attempt}} de la requête. Elle a ensuite réussi sur #{{channel}}.",
+    "This is attempt {{attempt}} of the request. It then succeeded.": "Ceci est la tentative {{attempt}} de la requête. Elle a ensuite réussi.",
     "This is attempt {{attempt}} of the request. It failed after all retries.": "Ceci est la tentative {{attempt}} de la requête. Elle a échoué après toutes les tentatives.",
     "The final record of this request was not found": "L'enregistrement final de cette requête est introuvable",
     "View final record": "Voir l'enregistrement final",

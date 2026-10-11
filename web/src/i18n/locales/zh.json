@@ -7379,6 +7379,7 @@
     "Charged {{amount}}": "实际扣费 {{amount}}",
     "Not charged (fully refunded)": "未扣费（已全额退款）",
     "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "这是该请求的第 {{attempt}} 次尝试（失败），请求随后在 #{{channel}} 重试成功。",
+    "This is attempt {{attempt}} of the request. It then succeeded.": "这是该请求的第 {{attempt}} 次尝试（失败），请求随后重试成功。",
     "This is attempt {{attempt}} of the request. It failed after all retries.": "这是该请求的第 {{attempt}} 次尝试（失败），请求在重试后仍然失败。",
     "The final record of this request was not found": "未找到该请求的最终记录",
     "View final record": "查看最终记录",
