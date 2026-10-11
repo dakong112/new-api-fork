@@ -16,18 +16,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import {
-  Link as LinkIcon,
-  Mail,
-  Megaphone,
-  MessageCircle,
-  X,
-} from 'lucide-react'
+import { Link as LinkIcon, Mail, Megaphone, X } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { SiDiscord, SiQq, SiTelegram, SiWechat } from 'react-icons/si'
 
-import { IconDiscord, IconTelegram, IconWeChat } from '@/assets/brand-icons'
 import { Button } from '@/components/ui/button'
 import {
   Popover,
@@ -45,16 +39,21 @@ const DISMISS_STORAGE_KEY = 'announcement-bar-dismissed'
 const MARQUEE_SECONDS_PER_CHAR = 0.25
 const MARQUEE_MIN_SECONDS = 15
 
+// Product logos keep their brand colors (Simple Icons data; WeChat from
+// wechat.design); generic contacts follow the text color.
 const CONTACT_ICONS: Record<
   ContactLink['icon'],
-  React.ComponentType<{ className?: string }>
+  {
+    Icon: React.ComponentType<{ className?: string; color?: string }>
+    color?: string
+  }
 > = {
-  qq: MessageCircle,
-  wechat: IconWeChat,
-  telegram: IconTelegram,
-  discord: IconDiscord,
-  email: Mail,
-  link: LinkIcon,
+  qq: { Icon: SiQq, color: '#1EBAFC' },
+  wechat: { Icon: SiWechat, color: '#07C160' },
+  telegram: { Icon: SiTelegram, color: '#26A5E4' },
+  discord: { Icon: SiDiscord, color: '#5865F2' },
+  email: { Icon: Mail },
+  link: { Icon: LinkIcon },
 }
 
 function readDismissedKey(): string | null {
@@ -68,13 +67,13 @@ function readDismissedKey(): string | null {
 function ContactItem(props: { link: ContactLink }) {
   const { t } = useTranslation()
   const { copyToClipboard } = useCopyToClipboard()
-  const Icon = CONTACT_ICONS[props.link.icon] ?? LinkIcon
+  const { Icon, color } = CONTACT_ICONS[props.link.icon] ?? CONTACT_ICONS.link
   const text = props.link.value
     ? `${props.link.label} ${props.link.value}`
     : props.link.label
   const content = (
     <>
-      <Icon className='size-4' aria-hidden='true' />
+      <Icon className='size-4' color={color} aria-hidden='true' />
       <span className='hidden max-w-48 truncate md:inline'>
         {props.link.label}
         {props.link.value ? (
