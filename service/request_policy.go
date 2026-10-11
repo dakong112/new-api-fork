@@ -16,6 +16,8 @@ import (
 
 const requestPolicyContextKey = "request_policy_state"
 
+const policyMessageLimit = 200
+
 type PolicyDecision struct {
 	Action string `json:"action"`
 	Reason string `json:"reason"`
@@ -23,16 +25,19 @@ type PolicyDecision struct {
 }
 
 type PolicyEvent struct {
-	Attempt     int            `json:"attempt"`
-	ChannelID   int            `json:"channel_id,omitempty"`
-	Group       string         `json:"group,omitempty"`
-	Rule        string         `json:"rule,omitempty"`
-	Status      int            `json:"status,omitempty"`
-	ErrorCode   string         `json:"error_code,omitempty"`
-	ErrorSource string         `json:"error_source,omitempty"`
-	ElapsedMS   int64          `json:"elapsed_ms"`
-	Decision    PolicyDecision `json:"decision"`
-	Health      string         `json:"health,omitempty"`
+	Attempt     int    `json:"attempt"`
+	ChannelID   int    `json:"channel_id,omitempty"`
+	Group       string `json:"group,omitempty"`
+	Rule        string `json:"rule,omitempty"`
+	Status      int    `json:"status,omitempty"`
+	ErrorCode   string `json:"error_code,omitempty"`
+	ErrorSource string `json:"error_source,omitempty"`
+	// Message is the masked upstream error, at most policyMessageLimit runes,
+	// shown only to administrators with the retry process in the log details.
+	Message   string         `json:"message,omitempty"`
+	ElapsedMS int64          `json:"elapsed_ms"`
+	Decision  PolicyDecision `json:"decision"`
+	Health    string         `json:"health,omitempty"`
 }
 
 // RequestPolicyState records how one request was routed so administrators can
@@ -115,6 +120,11 @@ func RecordPolicyFailure(c *gin.Context, channelID int, err *types.NewAPIError, 
 	if source == "local" {
 		event.Decision.Reason = "local_rejection"
 	}
+	message := []rune(err.MaskSensitiveError())
+	if len(message) > policyMessageLimit {
+		message = message[:policyMessageLimit]
+	}
+	event.Message = string(message)
 	state.AddEvent(event)
 	event.Decision, event.Health = decision, "unchanged"
 	if source != "local" && c.GetBool("auto_ban") && ShouldDisableChannel(err) {

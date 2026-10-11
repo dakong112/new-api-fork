@@ -6,8 +6,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -224,4 +226,28 @@ func TestRequestPolicyEventsReachLogAdminInfo(t *testing.T) {
 	other := model.NewLogOther()
 	AppendRelayLogAdminInfo(untouched, nil, other)
 	assert.NotContains(t, other.Snapshot()["admin_info"], "request_policy", "requests without decisions do not carry an empty record")
+}
+
+func TestRecordPolicyFailureStoresTruncatedMessage(t *testing.T) {
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	err := types.NewOpenAIError(errors.New(strings.Repeat("超时", 150)), types.ErrorCodeBadResponseStatusCode, 524)
+
+	RecordPolicyFailure(c, 45, err, PolicyDecision{Action: "retry", Reason: "network_error_retry", Source: "group"})
+
+	events := RequestPolicy(c).Events()
+	require.Len(t, events, 2)
+	assert.Equal(t, "failure", events[0].Decision.Action)
+	assert.Equal(t, 200, utf8.RuneCountInString(events[0].Message))
+}
+
+func TestRecordPolicyFailureMasksMessage(t *testing.T) {
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	err := types.NewOpenAIError(errors.New("dial https://up.example.com/v1/chat via 10.1.2.3 failed"), types.ErrorCodeBadResponseStatusCode, 502)
+
+	RecordPolicyFailure(c, 45, err, PolicyDecision{Action: "stop"})
+
+	msg := RequestPolicy(c).Events()[0].Message
+	assert.NotContains(t, msg, "example.com")
+	assert.NotContains(t, msg, "10.1.2.3")
+	assert.Equal(t, err.MaskSensitiveError(), msg)
 }
