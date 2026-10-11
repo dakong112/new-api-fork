@@ -200,8 +200,78 @@ describe('buildRetryProcess', () => {
     expect(process?.finalLogId).toBe(3)
   })
 
-  it('falls back to the channel id when no sibling names it', () => {
+  it('leaves the channel name empty when no sibling names it', () => {
     const process = buildRetryProcess(consumeLog, [consumeLog])
     expect(process?.attempts[0].channelName).toBe('')
+  })
+
+  it('marks a billed stream that broke mid-way as succeeded and interrupted', () => {
+    const events = [
+      policy[0],
+      policy[1],
+      policy[2],
+      policy[3],
+      {
+        attempt: 2,
+        channel_id: 42,
+        elapsed_ms: 130000,
+        decision: {
+          action: 'stop',
+          reason: 'stream_not_successful',
+          source: 'upstream',
+        },
+      },
+    ]
+    const streamLog = {
+      ...consumeLog,
+      other: JSON.stringify({ admin_info: { request_policy: events } }),
+    }
+    const process = buildRetryProcess(streamLog, [errorLog, streamLog])
+    expect(process?.attempts[1]).toEqual(
+      expect.objectContaining({
+        succeeded: true,
+        streamInterrupted: true,
+        quota: 716,
+        durationMs: 4870,
+      })
+    )
+    expect(process?.summary.succeeded).toBe(true)
+  })
+
+  it('reports a null duration for an attempt without an end event', () => {
+    const events = [policy[0], policy[1], policy[2], policy[3]]
+    const log = {
+      ...consumeLog,
+      other: JSON.stringify({ admin_info: { request_policy: events } }),
+    }
+    expect(buildRetryProcess(log, [log])?.attempts[1].durationMs).toBeNull()
+  })
+
+  it('keeps the outcome unknown while the final record is not loaded', () => {
+    const longer = {
+      ...errorLog,
+      id: 9,
+      other: JSON.stringify({
+        admin_info: { request_policy: policy.slice(0, 4) },
+      }),
+    }
+    const process = buildRetryProcess(longer, [])
+    expect(process?.attempts.map((a) => a.attempt)).toEqual([1, 2])
+    expect(process?.finalLogId).toBeNull()
+    expect(process?.summary).toEqual({
+      succeeded: null,
+      attemptCount: 2,
+      totalSeconds: null,
+      totalQuota: null,
+    })
+  })
+
+  it('returns null for a single-attempt record with nothing else loaded', () => {
+    expect(buildRetryProcess(errorLog, [])).toBeNull()
+  })
+
+  it('ignores a malformed other field', () => {
+    const broken = { ...consumeLog, other: '{not json' }
+    expect(buildRetryProcess(broken, [broken])).toBeNull()
   })
 })
