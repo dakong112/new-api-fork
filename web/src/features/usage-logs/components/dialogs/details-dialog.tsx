@@ -532,13 +532,15 @@ export function DetailsDialog(props: DetailsDialogProps) {
         await getAllLogs({ request_id: log.request_id, p: 1, page_size: 50 })
       ).data?.items ?? []) as UsageLog[],
     enabled: retryEnabled,
+    meta: { errorToast: false },
   })
   // ponytail: render nothing until siblings load (instead of passing []), so
   // the outcome never flips from "unknown" and the old block never swaps out.
+  // A failed fetch falls back to the old block.
   const retryLoading = retryEnabled && siblingsQuery.isPending
   const retryProcess =
-    retryEnabled && !retryLoading
-      ? buildRetryProcess(log, siblingsQuery.data ?? [])
+    retryEnabled && siblingsQuery.isSuccess
+      ? buildRetryProcess(log, siblingsQuery.data)
       : null
   const topupAuditFields =
     isTopup && props.isAdmin && adminInfo
@@ -784,7 +786,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
         {retryProcess && (
           <RetryProcessView
             process={retryProcess}
-            events={policyEvents}
+            events={retryProcess.events}
             onViewLog={(id) => {
               const target = siblingsQuery.data?.find((row) => row.id === id)
               if (target) setJump({ from: props.log, to: target })

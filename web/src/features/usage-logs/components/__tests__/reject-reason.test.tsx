@@ -18,11 +18,23 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import type { UsageLog } from '../../data/schema'
 import type { LogOtherData } from '../../types'
 import { DetailsDialog } from '../dialogs/details-dialog'
+
+// Admin error logs look up sibling attempts; this request has none.
+vi.mock('@/lib/api', () => ({
+  api: {
+    get: vi.fn().mockResolvedValue({
+      data: {
+        success: true,
+        data: { items: [], total: 0, page: 1, page_size: 50 },
+      },
+    }),
+  },
+}))
 
 const queryClients: QueryClient[] = []
 

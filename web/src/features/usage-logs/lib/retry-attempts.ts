@@ -65,6 +65,8 @@ export type RetryProcess = {
   currentAttempt: number | null
   /** Log id holding the final outcome, or null when it is not known. */
   finalLogId: number | null
+  /** Routing events of the whole chain the attempts were built from. */
+  events: PolicyEvent[]
 }
 
 const TIMEOUT_STATUSES = new Set([504, 524])
@@ -178,5 +180,6 @@ export function buildRetryProcess(
         ? null
         : (openedEvents.at(-1)?.attempt ?? null),
     finalLogId: final?.log.id ?? null,
+    events,
   }
 }

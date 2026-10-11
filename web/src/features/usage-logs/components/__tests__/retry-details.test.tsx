@@ -17,9 +17,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { PolicyEvent } from '@/features/system-settings/request-policies/api'
 
@@ -108,13 +108,16 @@ const consumeLog = makeLog(2, 2, 42, [...attempt1, ...attempt2])
 
 const queryClients: QueryClient[] = []
 
-function renderDetails(log: UsageLog, isAdmin: boolean): void {
+beforeEach(() => {
   get.mockResolvedValue({
     data: {
       success: true,
       data: { items: [errorLog, consumeLog], total: 2, page: 1, page_size: 50 },
     },
   })
+})
+
+function renderDetails(log: UsageLog, isAdmin: boolean): void {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -158,7 +161,7 @@ describe('usage log details retry process', () => {
 
   test('admin clicking view final record on a failed attempt switches to the final record', async () => {
     renderDetails(errorLog, true)
-    expect(screen.getByRole('dialog', { name: /Error/ })).toBeInTheDocument()
+    expect(screen.getByText('(channel-45)')).toBeInTheDocument()
 
     await userEvent.click(
       await screen.findByRole('button', { name: 'View final record' })
@@ -168,6 +171,29 @@ describe('usage log details retry process', () => {
       screen.queryByRole('button', { name: 'View final record' })
     ).toBeNull()
     expect(screen.getByRole('dialog', { name: /Consume/ })).toBeInTheDocument()
+    expect(screen.getByText('(channel-42)')).toBeInTheDocument()
+    expect(screen.queryByText('(channel-45)')).toBeNull()
+  })
+
+  test('admin expanding routing details on an intermediate error row sees the later attempt', async () => {
+    renderDetails(errorLog, true)
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Routing decision details' })
+    )
+
+    const flow = screen.getByRole('list', { name: 'Request decision flow' })
+    expect(within(flow).getAllByText(/Attempt 2/).length).toBeGreaterThan(0)
+  })
+
+  test('admin whose sibling fetch fails keeps the policy block without the retry process', async () => {
+    get.mockRejectedValue(new Error('network down'))
+    renderDetails(consumeLog, true)
+
+    expect(
+      await screen.findByText('Request policy decisions')
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Retry process' })).toBeNull()
   })
 
   test('non-admin details do not request sibling logs or show the retry process', () => {

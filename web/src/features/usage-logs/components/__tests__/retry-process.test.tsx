@@ -59,6 +59,7 @@ const succeeded: RetryProcess = {
   },
   currentAttempt: null,
   finalLogId: 2,
+  events: [],
 }
 const events: PolicyEvent[] = [
   {

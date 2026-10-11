@@ -152,6 +152,7 @@ describe('buildRetryProcess', () => {
     expect(process?.currentAttempt).toBe(1)
     expect(process?.finalLogId).toBe(2)
     expect(process?.summary.succeeded).toBe(true)
+    expect(process?.events).toEqual(policy)
   })
 
   it('reports a final failure with nothing charged', () => {
