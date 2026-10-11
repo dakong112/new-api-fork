@@ -7369,6 +7369,26 @@
     "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "网络重试：上游返回 502、504 或 524 时，请求会改走同一分组中尚未尝试过的渠道。不配置备选分组也能生效；如果该分组配置了备选分组，且令牌开启了「备选分组重试」，本分组渠道全部失败后会继续转到备选分组。超时的上游可能已经执行过请求，上游成本可能重复产生，但用户只计费一次。",
     "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "备选分组只对开启了「备选分组重试」的令牌生效。上游返回 502、504、524 时，只有在「定价分组」中为该分组开启了「网络重试」，才会转到备选分组。",
     "Channel balance alert (USD)": "渠道余额预警阈值（美元）",
-    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "定时刷新余额（CHANNEL_UPDATE_FREQUENCY）或点击「更新所有余额」时，渠道余额低于该金额就通知超级管理员。每个渠道在余额恢复前只提醒一次。填 0 或留空表示关闭。"
+    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "定时刷新余额（CHANNEL_UPDATE_FREQUENCY）或点击「更新所有余额」时，渠道余额低于该金额就通知超级管理员。每个渠道在余额恢复前只提醒一次。填 0 或留空表示关闭。",
+    "Retry process": "重试过程",
+    "Succeeded in the end": "最终成功",
+    "Failed in the end": "最终失败",
+    "Final result unknown": "最终结果未知",
+    "{{count}} attempts": "共尝试 {{count}} 次",
+    "Total time {{time}}": "总耗时 {{time}}",
+    "Charged {{amount}}": "实际扣费 {{amount}}",
+    "Not charged (fully refunded)": "未扣费（已全额退款）",
+    "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "这是该请求的第 {{attempt}} 次尝试（失败），请求随后在 #{{channel}} 重试成功。",
+    "This is attempt {{attempt}} of the request. It failed after all retries.": "这是该请求的第 {{attempt}} 次尝试（失败），请求在重试后仍然失败。",
+    "The final record of this request was not found": "未找到该请求的最终记录",
+    "View final record": "查看最终记录",
+    "Upstream timeout": "上游超时",
+    "Gateway timeout": "网关超时",
+    "Upstream error": "上游返回错误",
+    "Request rejected": "请求被拒绝",
+    "No charge for failed attempts": "失败不扣费",
+    "Timed out after reaching the upstream, which may have billed it": "超时类失败，上游可能已经计费",
+    "Stream interrupted midway; charged for the output delivered": "流式输出中途中断，按已输出内容扣费",
+    "Routing decision details": "路由决策明细"
   }
 }

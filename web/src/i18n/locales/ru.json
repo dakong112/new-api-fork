@@ -7370,6 +7370,26 @@
     "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "Сетевой повтор: при ответе провайдера 502, 504 или 524 запрос переходит на ещё не опробованный канал той же группы. Работает и без резервных групп; если у группы есть резервные группы и токен разрешает повтор в резервной группе, запрос переходит в них после отказа всех каналов группы. Провайдер с таймаутом мог уже выполнить запрос, поэтому расходы у провайдера могут повториться; пользователь оплачивает запрос один раз.",
     "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "Резервные группы действуют только для токенов с включённым повтором в резервной группе. Ошибки 502, 504 и 524 переходят в резервные группы, только если для группы включён сетевой повтор в разделе ценовых групп.",
     "Channel balance alert (USD)": "Порог предупреждения о балансе канала (USD)",
-    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "Уведомлять суперадминистратора, когда баланс канала опускается ниже этой суммы при плановом обновлении (CHANNEL_UPDATE_FREQUENCY) или «Обновить все балансы». О каждом канале сообщается один раз, пока баланс не восстановится. 0 или пустое значение отключает предупреждение."
+    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "Уведомлять суперадминистратора, когда баланс канала опускается ниже этой суммы при плановом обновлении (CHANNEL_UPDATE_FREQUENCY) или «Обновить все балансы». О каждом канале сообщается один раз, пока баланс не восстановится. 0 или пустое значение отключает предупреждение.",
+    "Retry process": "Ход повторных попыток",
+    "Succeeded in the end": "В итоге успешно",
+    "Failed in the end": "В итоге неудачно",
+    "Final result unknown": "Итоговый результат неизвестен",
+    "{{count}} attempts": "Попыток: {{count}}",
+    "Total time {{time}}": "Общее время {{time}}",
+    "Charged {{amount}}": "Списано {{amount}}",
+    "Not charged (fully refunded)": "Не списано (полный возврат)",
+    "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "Это попытка {{attempt}} запроса. Затем запрос выполнен на #{{channel}}.",
+    "This is attempt {{attempt}} of the request. It failed after all retries.": "Это попытка {{attempt}} запроса. Все повторы завершились неудачей.",
+    "The final record of this request was not found": "Итоговая запись этого запроса не найдена",
+    "View final record": "Открыть итоговую запись",
+    "Upstream timeout": "Тайм-аут вышестоящего сервера",
+    "Gateway timeout": "Тайм-аут шлюза",
+    "Upstream error": "Ошибка вышестоящего сервера",
+    "Request rejected": "Запрос отклонён",
+    "No charge for failed attempts": "За неудачные попытки не списывается",
+    "Timed out after reaching the upstream, which may have billed it": "Тайм-аут после обращения к вышестоящему серверу; он мог выставить счёт",
+    "Stream interrupted midway; charged for the output delivered": "Поток прерван на середине; списано за уже выданный ответ",
+    "Routing decision details": "Подробности решений маршрутизации"
   }
 }

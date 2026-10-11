@@ -7369,6 +7369,26 @@
     "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.",
     "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.",
     "Channel balance alert (USD)": "Channel balance alert (USD)",
-    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off."
+    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.",
+    "Retry process": "Retry process",
+    "Succeeded in the end": "Succeeded in the end",
+    "Failed in the end": "Failed in the end",
+    "Final result unknown": "Final result unknown",
+    "{{count}} attempts": "{{count}} attempts",
+    "Total time {{time}}": "Total time {{time}}",
+    "Charged {{amount}}": "Charged {{amount}}",
+    "Not charged (fully refunded)": "Not charged (fully refunded)",
+    "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.",
+    "This is attempt {{attempt}} of the request. It failed after all retries.": "This is attempt {{attempt}} of the request. It failed after all retries.",
+    "The final record of this request was not found": "The final record of this request was not found",
+    "View final record": "View final record",
+    "Upstream timeout": "Upstream timeout",
+    "Gateway timeout": "Gateway timeout",
+    "Upstream error": "Upstream error",
+    "Request rejected": "Request rejected",
+    "No charge for failed attempts": "No charge for failed attempts",
+    "Timed out after reaching the upstream, which may have billed it": "Timed out after reaching the upstream, which may have billed it",
+    "Stream interrupted midway; charged for the output delivered": "Stream interrupted midway; charged for the output delivered",
+    "Routing decision details": "Routing decision details"
   }
 }

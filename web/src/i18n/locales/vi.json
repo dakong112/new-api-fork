@@ -7370,6 +7370,26 @@
     "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "Thử lại mạng: khi upstream trả về 502, 504 hoặc 524, yêu cầu chuyển sang kênh chưa thử trong cùng nhóm. Hoạt động cả khi không có nhóm dự phòng; nếu nhóm có nhóm dự phòng và token bật thử lại nhóm dự phòng, yêu cầu sẽ chuyển sang đó sau khi mọi kênh của nhóm đều lỗi. Upstream bị hết thời gian có thể đã xử lý yêu cầu, nên chi phí upstream có thể lặp lại; người dùng chỉ bị tính phí một lần.",
     "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "Nhóm dự phòng chỉ áp dụng cho token đã bật thử lại nhóm dự phòng. Lỗi 502, 504 và 524 từ upstream chỉ chuyển sang nhóm dự phòng khi nhóm đó đã bật Thử lại mạng trong Nhóm định giá.",
     "Channel balance alert (USD)": "Ngưỡng cảnh báo số dư kênh (USD)",
-    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "Thông báo cho quản trị viên cấp cao khi số dư kênh xuống dưới mức này trong lần làm mới định kỳ (CHANNEL_UPDATE_FREQUENCY) hoặc khi nhấn \"Cập nhật tất cả số dư\". Mỗi kênh chỉ được thông báo một lần cho đến khi số dư phục hồi. Nhập 0 hoặc để trống để tắt."
+    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "Thông báo cho quản trị viên cấp cao khi số dư kênh xuống dưới mức này trong lần làm mới định kỳ (CHANNEL_UPDATE_FREQUENCY) hoặc khi nhấn \"Cập nhật tất cả số dư\". Mỗi kênh chỉ được thông báo một lần cho đến khi số dư phục hồi. Nhập 0 hoặc để trống để tắt.",
+    "Retry process": "Quá trình thử lại",
+    "Succeeded in the end": "Cuối cùng thành công",
+    "Failed in the end": "Cuối cùng thất bại",
+    "Final result unknown": "Chưa rõ kết quả cuối cùng",
+    "{{count}} attempts": "{{count}} lần thử",
+    "Total time {{time}}": "Tổng thời gian {{time}}",
+    "Charged {{amount}}": "Đã trừ {{amount}}",
+    "Not charged (fully refunded)": "Không trừ phí (hoàn toàn bộ)",
+    "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "Đây là lần thử {{attempt}} của yêu cầu. Sau đó đã thành công trên #{{channel}}.",
+    "This is attempt {{attempt}} of the request. It failed after all retries.": "Đây là lần thử {{attempt}} của yêu cầu. Yêu cầu vẫn thất bại sau mọi lần thử lại.",
+    "The final record of this request was not found": "Không tìm thấy bản ghi cuối của yêu cầu này",
+    "View final record": "Xem bản ghi cuối",
+    "Upstream timeout": "Máy chủ nguồn hết thời gian",
+    "Gateway timeout": "Cổng hết thời gian",
+    "Upstream error": "Lỗi máy chủ nguồn",
+    "Request rejected": "Yêu cầu bị từ chối",
+    "No charge for failed attempts": "Lần thất bại không tính phí",
+    "Timed out after reaching the upstream, which may have billed it": "Hết thời gian sau khi đến máy chủ nguồn, có thể đã bị tính phí",
+    "Stream interrupted midway; charged for the output delivered": "Luồng bị gián đoạn giữa chừng; tính phí phần nội dung đã trả về",
+    "Routing decision details": "Chi tiết quyết định định tuyến"
   }
 }
