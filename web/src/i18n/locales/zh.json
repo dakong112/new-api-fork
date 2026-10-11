@@ -6058,6 +6058,7 @@
     "Tag Name": "标签名称",
     "Tag set successfully": "标签设置成功",
     "Tag updated successfully": "标签更新成功",
+    "Temporarily unavailable": "暂不可用",
     "The access token lacks the required permission: {{scope}}": "访问令牌缺少所需权限：{{scope}}",
     "Tag:": "标签：",
     "Tags": "标签",

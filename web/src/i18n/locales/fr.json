@@ -6058,6 +6058,7 @@
     "Tag Name": "Nom de l'étiquette",
     "Tag set successfully": "Tag défini avec succès",
     "Tag updated successfully": "Tag mis à jour avec succès",
+    "Temporarily unavailable": "Temporairement indisponible",
     "The access token lacks the required permission: {{scope}}": "Le jeton d'accès n'a pas l'autorisation requise : {{scope}}",
     "Tag:": "Balise :",
     "Tags": "Balises",

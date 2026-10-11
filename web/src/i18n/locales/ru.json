@@ -6058,6 +6058,7 @@
     "Tag Name": "Название метки",
     "Tag set successfully": "Тег успешно установлен",
     "Tag updated successfully": "Тег успешно обновлён",
+    "Temporarily unavailable": "Временно недоступно",
     "The access token lacks the required permission: {{scope}}": "У токена доступа нет нужного разрешения: {{scope}}",
     "Tag:": "Тег:",
     "Tags": "Теги",

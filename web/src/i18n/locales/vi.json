@@ -6058,6 +6058,7 @@
     "Tag Name": "Tên thẻ",
     "Tag set successfully": "Thiết lập bộ thẻ thành công",
     "Tag updated successfully": "Đã cập nhật thẻ thành công",
+    "Temporarily unavailable": "Tạm thời không khả dụng",
     "The access token lacks the required permission: {{scope}}": "Token truy cập thiếu quyền cần thiết: {{scope}}",
     "Tag:": "Thẻ:",
     "Tags": "Thẻ",

@@ -6058,6 +6058,7 @@
     "Tag Name": "タグ名",
     "Tag set successfully": "タグが正常に設定されました",
     "Tag updated successfully": "タグが正常に更新されました",
+    "Temporarily unavailable": "一時的に利用できません",
     "The access token lacks the required permission: {{scope}}": "アクセストークンに必要な権限がありません：{{scope}}",
     "Tag:": "タグ:",
     "Tags": "タグ",

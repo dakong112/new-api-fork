@@ -16,7 +16,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { afterEach, describe, expect, test } from 'vitest'
 
 const { createInstance } = await import('i18next')
@@ -66,7 +72,30 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
                 fallback_groups: ['vip'],
               },
               vip: { desc: 'Priority access', ratio: 2 },
+              empty: { desc: 'No channels', ratio: 1 },
             },
+          },
+        }
+      case '/api/pricing':
+        return {
+          data: {
+            success: true,
+            data: [
+              {
+                model_name: 'deepseek-v4',
+                vendor_id: 1,
+                enable_groups: ['vip'],
+              },
+              { model_name: 'glm-5', vendor_id: 2, enable_groups: ['default'] },
+            ],
+            vendors: [
+              { id: 1, name: 'DeepSeek' },
+              { id: 2, name: '智谱' },
+            ],
+            group_ratio: {},
+            usable_group: {},
+            supported_endpoint: {},
+            auto_groups: [],
           },
         }
       case '/api/token/auto-groups':
@@ -115,6 +144,7 @@ async function renderCreateDrawer(): Promise<void> {
           fallback_groups: ['vip'],
         },
         vip: { desc: 'Priority access', ratio: 2 },
+        empty: { desc: 'No channels', ratio: 1 },
       },
     },
     { updatedAt: freshAt }
@@ -316,5 +346,32 @@ describe('API keys mutate drawer Auto group integration', () => {
     await waitFor(() => expect(createdPayloads).toHaveLength(1))
     expect(createdPayloads[0]?.group).toBe('default')
     expect(createdPayloads[0]?.cross_group_retry).toBe(false)
+  })
+
+  test('narrows the group picker to the chosen vendor and keeps auto', async () => {
+    installApiFixtures([])
+    await renderCreateDrawer()
+    const vendorFilter = await screen.findByRole('group', { name: 'Vendor' })
+    fireEvent.click(
+      within(vendorFilter).getByRole('button', { name: 'DeepSeek' })
+    )
+    fireEvent.click(screen.getByRole('combobox', { name: 'Group' }))
+    expect(await screen.findByRole('option', { name: /vip/ })).toBeTruthy()
+    expect(screen.queryByRole('option', { name: /default/ })).toBeNull()
+    expect(screen.getByRole('option', { name: /auto/ })).toBeTruthy()
+  })
+
+  test('shows a group without enabled models greyed out and unselectable', async () => {
+    installApiFixtures([])
+    await renderCreateDrawer()
+    await screen.findByRole('group', { name: 'Vendor' })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Group' }))
+    const empty = await screen.findByRole('option', { name: /empty/ })
+    expect(empty).toHaveAttribute('aria-disabled', 'true')
+    expect(empty).toHaveTextContent('Temporarily unavailable')
+    fireEvent.click(empty)
+    expect(
+      screen.getByRole('combobox', { name: 'Group' })
+    ).not.toHaveTextContent('empty')
   })
 })

@@ -6058,6 +6058,7 @@
     "Tag Name": "標籤名稱",
     "Tag set successfully": "標籤設定成功",
     "Tag updated successfully": "標籤更新成功",
+    "Temporarily unavailable": "暫不可用",
     "The access token lacks the required permission: {{scope}}": "存取權杖缺少所需權限：{{scope}}",
     "Tag:": "標籤：",
     "Tags": "標籤",

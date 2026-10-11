@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
 let shouldReduceMotion = false
 const reducedMotionMediaQuery = window.matchMedia('(prefers-reduced-motion)')
@@ -220,5 +220,27 @@ describe('API key group combobox Auto effect', () => {
     expect(autoOption.querySelector('[data-auto-group-flow-border]')).toBe(null)
     expect(within(autoOption).getByText('Auto')).toBeInTheDocument()
     setReducedMotion(false)
+  })
+})
+
+describe('API key group combobox availability', () => {
+  test('disables an unavailable option and labels it', async () => {
+    const onValueChange = vi.fn()
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ApiKeyGroupCombobox
+          options={[
+            { value: 'ok', label: 'ok' },
+            { value: 'empty', label: 'empty', unavailable: true },
+          ]}
+          onValueChange={onValueChange}
+        />
+      </I18nextProvider>
+    )
+    fireEvent.click(screen.getByRole('combobox'))
+    const option = await screen.findByRole('option', { name: /empty/ })
+    expect(option).toHaveAttribute('aria-disabled', 'true')
+    fireEvent.click(option)
+    expect(onValueChange).not.toHaveBeenCalled()
   })
 })
