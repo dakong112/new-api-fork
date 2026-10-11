@@ -738,7 +738,9 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
           return (
             <button
               className={cn(
-                'flex min-w-0 items-center justify-between gap-2 rounded-md px-2.5 py-2 text-left text-[12px] leading-4 transition-colors',
+                'flex min-w-0 items-center justify-between gap-2 rounded-md px-2.5 text-left text-[12px] transition-colors',
+                // Desktop rows are a fixed 2rem: 8 + 12 + 12 fits two lines.
+                unavailable ? 'py-1 leading-3' : 'py-2 leading-4',
                 isSelected
                   ? 'bg-primary/10 text-foreground'
                   : 'text-muted-foreground hover:bg-accent hover:text-foreground',
@@ -753,7 +755,7 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
               <span className='flex min-w-0 flex-col'>
                 <span className='truncate font-medium'>{group.label}</span>
                 {unavailable && (
-                  <span className='text-muted-foreground truncate text-[10px]'>
+                  <span className='text-muted-foreground truncate text-[10px] leading-3'>
                     {t('Temporarily unavailable')}
                   </span>
                 )}
