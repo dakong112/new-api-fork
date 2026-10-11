@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { buildGroupVendorIndex } from '@/lib/group-vendors'
 
@@ -57,15 +57,7 @@ async function openSelector(
 }
 
 describe('ModelGroupSelector vendor filter', () => {
-  beforeEach(() => {
-    // useIsMobile reads innerWidth; pin the desktop popover layout.
-    Object.defineProperty(window, 'innerWidth', {
-      configurable: true,
-      value: 1024,
-    })
-  })
-
-  it('shows only the chosen vendor groups', async () => {
+  it("when a vendor is clicked, only that vendor's groups remain", async () => {
     const user = await openSelector(index, ['ds', 'zp'])
     await user.click(
       within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
@@ -77,15 +69,28 @@ describe('ModelGroupSelector vendor filter', () => {
     expect(screen.queryByRole('button', { name: /^zp/ })).toBeNull()
   })
 
-  it('greys out a group without enabled models', async () => {
+  it('when pricing is ready, a group without enabled models is disabled and labelled', async () => {
     await openSelector({ ...index, ready: true }, ['ds', 'empty'])
     expect(screen.getByRole('button', { name: /^empty/ })).toBeDisabled()
     expect(screen.getByText('Temporarily unavailable')).toBeVisible()
     expect(screen.getByRole('button', { name: /^ds/ })).toBeEnabled()
   })
 
-  it('does not grey out groups before pricing is ready', async () => {
+  it('when pricing is not ready, no group is disabled', async () => {
     await openSelector({ ...index, ready: false }, ['empty'])
     expect(screen.getByRole('button', { name: /^empty/ })).toBeEnabled()
+  })
+
+  it('when a vendor is clicked, the selected group and auto stay visible', async () => {
+    const user = await openSelector(index, ['ds', 'zp', 'auto'], 'zp')
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
+    )
+    expect(screen.getByRole('button', { name: /^ds/ })).toBeVisible()
+    expect(screen.getByRole('button', { name: /^zp/ })).toBeVisible()
+    expect(screen.getByRole('button', { name: /^auto/ })).toBeVisible()
   })
 })

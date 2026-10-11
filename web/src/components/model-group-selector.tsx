@@ -600,18 +600,24 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
     () => groups.find((group) => group.value === selectedGroup),
     [groups, selectedGroup]
   )
+  // A filter whose vendor vanished (refetch) or is not rendered means "All".
+  const activeVendor = groupVendors?.vendors.some(
+    (v) => v.name === vendorFilter
+  )
+    ? vendorFilter
+    : null
   const visibleGroups = useMemo(
     () =>
       groupVendors
         ? filterGroupsByVendor(
             groups,
             (group) => group.value,
-            vendorFilter,
+            activeVendor,
             groupVendors,
             selectedGroup
           )
         : groups,
-    [groups, groupVendors, vendorFilter, selectedGroup]
+    [groups, groupVendors, activeVendor, selectedGroup]
   )
   const filteredModels = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -710,7 +716,7 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
         <GroupVendorFilter
           variant='chips'
           vendors={groupVendors.vendors}
-          value={vendorFilter}
+          value={activeVendor}
           onChange={setVendorFilter}
           className='px-1'
         />
@@ -726,8 +732,7 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
           const isSelected = selectedGroup === group.value
           // Before pricing loads every group looks model-less; don't grey yet.
           const unavailable =
-            Boolean(groupVendors?.ready) &&
-            groupVendors !== undefined &&
+            groupVendors?.ready === true &&
             !isGroupAvailable(group.value, groupVendors)
 
           return (
@@ -745,14 +750,14 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
               ref={isSelected ? selectedGroupOptionRef : undefined}
               type='button'
             >
-              <span className='min-w-0 truncate font-medium'>
-                {group.label}
+              <span className='flex min-w-0 flex-col'>
+                <span className='truncate font-medium'>{group.label}</span>
+                {unavailable && (
+                  <span className='text-muted-foreground truncate text-[10px]'>
+                    {t('Temporarily unavailable')}
+                  </span>
+                )}
               </span>
-              {unavailable && (
-                <span className='text-muted-foreground shrink-0 text-[10px]'>
-                  {t('Temporarily unavailable')}
-                </span>
-              )}
               <Check
                 className={cn(
                   'size-3.5 shrink-0',
