@@ -389,6 +389,34 @@ describe('API keys mutate drawer Auto group integration', () => {
     expect(screen.getByRole('option', { name: /^auto/ })).toBeTruthy()
   })
 
+  test('clears a selected group that is not in the clicked vendor', async () => {
+    installApiFixtures([])
+    await renderDrawer()
+    selectComboboxOption(getControlByLabel('Group'), 'Priority access')
+    const vendorFilter = await screen.findByRole('group', { name: 'Vendor' })
+    fireEvent.click(within(vendorFilter).getByRole('button', { name: '智谱' }))
+
+    const trigger = screen.getByRole('combobox', { name: 'Group' })
+    await waitFor(() => expect(trigger).toHaveTextContent('Select a group'))
+    fireEvent.click(trigger)
+    expect(await screen.findByRole('option', { name: /^default/ })).toBeTruthy()
+    expect(screen.getByRole('option', { name: /^auto/ })).toBeTruthy()
+    expect(screen.queryByRole('option', { name: /^vip/ })).toBeNull()
+  })
+
+  test('keeps a selected group that belongs to the clicked vendor', async () => {
+    installApiFixtures([])
+    await renderDrawer()
+    selectComboboxOption(getControlByLabel('Group'), 'Priority access')
+    const vendorFilter = await screen.findByRole('group', { name: 'Vendor' })
+    fireEvent.click(
+      within(vendorFilter).getByRole('button', { name: 'DeepSeek' })
+    )
+    expect(screen.getByRole('combobox', { name: 'Group' })).toHaveTextContent(
+      'vip'
+    )
+  })
+
   test('shows a group without enabled models greyed out and unselectable', async () => {
     installApiFixtures([])
     await renderDrawer()

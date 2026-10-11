@@ -717,7 +717,22 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
           variant='chips'
           vendors={groupVendors.vendors}
           value={activeVendor}
-          onChange={setVendorFilter}
+          onChange={(vendor) => {
+            setVendorFilter(vendor)
+            if (
+              vendor === null ||
+              selectedGroup === 'auto' ||
+              groupVendors.vendorsByGroup.get(selectedGroup)?.includes(vendor)
+            ) {
+              return
+            }
+            const next = groups.find(
+              (g) =>
+                groupVendors.vendorsByGroup.get(g.value)?.includes(vendor) &&
+                isGroupAvailable(g.value, groupVendors)
+            )
+            if (next) onGroupChange(next.value)
+          }}
           className='px-1'
         />
       )}

@@ -38,7 +38,8 @@ const index = buildGroupVendorIndex(
 async function openSelector(
   groupVendors: Parameters<typeof ModelGroupSelector>[0]['groupVendors'],
   groups: string[],
-  selectedGroup = ''
+  selectedGroup = '',
+  onGroupChange = vi.fn()
 ) {
   const user = userEvent.setup()
   render(
@@ -48,7 +49,7 @@ async function openSelector(
       onModelChange={vi.fn()}
       selectedGroup={selectedGroup}
       groups={groups.map((value) => ({ value, label: value }))}
-      onGroupChange={vi.fn()}
+      onGroupChange={onGroupChange}
       groupVendors={groupVendors}
     />
   )
@@ -92,5 +93,34 @@ describe('ModelGroupSelector vendor filter', () => {
     expect(screen.getByRole('button', { name: /^ds/ })).toBeVisible()
     expect(screen.getByRole('button', { name: /^zp/ })).toBeVisible()
     expect(screen.getByRole('button', { name: /^auto/ })).toBeVisible()
+  })
+
+  it('when a vendor is clicked and the selected group is not in it, switches to its first available group', async () => {
+    const onGroupChange = vi.fn()
+    const user = await openSelector(
+      { ...index, ready: true },
+      ['zp', 'ds'],
+      'zp',
+      onGroupChange
+    )
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
+    )
+    expect(onGroupChange).toHaveBeenCalledWith('ds')
+  })
+
+  it('when a vendor is clicked and the selected group is in it, keeps the group', async () => {
+    const onGroupChange = vi.fn()
+    const user = await openSelector(index, ['ds', 'zp'], 'ds', onGroupChange)
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
+    )
+    expect(onGroupChange).not.toHaveBeenCalled()
   })
 })

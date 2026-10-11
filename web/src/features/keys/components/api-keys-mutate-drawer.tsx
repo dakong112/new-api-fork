@@ -91,7 +91,7 @@ import {
   getApiKey,
   getTokenAutoGroups,
 } from '../api'
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
+import { DEFAULT_GROUP, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
 import {
   getApiKeyFormSchema,
   type ApiKeyFormValues,
@@ -467,7 +467,21 @@ export function ApiKeysMutateDrawer({
                       variant='cards'
                       vendors={groupVendors.vendors}
                       value={activeVendor}
-                      onChange={setVendorFilter}
+                      onChange={(vendor) => {
+                        setVendorFilter(vendor)
+                        // Drop a group the new vendor does not own, so the box and list agree.
+                        if (
+                          vendor !== null &&
+                          field.value !== 'auto' &&
+                          !groupVendors.vendorsByGroup
+                            .get(field.value ?? '')
+                            ?.includes(vendor)
+                        ) {
+                          form.setValue('group', DEFAULT_GROUP, {
+                            shouldDirty: true,
+                          })
+                        }
+                      }}
                     />
                     <FormControl>
                       <ApiKeyGroupCombobox
