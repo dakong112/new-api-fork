@@ -7375,9 +7375,15 @@
     "Keywords": "關鍵字",
     "Comma-separated, e.g. gpt, o1, dall-e": "以逗號分隔，例如 gpt, o1, dall-e",
     "Add vendor": "新增供應商",
-    "Restore the built-in vendor rules? Your changes will be replaced.": "恢復內建的供應商識別規則？目前的修改將被覆蓋。",
     "Vendor name must be unique": "供應商名稱不可重複",
     "At least one keyword is required": "至少填寫一個關鍵字",
-    "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "依據模型名稱中的關鍵字判斷模型所屬供應商。比對不區分大小寫，最長的關鍵字優先。在模型管理中為模型設定的供應商優先。"
+    "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "依據模型名稱中的關鍵字判斷模型所屬供應商。比對不區分大小寫，最長的關鍵字優先比對。在模型管理中為模型個別設定的供應商不受此規則影響。",
+    "Restore the built-in vendor rules? The current rules will be replaced.": "確定恢復內建的供應商識別規則嗎？目前的規則將被取代。",
+    "Row {{row}}": "第 {{row}} 列",
+    "Vendor name, row {{row}}": "供應商名稱，第 {{row}} 列",
+    "Icon, row {{row}}": "圖示，第 {{row}} 列",
+    "Keywords, row {{row}}": "關鍵字，第 {{row}} 列",
+    "The stored vendor rules could not be read. Restore defaults to continue.": "無法讀取已儲存的供應商識別規則。請恢復預設後繼續。",
+    "Save an empty rule list? Every model will be shown under Other.": "確定儲存空的規則清單嗎？所有模型都將顯示為「其他」。"
   }
 }

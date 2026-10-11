@@ -7375,9 +7375,15 @@
     "Keywords": "Keywords",
     "Comma-separated, e.g. gpt, o1, dall-e": "Comma-separated, e.g. gpt, o1, dall-e",
     "Add vendor": "Add vendor",
-    "Restore the built-in vendor rules? Your changes will be replaced.": "Restore the built-in vendor rules? Your changes will be replaced.",
     "Vendor name must be unique": "Vendor name must be unique",
     "At least one keyword is required": "At least one keyword is required",
-    "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence."
+    "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.",
+    "Restore the built-in vendor rules? The current rules will be replaced.": "Restore the built-in vendor rules? The current rules will be replaced.",
+    "Row {{row}}": "Row {{row}}",
+    "Vendor name, row {{row}}": "Vendor name, row {{row}}",
+    "Icon, row {{row}}": "Icon, row {{row}}",
+    "Keywords, row {{row}}": "Keywords, row {{row}}",
+    "The stored vendor rules could not be read. Restore defaults to continue.": "The stored vendor rules could not be read. Restore defaults to continue.",
+    "Save an empty rule list? Every model will be shown under Other.": "Save an empty rule list? Every model will be shown under Other."
   }
 }

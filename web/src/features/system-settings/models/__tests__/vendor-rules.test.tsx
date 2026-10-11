@@ -17,7 +17,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -76,10 +82,10 @@ describe('vendor rules settings', () => {
     const put = mockSave()
     render(<Fixture value={rules} />)
 
-    const name = screen.getAllByRole('textbox', { name: 'Name' })[1]
+    const name = screen.getByRole('textbox', { name: 'Vendor name, row 2' })
     await user.clear(name)
     await user.type(name, 'Anthropic')
-    const keywords = screen.getAllByRole('textbox', { name: 'Keywords' })[1]
+    const keywords = screen.getByRole('textbox', { name: 'Keywords, row 2' })
     await user.clear(keywords)
     await user.type(keywords, ' claude ,, Sonnet , ')
     await user.click(screen.getByRole('button', { name: 'Save Changes' }))
@@ -97,7 +103,7 @@ describe('vendor rules settings', () => {
     const put = mockSave()
     render(<Fixture value={rules} />)
 
-    const name = screen.getAllByRole('textbox', { name: 'Name' })[1]
+    const name = screen.getByRole('textbox', { name: 'Vendor name, row 2' })
     await user.clear(name)
     await user.type(name, 'openai')
     await user.click(screen.getByRole('button', { name: 'Save Changes' }))
@@ -105,8 +111,10 @@ describe('vendor rules settings', () => {
     expect(put).not.toHaveBeenCalled()
     expect(name).toHaveAttribute('aria-invalid', 'true')
     expect(
-      screen.getAllByText('Vendor name must be unique').length
-    ).toBeGreaterThan(0)
+      within(name.closest('td') as HTMLElement).getByText(
+        'Vendor name must be unique'
+      )
+    ).toBeInTheDocument()
   })
 
   it('blocks saving a new row without name or keywords', async () => {
@@ -167,7 +175,7 @@ describe('vendor rules settings', () => {
       { dataTransfer }
     )
     const openaiRow = screen
-      .getAllByRole('textbox', { name: 'Name' })[0]
+      .getByRole('textbox', { name: 'Vendor name, row 1' })
       .closest('tr') as HTMLElement
     fireEvent.dragOver(openaiRow, { dataTransfer, clientY: -1 })
     fireEvent.drop(openaiRow, { dataTransfer, clientY: -1 })
@@ -176,5 +184,124 @@ describe('vendor rules settings', () => {
     expect(
       JSON.parse(savedValue(put).value).map((r: { name: string }) => r.name)
     ).toEqual(['Claude', 'OpenAI'])
+  })
+
+  it('saves the new order after pressing ArrowUp on a drag handle', async () => {
+    const user = userEvent.setup()
+    const put = mockSave()
+    render(<Fixture value={rules} />)
+
+    screen.getByRole('button', { name: 'Drag Claude to reorder' }).focus()
+    await user.keyboard('{ArrowUp}')
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+    expect(
+      JSON.parse(savedValue(put).value).map((r: { name: string }) => r.name)
+    ).toEqual(['Claude', 'OpenAI'])
+  })
+
+  it('saves the new order after pressing ArrowDown on a drag handle', async () => {
+    const user = userEvent.setup()
+    const put = mockSave()
+    render(<Fixture value={rules} />)
+
+    screen.getByRole('button', { name: 'Drag OpenAI to reorder' }).focus()
+    await user.keyboard('{ArrowDown}')
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+    expect(
+      JSON.parse(savedValue(put).value).map((r: { name: string }) => r.name)
+    ).toEqual(['Claude', 'OpenAI'])
+  })
+
+  it('rebuilds the rows when the stored value changes', () => {
+    const { rerender } = render(<Fixture value={rules} />)
+
+    rerender(
+      <Fixture
+        value={JSON.stringify([{ name: 'Gemini', keywords: ['gemini'] }])}
+      />
+    )
+
+    expect(
+      screen.getByRole('textbox', { name: 'Vendor name, row 1' })
+    ).toHaveValue('Gemini')
+    expect(
+      screen.queryByRole('textbox', { name: 'Vendor name, row 2' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('discards edits after restoring defaults when the stored value is unchanged', async () => {
+    const user = userEvent.setup()
+    mockSave()
+    render(<Fixture value={rules} />)
+
+    const name = screen.getByRole('textbox', { name: 'Vendor name, row 1' })
+    await user.clear(name)
+    await user.type(name, 'Edited')
+    await user.click(screen.getByRole('button', { name: 'Restore defaults' }))
+    await user.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', {
+        name: 'Restore defaults',
+      })
+    )
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('textbox', { name: 'Vendor name, row 1' })
+      ).toHaveValue('OpenAI')
+    )
+  })
+
+  it('disables saving and explains when the stored value cannot be read', async () => {
+    const user = userEvent.setup()
+    const put = mockSave()
+    render(<Fixture value='not json' />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'The stored vendor rules could not be read. Restore defaults to continue.'
+    )
+    expect(screen.getByRole('button', { name: 'Save Changes' })).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Restore defaults' }))
+    await user.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', {
+        name: 'Restore defaults',
+      })
+    )
+    expect(savedValue(put)).toEqual({ key: 'VendorRules', value: '' })
+  })
+
+  it('asks for confirmation before saving an empty rule list', async () => {
+    const user = userEvent.setup()
+    const put = mockSave()
+    render(<Fixture value={rules} />)
+
+    for (const button of screen.getAllByRole('button', { name: 'Delete' })) {
+      await user.click(button)
+    }
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+    expect(put).not.toHaveBeenCalled()
+
+    const dialog = await screen.findByRole('alertdialog')
+    expect(dialog).toHaveTextContent(
+      'Save an empty rule list? Every model will be shown under Other.'
+    )
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Save Changes' })
+    )
+
+    expect(savedValue(put)).toEqual({ key: 'VendorRules', value: '[]' })
+  })
+
+  it('labels the drag handle with the row number when the name is empty', async () => {
+    const user = userEvent.setup()
+    render(<Fixture value={rules} />)
+
+    await user.click(screen.getByRole('button', { name: 'Add vendor' }))
+
+    expect(
+      screen.getByRole('button', { name: 'Drag Row 3 to reorder' })
+    ).toBeInTheDocument()
   })
 })

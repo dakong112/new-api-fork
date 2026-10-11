@@ -7376,9 +7376,15 @@
     "Keywords": "キーワード",
     "Comma-separated, e.g. gpt, o1, dall-e": "カンマ区切り（例：gpt, o1, dall-e）",
     "Add vendor": "ベンダーを追加",
-    "Restore the built-in vendor rules? Your changes will be replaced.": "組み込みのベンダールールに戻しますか？現在の変更は置き換えられます。",
     "Vendor name must be unique": "ベンダー名は重複できません",
     "At least one keyword is required": "キーワードを 1 つ以上入力してください",
-    "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "モデル名に含まれるキーワードでモデルのベンダーを判定します。大文字と小文字は区別せず、最も長いキーワードが優先されます。モデル管理でモデルに設定したベンダーが優先されます。"
+    "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "モデル名に含まれるキーワードでモデルのベンダーを判定します。大文字と小文字は区別せず、最も長いキーワードが優先されます。モデル管理でモデルに設定したベンダーが優先されます。",
+    "Restore the built-in vendor rules? The current rules will be replaced.": "組み込みのベンダールールに戻しますか？現在のルールは置き換えられます。",
+    "Row {{row}}": "{{row}} 行目",
+    "Vendor name, row {{row}}": "ベンダー名（{{row}} 行目）",
+    "Icon, row {{row}}": "アイコン（{{row}} 行目）",
+    "Keywords, row {{row}}": "キーワード（{{row}} 行目）",
+    "The stored vendor rules could not be read. Restore defaults to continue.": "保存されているベンダールールを読み取れません。デフォルトに戻してから続行してください。",
+    "Save an empty rule list? Every model will be shown under Other.": "空のルール一覧を保存しますか？すべてのモデルが「その他」として表示されます。"
   }
 }

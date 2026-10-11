@@ -7376,9 +7376,15 @@
     "Keywords": "Từ khóa",
     "Comma-separated, e.g. gpt, o1, dall-e": "Phân tách bằng dấu phẩy, ví dụ gpt, o1, dall-e",
     "Add vendor": "Thêm nhà cung cấp",
-    "Restore the built-in vendor rules? Your changes will be replaced.": "Khôi phục quy tắc nhà cung cấp tích hợp sẵn? Các thay đổi của bạn sẽ bị thay thế.",
     "Vendor name must be unique": "Tên nhà cung cấp không được trùng",
     "At least one keyword is required": "Cần ít nhất một từ khóa",
-    "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "Xác định nhà cung cấp của mô hình theo từ khóa trong tên. Không phân biệt chữ hoa chữ thường và từ khóa dài nhất được ưu tiên. Nhà cung cấp đặt cho mô hình trong Quản lý mô hình được ưu tiên."
+    "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "Xác định nhà cung cấp của mô hình theo từ khóa trong tên. Không phân biệt chữ hoa chữ thường và từ khóa dài nhất được ưu tiên. Nhà cung cấp đặt cho mô hình trong Quản lý mô hình được ưu tiên.",
+    "Restore the built-in vendor rules? The current rules will be replaced.": "Khôi phục quy tắc nhà cung cấp tích hợp sẵn? Các quy tắc hiện tại sẽ bị thay thế.",
+    "Row {{row}}": "Hàng {{row}}",
+    "Vendor name, row {{row}}": "Tên nhà cung cấp, hàng {{row}}",
+    "Icon, row {{row}}": "Biểu tượng, hàng {{row}}",
+    "Keywords, row {{row}}": "Từ khóa, hàng {{row}}",
+    "The stored vendor rules could not be read. Restore defaults to continue.": "Không thể đọc quy tắc nhà cung cấp đã lưu. Hãy khôi phục mặc định để tiếp tục.",
+    "Save an empty rule list? Every model will be shown under Other.": "Lưu danh sách quy tắc trống? Mọi mô hình sẽ được hiển thị trong mục Khác."
   }
 }

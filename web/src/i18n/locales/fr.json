@@ -7376,9 +7376,15 @@
     "Keywords": "Mots-clés",
     "Comma-separated, e.g. gpt, o1, dall-e": "Séparés par des virgules, ex. gpt, o1, dall-e",
     "Add vendor": "Ajouter un fournisseur",
-    "Restore the built-in vendor rules? Your changes will be replaced.": "Restaurer les règles de fournisseur intégrées ? Vos modifications seront remplacées.",
     "Vendor name must be unique": "Le nom du fournisseur doit être unique",
     "At least one keyword is required": "Au moins un mot-clé est requis",
-    "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "Détermine le fournisseur d'un modèle à partir des mots-clés de son nom. La correspondance ignore la casse et le mot-clé le plus long l'emporte. Les fournisseurs définis sur un modèle dans la gestion des modèles sont prioritaires."
+    "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "Détermine le fournisseur d'un modèle à partir des mots-clés de son nom. La correspondance ignore la casse et le mot-clé le plus long l'emporte. Les fournisseurs définis sur un modèle dans la gestion des modèles sont prioritaires.",
+    "Restore the built-in vendor rules? The current rules will be replaced.": "Restaurer les règles de fournisseur intégrées ? Les règles actuelles seront remplacées.",
+    "Row {{row}}": "Ligne {{row}}",
+    "Vendor name, row {{row}}": "Nom du fournisseur, ligne {{row}}",
+    "Icon, row {{row}}": "Icône, ligne {{row}}",
+    "Keywords, row {{row}}": "Mots-clés, ligne {{row}}",
+    "The stored vendor rules could not be read. Restore defaults to continue.": "Les règles de fournisseur enregistrées sont illisibles. Restaurez les valeurs par défaut pour continuer.",
+    "Save an empty rule list? Every model will be shown under Other.": "Enregistrer une liste de règles vide ? Tous les modèles seront affichés sous Autre."
   }
 }

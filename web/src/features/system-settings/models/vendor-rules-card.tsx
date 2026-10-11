@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { StaticDataTable } from '@/components/data-table/static/static-data-table'
 import { LobeIconField } from '@/components/lobe-icon-field'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getLobeIcon } from '@/lib/lobe-icon'
@@ -53,14 +54,15 @@ function createVendorRuleRow(rule: Partial<VendorRule> = {}): VendorRuleRow {
   }
 }
 
-function toVendorRuleRows(value: string): VendorRuleRow[] {
+/** Null when the stored value is missing or unreadable. */
+function toVendorRuleRows(value: string): VendorRuleRow[] | null {
   let parsed: unknown
   try {
     parsed = JSON.parse(value)
   } catch {
-    return []
+    return null
   }
-  if (!Array.isArray(parsed)) return []
+  if (!Array.isArray(parsed)) return null
   return (parsed as Partial<VendorRule>[]).map((rule) =>
     createVendorRuleRow(rule ?? {})
   )
@@ -76,10 +78,14 @@ function splitKeywords(value: string) {
 export function VendorRulesCard(props: { defaultValue: string }) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
-  const [baseline, setBaseline] = useState(props.defaultValue)
-  const [rows, setRows] = useState(() => toVendorRuleRows(props.defaultValue))
+  // Null forces a rebuild from defaultValue even when it did not change.
+  const [baseline, setBaseline] = useState<string | null>(props.defaultValue)
+  const [parsedRows, setParsedRows] = useState(() =>
+    toVendorRuleRows(props.defaultValue)
+  )
   const [showErrors, setShowErrors] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmRestoreOpen, setConfirmRestoreOpen] = useState(false)
+  const [confirmEmptyOpen, setConfirmEmptyOpen] = useState(false)
   const [draggingRowId, setDraggingRowId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<{
     id: string
@@ -89,9 +95,14 @@ export function VendorRulesCard(props: { defaultValue: string }) {
   // A saved value comes back through system-options; start over from it.
   if (baseline !== props.defaultValue) {
     setBaseline(props.defaultValue)
-    setRows(toVendorRuleRows(props.defaultValue))
+    setParsedRows(toVendorRuleRows(props.defaultValue))
     setShowErrors(false)
   }
+  const readFailed = parsedRows === null
+  const rows = parsedRows ?? []
+  const setRows = setParsedRows
+  const rowLabel = (row: VendorRuleRow, index: number) =>
+    row.name.trim() || t('Row {{row}}', { row: index + 1 })
 
   // Mirrors the server validation in model/vendor_rules.go.
   const nameCounts = new Map<string, number>()
@@ -135,36 +146,63 @@ export function VendorRulesCard(props: { defaultValue: string }) {
     setRows([...rest.slice(0, at), moving, ...rest.slice(at)])
   }
 
-  const save = async () => {
-    if (errors.some((error) => error.name || error.keywords)) {
-      setShowErrors(true)
-      return
-    }
+  const submitRules = () => {
     const rules: VendorRule[] = rows.map((row) => ({
       name: row.name.trim(),
       ...(row.icon.trim() ? { icon: row.icon.trim() } : {}),
       keywords: splitKeywords(row.keywords),
     }))
-    await updateOption.mutateAsync({
-      key: 'VendorRules',
-      value: JSON.stringify(rules),
-    })
+    updateOption.mutate(
+      { key: 'VendorRules', value: JSON.stringify(rules) },
+      { onSuccess: () => setConfirmEmptyOpen(false) }
+    )
   }
 
-  const restoreDefaults = async () => {
+  const save = () => {
+    if (readFailed) return
+    if (errors.some((error) => error.name || error.keywords)) {
+      setShowErrors(true)
+      return
+    }
+    // An empty list sends every model to "Other", so ask first.
+    if (rows.length === 0) {
+      setConfirmEmptyOpen(true)
+      return
+    }
+    submitRules()
+  }
+
+  const restoreDefaults = () => {
     // The server treats an empty value as "use the built-in rules".
-    await updateOption.mutateAsync({ key: 'VendorRules', value: '' })
-    setConfirmOpen(false)
+    updateOption.mutate(
+      { key: 'VendorRules', value: '' },
+      {
+        onSuccess: () => {
+          setBaseline(null)
+          setConfirmRestoreOpen(false)
+        },
+      }
+    )
   }
 
   return (
     <SettingsSection title={t('Vendor rules')}>
       <SettingsPageFormActions
         onSave={save}
-        onReset={() => setConfirmOpen(true)}
+        onReset={() => setConfirmRestoreOpen(true)}
         resetLabel='Restore defaults'
         isSaving={updateOption.isPending}
+        isSaveDisabled={readFailed}
       />
+      {readFailed && (
+        <Alert variant='destructive'>
+          <AlertDescription>
+            {t(
+              'The stored vendor rules could not be read. Restore defaults to continue.'
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
       <p className='text-muted-foreground text-sm'>
         {t(
           'Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.'
@@ -175,6 +213,7 @@ export function VendorRulesCard(props: { defaultValue: string }) {
           type='button'
           variant='outline'
           size='sm'
+          disabled={readFailed}
           onClick={() => setRows([...rows, createVendorRuleRow()])}
         >
           <Plus data-icon='inline-start' />
@@ -225,7 +264,7 @@ export function VendorRulesCard(props: { defaultValue: string }) {
             id: 'drag',
             header: '',
             className: 'w-8',
-            cell: (row) => (
+            cell: (row, index) => (
               // Native drag from the handle only, so text in the inputs stays
               // selectable; the arrow keys mirror Move up/down.
               <Button
@@ -234,10 +273,10 @@ export function VendorRulesCard(props: { defaultValue: string }) {
                 className='text-muted-foreground cursor-grab active:cursor-grabbing'
                 draggable
                 aria-label={t('Drag {{group}} to reorder', {
-                  group: row.name.trim(),
+                  group: rowLabel(row, index),
                 })}
                 title={t('Drag {{group}} to reorder', {
-                  group: row.name.trim(),
+                  group: rowLabel(row, index),
                 })}
                 onDragStart={(event) => {
                   event.dataTransfer.effectAllowed = 'move'
@@ -281,7 +320,9 @@ export function VendorRulesCard(props: { defaultValue: string }) {
             cell: (row, index) => (
               <div className='space-y-1'>
                 <Input
-                  aria-label={t('Name')}
+                  aria-label={t('Vendor name, row {{row}}', {
+                    row: index + 1,
+                  })}
                   value={row.name}
                   aria-invalid={showErrors && Boolean(errors[index].name)}
                   onChange={(event) =>
@@ -300,10 +341,10 @@ export function VendorRulesCard(props: { defaultValue: string }) {
             id: 'icon',
             header: t('Icon'),
             className: 'min-w-44',
-            cell: (row) => (
+            cell: (row, index) => (
               <LobeIconField
                 compact
-                aria-label={t('Icon')}
+                aria-label={t('Icon, row {{row}}', { row: index + 1 })}
                 value={row.icon}
                 onChange={(icon) => updateRow(row._id, { icon })}
               />
@@ -316,7 +357,9 @@ export function VendorRulesCard(props: { defaultValue: string }) {
             cell: (row, index) => (
               <div className='space-y-1'>
                 <Input
-                  aria-label={t('Keywords')}
+                  aria-label={t('Keywords, row {{row}}', {
+                    row: index + 1,
+                  })}
                   placeholder={t('Comma-separated, e.g. gpt, o1, dall-e')}
                   value={row.keywords}
                   aria-invalid={showErrors && Boolean(errors[index].keywords)}
@@ -345,7 +388,7 @@ export function VendorRulesCard(props: { defaultValue: string }) {
                   onClick={() => moveRow(row._id, -1)}
                   disabled={index === 0}
                   aria-label={t('Move {{group}} up', {
-                    group: row.name.trim(),
+                    group: rowLabel(row, index),
                   })}
                 >
                   <ArrowUp className='h-4 w-4' />
@@ -356,7 +399,7 @@ export function VendorRulesCard(props: { defaultValue: string }) {
                   onClick={() => moveRow(row._id, 1)}
                   disabled={index === rows.length - 1}
                   aria-label={t('Move {{group}} down', {
-                    group: row.name.trim(),
+                    group: rowLabel(row, index),
                   })}
                 >
                   <ArrowDown className='h-4 w-4' />
@@ -377,14 +420,26 @@ export function VendorRulesCard(props: { defaultValue: string }) {
         ]}
       />
       <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
+        open={confirmRestoreOpen}
+        onOpenChange={setConfirmRestoreOpen}
         title={t('Restore defaults')}
         desc={t(
-          'Restore the built-in vendor rules? Your changes will be replaced.'
+          'Restore the built-in vendor rules? The current rules will be replaced.'
         )}
         confirmText={t('Restore defaults')}
         handleConfirm={restoreDefaults}
+        isLoading={updateOption.isPending}
+      />
+      <ConfirmDialog
+        open={confirmEmptyOpen}
+        onOpenChange={setConfirmEmptyOpen}
+        title={t('Save Changes')}
+        desc={t(
+          'Save an empty rule list? Every model will be shown under Other.'
+        )}
+        confirmText={t('Save Changes')}
+        destructive
+        handleConfirm={submitRules}
         isLoading={updateOption.isPending}
       />
     </SettingsSection>
