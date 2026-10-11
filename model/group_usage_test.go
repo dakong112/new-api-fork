@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -52,7 +51,10 @@ func TestGetGroupUsageCountsReferencesByGroupName(t *testing.T) {
 
 func TestGetGroupUsageListsVendorsOfEnabledModels(t *testing.T) {
 	resetPricingEndpointTestTables(t)
-	insertPricingEndpointChannel(t, 1, 1, dto.ChannelOtherSettings{})
+	require.NoError(t, DB.Create(&Channel{
+		Id: 1, Type: 1, Key: "key-1", Name: "channel-1",
+		Status: common.ChannelStatusEnabled, Group: "mix,misc",
+	}).Error)
 	for _, ability := range []Ability{
 		{Group: "mix", Model: "deepseek-v4-flash", ChannelId: 1, Enabled: true},
 		{Group: "mix", Model: "glm-5.3", ChannelId: 1, Enabled: true},
@@ -74,8 +76,12 @@ func TestGetGroupUsageListsVendorsOfEnabledModels(t *testing.T) {
 
 	require.Contains(t, byName, "mix")
 	assert.Equal(t, []string{"DeepSeek", "小米", "智谱"}, byName["mix"].Vendors)
+	assert.Equal(t, 1, byName["mix"].Channels)
+	assert.Equal(t, 1, byName["mix"].EnabledChannels)
 	require.Contains(t, byName, "misc")
 	// "" stands for "Other": an enabled model with no vendor.
 	assert.Equal(t, []string{""}, byName["misc"].Vendors)
+	assert.Equal(t, 1, byName["misc"].Channels)
+	assert.Equal(t, 1, byName["misc"].EnabledChannels)
 	assert.NotContains(t, byName, "off", "a disabled ability adds no vendor")
 }

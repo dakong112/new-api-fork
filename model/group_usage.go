@@ -17,7 +17,7 @@ type GroupUsage struct {
 	Tokens          int64  `json:"tokens"`
 	Users           int64  `json:"users"`
 	// Vendors of the group's enabled models, sorted; "" means a model with
-	// no vendor ("Other"). Derived from the cached pricing, so it adds no query.
+	// no vendor ("Other"). Derived from the cached pricing data.
 	Vendors []string `json:"vendors,omitempty"`
 }
 
@@ -70,23 +70,27 @@ func GetGroupUsage() ([]*GroupUsage, error) {
 		entry(row.Name).Users = row.Count
 	}
 
+	pricings := GetPricing()
 	vendorNames := map[int]string{}
 	for _, vendor := range GetVendors() {
 		vendorNames[vendor.ID] = vendor.Name
 	}
-	groupVendors := map[string]map[string]bool{}
-	for _, pricing := range GetPricing() {
+	groupVendors := map[string]map[string]struct{}{}
+	for _, pricing := range pricings {
 		vendor := vendorNames[pricing.VendorID]
 		for _, name := range pricing.EnableGroup {
 			if groupVendors[name] == nil {
-				groupVendors[name] = map[string]bool{}
+				groupVendors[name] = map[string]struct{}{}
 			}
-			groupVendors[name][vendor] = true
+			groupVendors[name][vendor] = struct{}{}
 		}
 	}
+	// Only groups something still references get vendors; the pricing cache
+	// must not introduce usage rows of its own.
 	for name, vendors := range groupVendors {
-		e := entry(name)
-		e.Vendors = slices.Sorted(maps.Keys(vendors))
+		if e := usage[name]; e != nil {
+			e.Vendors = slices.Sorted(maps.Keys(vendors))
+		}
 	}
 
 	result := make([]*GroupUsage, 0, len(usage))
