@@ -7370,6 +7370,14 @@
     "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.",
     "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.",
     "Channel balance alert (USD)": "Channel balance alert (USD)",
-    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off."
+    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.",
+    "Vendor rules": "Vendor rules",
+    "Keywords": "Keywords",
+    "Comma-separated, e.g. gpt, o1, dall-e": "Comma-separated, e.g. gpt, o1, dall-e",
+    "Add vendor": "Add vendor",
+    "Restore the built-in vendor rules? Your changes will be replaced.": "Restore the built-in vendor rules? Your changes will be replaced.",
+    "Vendor name must be unique": "Vendor name must be unique",
+    "At least one keyword is required": "At least one keyword is required",
+    "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence."
   }
 }

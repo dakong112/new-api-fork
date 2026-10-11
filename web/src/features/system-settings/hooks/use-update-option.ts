@@ -60,6 +60,11 @@ export function useUpdateOption() {
         // Always refresh system-options
         queryClient.invalidateQueries({ queryKey: ['system-options'] })
 
+        // Vendor rules decide the vendors shown with pricing data.
+        if (variables.key === 'VendorRules') {
+          queryClient.invalidateQueries({ queryKey: ['pricing'] })
+        }
+
         // If updating frontend-display-related config, also refresh status
         if (STATUS_RELATED_KEYS.has(variables.key)) {
           queryClient.invalidateQueries({ queryKey: ['status'] })

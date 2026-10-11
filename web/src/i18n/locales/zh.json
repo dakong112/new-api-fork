@@ -7370,6 +7370,14 @@
     "Network retry: when an upstream returns 502, 504 or 524, the request moves to an untried channel of the same group. It works without fallback groups; if the group has fallback groups and the token enables fallback group retry, the request moves on to them after every channel of the group fails. A timed-out upstream may already have run the request, so upstream costs can repeat; users are billed once.": "网络重试：上游返回 502、504 或 524 时，请求会改走同一分组中尚未尝试过的渠道。不配置备选分组也能生效；如果该分组配置了备选分组，且令牌开启了「备选分组重试」，本分组渠道全部失败后会继续转到备选分组。超时的上游可能已经执行过请求，上游成本可能重复产生，但用户只计费一次。",
     "Fallback groups apply only to tokens with fallback group retry enabled. Upstream 502, 504 and 524 errors move on to fallback groups only when Network retry is on for the group in Pricing groups.": "备选分组只对开启了「备选分组重试」的令牌生效。上游返回 502、504、524 时，只有在「定价分组」中为该分组开启了「网络重试」，才会转到备选分组。",
     "Channel balance alert (USD)": "渠道余额预警阈值（美元）",
-    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "定时刷新余额（CHANNEL_UPDATE_FREQUENCY）或点击「更新所有余额」时，渠道余额低于该金额就通知超级管理员。每个渠道在余额恢复前只提醒一次。填 0 或留空表示关闭。"
+    "Notify the root user when a channel balance drops below this amount on a scheduled balance refresh (CHANNEL_UPDATE_FREQUENCY) or \"Update All Balances\". Each channel is notified once until its balance recovers. 0 or empty turns it off.": "定时刷新余额（CHANNEL_UPDATE_FREQUENCY）或点击「更新所有余额」时，渠道余额低于该金额就通知超级管理员。每个渠道在余额恢复前只提醒一次。填 0 或留空表示关闭。",
+    "Vendor rules": "供应商识别规则",
+    "Keywords": "关键字",
+    "Comma-separated, e.g. gpt, o1, dall-e": "用逗号分隔，例如 gpt, o1, dall-e",
+    "Add vendor": "添加供应商",
+    "Restore the built-in vendor rules? Your changes will be replaced.": "恢复内置的供应商识别规则？当前修改将被覆盖。",
+    "Vendor name must be unique": "供应商名称不能重复",
+    "At least one keyword is required": "至少填写一个关键字",
+    "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "根据模型名称中的关键字判断模型所属供应商。匹配不区分大小写，最长的关键字优先。在模型管理中为模型设置的供应商优先。"
   }
 }
