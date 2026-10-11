@@ -895,7 +895,12 @@ function GroupPricingTable({
 
   // Vendors per group come from usage, which covers every group. Icons come
   // from the pricing response's full vendor list, shared with the model square.
-  const { data: pricingData } = useQuery(pricingQueryOptions)
+  // Icons are optional (names show instead), so a 403 when the Pricing module
+  // is disabled must not toast.
+  const { data: pricingData } = useQuery({
+    ...pricingQueryOptions,
+    meta: { errorToast: false },
+  })
   const [vendorFilter, setVendorFilter] = useState<string | null>(null)
   const vendorsByGroup = useMemo(
     () =>
@@ -1155,7 +1160,7 @@ function GroupPricingTable({
                 header: t('Vendor'),
                 className: 'w-24',
                 cell: (row) => (
-                  <div className='flex items-center gap-1'>
+                  <div className='flex flex-wrap items-center gap-1'>
                     {(vendorsByGroup.get(row.name.trim()) ?? []).map((name) => {
                       const icon = iconByVendor.get(name)
                       const label = name === OTHER_VENDOR ? t('Other') : name

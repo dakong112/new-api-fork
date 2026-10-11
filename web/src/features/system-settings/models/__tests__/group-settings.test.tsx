@@ -305,6 +305,53 @@ describe('group settings workspace', () => {
     ).toHaveAttribute('draggable', 'false')
   })
 
+  it('keeps a newly added group visible under a vendor filter', async () => {
+    const user = userEvent.setup()
+    render(<Fixture usage={vendorUsage} />)
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
+    )
+    await user.click(screen.getByRole('button', { name: 'Add group' }))
+    const names = screen
+      .getAllByRole('textbox', { name: 'Group name' })
+      .map((input) => (input as HTMLInputElement).value)
+    expect(names).toEqual(['vip', 'group_1'])
+  })
+
+  it('shows no results when no pricing group matches the vendor filter', async () => {
+    const user = userEvent.setup()
+    render(
+      <Fixture
+        usage={[
+          { ...vendorUsage[0], name: 'legacy', vendors: ['DeepSeek'] },
+          { ...vendorUsage[1], name: 'retired', vendors: ['智谱'] },
+        ]}
+      />
+    )
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
+    )
+    expect(screen.getByText('No results found')).toBeVisible()
+  })
+
+  it('disables the move buttons while a vendor filters the rows', async () => {
+    const user = userEvent.setup()
+    render(<Fixture usage={vendorUsage} />)
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
+    )
+    expect(screen.getByRole('button', { name: 'Move vip up' })).toBeDisabled()
+  })
+
   it('saves fallback groups in the order set with the move controls', async () => {
     const user = userEvent.setup()
     const onSave = vi.fn(async (_values: typeof defaults) => {})
