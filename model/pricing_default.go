@@ -37,6 +37,7 @@ var defaultVendorRules = map[string]string{
 	"kling":    "快手",
 	"jimeng":   "即梦",
 	"vidu":     "Vidu",
+	"mimo":     "小米",
 }
 
 // 供应商默认图标映射
@@ -64,6 +65,7 @@ var defaultVendorIcons = map[string]string{
 	"快手":         "Kling.Color",
 	"即梦":         "Jimeng.Color",
 	"Vidu":       "Vidu",
+	"小米":         "XiaomiMiMo",
 	"微软":         "AzureAI",
 	"Microsoft":  "AzureAI",
 	"Azure":      "AzureAI",
@@ -134,6 +136,7 @@ var defaultVendorDisplayIDs = map[string]int{
 	"讯飞":         -1021,
 	"阿里巴巴":       -1022,
 	"零一万物":       -1023,
+	"小米":         -1024,
 }
 
 func getDisplayVendor(vendorName string, vendorMap map[int]*Vendor) int {
