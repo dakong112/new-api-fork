@@ -87,7 +87,7 @@ import {
 } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useGroupVendors } from '@/hooks/use-group-vendors'
+import { pricingQueryOptions } from '@/features/pricing/api'
 import { toIntlLocale } from '@/i18n/languages'
 import { formatNumber } from '@/lib/format'
 import { sortGroupNames } from '@/lib/group-order'
@@ -893,9 +893,9 @@ function GroupPricingTable({
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [rows, usageQuery.data])
 
-  // Usage lists every vendor an admin can see; the pricing query only knows the
-  // current user's groups, so it supplies icons alone.
-  const { vendors: knownVendors } = useGroupVendors()
+  // Vendors per group come from usage, which covers every group. Icons come
+  // from the pricing response's full vendor list, shared with the model square.
+  const { data: pricingData } = useQuery(pricingQueryOptions)
   const [vendorFilter, setVendorFilter] = useState<string | null>(null)
   const vendorsByGroup = useMemo(
     () =>
@@ -903,8 +903,8 @@ function GroupPricingTable({
     [usageQuery.data]
   )
   const iconByVendor = useMemo(
-    () => new Map(knownVendors.map((v) => [v.name, v.icon])),
-    [knownVendors]
+    () => new Map((pricingData?.vendors ?? []).map((v) => [v.name, v.icon])),
+    [pricingData]
   )
   const vendorOptions = useMemo(
     () =>
