@@ -31,6 +31,7 @@ import { useForm } from 'react-hook-form'
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
+import type { PricingData } from '@/features/pricing/types'
 import { api } from '@/lib/api'
 
 import type { GroupUsage } from '../../api'
@@ -66,12 +67,23 @@ const schema = z.object({
   GroupSpecialUsableGroup: z.string(),
 })
 
-/** Query client with group usage pre-seeded, so the table never fetches it. */
+/** Query client with group usage and pricing pre-seeded, so the table never fetches it. */
 function seededQueryClient(usage: GroupUsage[] = []) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   client.setQueryData(['group-usage'], usage)
+  // Vendor icons come from the pricing query; seed it empty so it never fetches.
+  const pricing: PricingData = {
+    success: true,
+    data: [],
+    vendors: [],
+    group_ratio: {},
+    usable_group: {},
+    supported_endpoint: {},
+    auto_groups: [],
+  }
+  client.setQueryData(['pricing'], pricing)
   return client
 }
 
@@ -100,6 +112,25 @@ function Fixture(props: {
     </QueryClientProvider>
   )
 }
+
+const vendorUsage: GroupUsage[] = [
+  {
+    name: 'default',
+    channels: 1,
+    enabled_channels: 1,
+    tokens: 0,
+    users: 0,
+    vendors: ['智谱'],
+  },
+  {
+    name: 'vip',
+    channels: 1,
+    enabled_channels: 1,
+    tokens: 0,
+    users: 0,
+    vendors: ['DeepSeek'],
+  },
+]
 
 describe('group settings workspace', () => {
   it('filters by description and clears search without discarding edits', async () => {
@@ -239,6 +270,35 @@ describe('group settings workspace', () => {
         name: 'Search groups by name or description',
       }),
       'vip'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Drag vip to reorder' })
+    ).toHaveAttribute('draggable', 'false')
+  })
+
+  it('filters pricing groups by vendor from group usage', async () => {
+    const user = userEvent.setup()
+    render(<Fixture usage={vendorUsage} />)
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
+    )
+    const names = screen
+      .getAllByRole('textbox', { name: 'Group name' })
+      .map((input) => (input as HTMLInputElement).value)
+    expect(names).toEqual(['vip'])
+  })
+
+  it('stops pricing group dragging while a vendor filters the rows', async () => {
+    const user = userEvent.setup()
+    render(<Fixture usage={vendorUsage} />)
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
     )
     expect(
       screen.getByRole('button', { name: 'Drag vip to reorder' })
