@@ -238,6 +238,7 @@ func TestRecordPolicyFailureStoresTruncatedMessage(t *testing.T) {
 	require.Len(t, events, 2)
 	assert.Equal(t, "failure", events[0].Decision.Action)
 	assert.Equal(t, 200, utf8.RuneCountInString(events[0].Message))
+	assert.Empty(t, events[1].Message)
 }
 
 func TestRecordPolicyFailureMasksMessage(t *testing.T) {
