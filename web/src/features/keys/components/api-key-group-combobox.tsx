@@ -133,6 +133,11 @@ export function ApiKeyGroupCombobox({
             <span className='block truncate font-medium'>
               {selectedOption?.label || placeholder || t('Select a group')}
             </span>
+            {selectedOption?.unavailable && (
+              <span className='text-muted-foreground block truncate text-[11px] sm:text-xs'>
+                {t('Temporarily unavailable')}
+              </span>
+            )}
             {selectedOption?.desc && (
               <span className='text-muted-foreground block truncate text-[11px] sm:text-xs'>
                 {selectedOption.desc}
@@ -183,8 +188,7 @@ export function ApiKeyGroupCombobox({
                         cn(
                           AUTO_GROUP_FRAME_CLASS_NAME,
                           'border-primary/35 data-[selected=true]:border-primary/55'
-                        ),
-                      option.unavailable && 'opacity-50'
+                        )
                     )}
                   >
                     {isAutoOption && (
