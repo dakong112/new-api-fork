@@ -22,6 +22,7 @@ import {
   ArrowDown,
   ArrowUp,
   ChevronDown,
+  GripVertical,
   Search,
   X,
   Info,
@@ -89,6 +90,7 @@ import { toIntlLocale } from '@/i18n/languages'
 import { formatNumber } from '@/lib/format'
 import { sortGroupNames } from '@/lib/group-order'
 import { requireServerSuccess } from '@/lib/server-error-message'
+import { cn } from '@/lib/utils'
 
 import { getGroupUsage } from '../api'
 import { safeJsonParse } from '../utils/json-parser'
@@ -776,6 +778,24 @@ function GroupPricingTable({
     [emitRows, rows]
   )
 
+  const [draggingRowId, setDraggingRowId] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<{
+    id: string
+    after: boolean
+  } | null>(null)
+
+  const dropRow = useCallback(
+    (sourceId: string, targetId: string, after: boolean) => {
+      const moving = rows.find((row) => row._id === sourceId)
+      const rest = rows.filter((row) => row._id !== sourceId)
+      const targetIndex = rest.findIndex((row) => row._id === targetId)
+      if (!moving || targetIndex < 0) return
+      const at = targetIndex + (after ? 1 : 0)
+      emitRows([...rest.slice(0, at), moving, ...rest.slice(at)])
+    },
+    [emitRows, rows]
+  )
+
   const updateRow = useCallback(
     (
       id: string,
@@ -961,6 +981,39 @@ function GroupPricingTable({
             tableProps={{ 'aria-label': t('Pricing groups') }}
             data={visibleRows}
             getRowKey={(row) => row._id}
+            getRowClassName={(row) =>
+              cn(
+                draggingRowId === row._id && 'opacity-50',
+                dropTarget?.id === row._id &&
+                  (dropTarget.after
+                    ? 'border-b-primary border-b-2'
+                    : 'border-t-primary border-t-2')
+              )
+            }
+            getRowProps={(row) => ({
+              onDragOver: (event) => {
+                if (!draggingRowId || draggingRowId === row._id) return
+                event.preventDefault()
+                event.dataTransfer.dropEffect = 'move'
+                const rect = event.currentTarget.getBoundingClientRect()
+                const after = event.clientY > rect.top + rect.height / 2
+                if (dropTarget?.id !== row._id || dropTarget.after !== after) {
+                  setDropTarget({ id: row._id, after })
+                }
+              },
+              onDrop: (event) => {
+                if (!draggingRowId) return
+                event.preventDefault()
+                const rect = event.currentTarget.getBoundingClientRect()
+                dropRow(
+                  draggingRowId,
+                  row._id,
+                  event.clientY > rect.top + rect.height / 2
+                )
+                setDraggingRowId(null)
+                setDropTarget(null)
+              },
+            })}
             emptyClassName='text-muted-foreground h-20 text-sm'
             emptyContent={
               <EmptyState
@@ -984,6 +1037,52 @@ function GroupPricingTable({
               />
             }
             columns={[
+              {
+                id: 'drag',
+                header: '',
+                className: 'w-8',
+                cell: (row) => (
+                  // Native drag from the handle only, so text in the row's
+                  // inputs stays selectable; the arrow keys mirror Move up/down.
+                  <Button
+                    variant='ghost'
+                    size='icon-sm'
+                    className='text-muted-foreground cursor-grab active:cursor-grabbing'
+                    draggable={!query}
+                    aria-label={t('Drag {{group}} to reorder', {
+                      group: row.name.trim(),
+                    })}
+                    title={t('Drag {{group}} to reorder', {
+                      group: row.name.trim(),
+                    })}
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = 'move'
+                      event.dataTransfer.setData('text/plain', row._id)
+                      const tableRow = event.currentTarget.closest('tr')
+                      if (tableRow) {
+                        event.dataTransfer.setDragImage(tableRow, 0, 0)
+                      }
+                      setDraggingRowId(row._id)
+                    }}
+                    onDragEnd={() => {
+                      setDraggingRowId(null)
+                      setDropTarget(null)
+                    }}
+                    onKeyDown={(event) => {
+                      if (query) return
+                      if (
+                        event.key === 'ArrowUp' ||
+                        event.key === 'ArrowDown'
+                      ) {
+                        event.preventDefault()
+                        moveRow(row._id, event.key === 'ArrowUp' ? -1 : 1)
+                      }
+                    }}
+                  >
+                    <GripVertical className='h-4 w-4' aria-hidden='true' />
+                  </Button>
+                ),
+              },
               {
                 id: 'group',
                 header: t('Group name'),

@@ -197,6 +197,54 @@ describe('group settings workspace', () => {
     )
   })
 
+  it('drops a dragged pricing group before the target row and saves that order', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn(async (_values: typeof defaults) => {})
+    render(<Fixture onSave={onSave} />)
+    const handle = screen.getByRole('button', { name: 'Drag vip to reorder' })
+    const target = screen.getByDisplayValue('default').closest('tr')
+    if (!target) throw new Error('default row not rendered')
+    const dataTransfer = {
+      setData: vi.fn(),
+      setDragImage: vi.fn(),
+      effectAllowed: '',
+      dropEffect: '',
+    }
+
+    fireEvent.dragStart(handle, { dataTransfer })
+    // jsdom rows have no height, so clientY 0 sits in the upper half.
+    fireEvent.dragOver(target, { dataTransfer, clientY: 0 })
+    fireEvent.drop(target, { dataTransfer, clientY: 0 })
+
+    const names = screen
+      .getAllByRole('textbox', { name: 'Group name' })
+      .map((input) => (input as HTMLInputElement).value)
+    expect(names).toEqual(['vip', 'default'])
+    await user.click(
+      screen.getByRole('button', { name: 'Save group settings' })
+    )
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+    expect(onSave.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        GroupDisplayOrder: '[\n  "vip",\n  "default"\n]',
+      })
+    )
+  })
+
+  it('stops pricing group dragging while a search filters the rows', async () => {
+    const user = userEvent.setup()
+    render(<Fixture />)
+    await user.type(
+      screen.getByRole('textbox', {
+        name: 'Search groups by name or description',
+      }),
+      'vip'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Drag vip to reorder' })
+    ).toHaveAttribute('draggable', 'false')
+  })
+
   it('saves fallback groups in the order set with the move controls', async () => {
     const user = userEvent.setup()
     const onSave = vi.fn(async (_values: typeof defaults) => {})
