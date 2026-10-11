@@ -38,6 +38,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { GroupVendorFilter } from '@/components/group-vendor-filter'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -60,6 +61,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { useIsMobile } from '@/hooks/use-mobile'
+import {
+  filterGroupsByVendor,
+  isGroupAvailable,
+  type GroupVendorIndex,
+} from '@/lib/group-vendors'
 import { cn } from '@/lib/utils'
 
 import { formatGroupDetail } from './model-group-selector/group-detail'
@@ -552,6 +558,11 @@ export interface ModelGroupSelectorProps {
   selectedGroup: string
   groups: GroupOption[]
   onGroupChange: (value: string) => void
+  /**
+   * Optional vendor index; when given, the group column gets vendor tabs and
+   * groups without enabled models are greyed out once `ready`.
+   */
+  groupVendors?: GroupVendorIndex & { ready?: boolean }
   // Common props
   className?: string
   disabled?: boolean
@@ -568,12 +579,14 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
   selectedGroup,
   groups,
   onGroupChange,
+  groupVendors,
   className,
   disabled = false,
 }) => {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [vendorFilter, setVendorFilter] = useState<string | null>(null)
   const isMobile = useIsMobile()
   const groupScrollContainerRef = useRef<HTMLDivElement | null>(null)
   const selectedGroupOptionRef = useRef<HTMLButtonElement | null>(null)
@@ -586,6 +599,19 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
   const currentGroup = useMemo(
     () => groups.find((group) => group.value === selectedGroup),
     [groups, selectedGroup]
+  )
+  const visibleGroups = useMemo(
+    () =>
+      groupVendors
+        ? filterGroupsByVendor(
+            groups,
+            (group) => group.value,
+            vendorFilter,
+            groupVendors,
+            selectedGroup
+          )
+        : groups,
+    [groups, groupVendors, vendorFilter, selectedGroup]
   )
   const filteredModels = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -680,6 +706,15 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
       <div className='text-muted-foreground px-1 text-[11px] leading-4 font-medium'>
         {t('Model Group')}
       </div>
+      {groupVendors && (
+        <GroupVendorFilter
+          variant='chips'
+          vendors={groupVendors.vendors}
+          value={vendorFilter}
+          onChange={setVendorFilter}
+          className='px-1'
+        />
+      )}
       <div
         className={cn(
           'grid gap-1',
@@ -687,8 +722,13 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
         )}
         ref={groupScrollContainerRef}
       >
-        {groups.map((group) => {
+        {visibleGroups.map((group) => {
           const isSelected = selectedGroup === group.value
+          // Before pricing loads every group looks model-less; don't grey yet.
+          const unavailable =
+            Boolean(groupVendors?.ready) &&
+            groupVendors !== undefined &&
+            !isGroupAvailable(group.value, groupVendors)
 
           return (
             <button
@@ -696,9 +736,10 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
                 'flex min-w-0 items-center justify-between gap-2 rounded-md px-2.5 py-2 text-left text-[12px] leading-4 transition-colors',
                 isSelected
                   ? 'bg-primary/10 text-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                unavailable && 'opacity-50'
               )}
-              disabled={disabled}
+              disabled={disabled || unavailable}
               key={group.value}
               onClick={() => handleGroupChange(group.value)}
               ref={isSelected ? selectedGroupOptionRef : undefined}
@@ -707,6 +748,11 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
               <span className='min-w-0 truncate font-medium'>
                 {group.label}
               </span>
+              {unavailable && (
+                <span className='text-muted-foreground shrink-0 text-[10px]'>
+                  {t('Temporarily unavailable')}
+                </span>
+              )}
               <Check
                 className={cn(
                   'size-3.5 shrink-0',
