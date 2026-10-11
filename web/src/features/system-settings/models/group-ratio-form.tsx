@@ -83,12 +83,14 @@ type GroupRatioFormProps = {
   form: UseFormReturn<GroupFormValues>
   onSave: (values: GroupFormValues) => Promise<void>
   isSaving: boolean
+  vendorRules?: string
 }
 
 export const GroupRatioForm = memo(function GroupRatioForm({
   form,
   onSave,
   isSaving,
+  vendorRules,
 }: GroupRatioFormProps) {
   const { t } = useTranslation()
   const values = useWatch({ control: form.control })
@@ -178,6 +180,7 @@ export const GroupRatioForm = memo(function GroupRatioForm({
             groupDisplayOrder={values.GroupDisplayOrder ?? '[]'}
             groupFallbackGroups={values.GroupFallbackGroups ?? '{}'}
             groupNetworkRetryGroups={values.GroupNetworkRetryGroups ?? '[]'}
+            vendorRules={vendorRules}
             hasUnsavedChanges={form.formState.isDirty}
             maxTokenAutoGroupsField={
               <FormField

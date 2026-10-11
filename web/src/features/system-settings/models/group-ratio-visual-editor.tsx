@@ -126,6 +126,8 @@ type GroupRatioVisualEditorProps = {
   hasUnsavedChanges: boolean
   maxTokenAutoGroupsField: ReactNode
   groupSpecialUsableGroup: string
+  /** VendorRules option JSON; its icons win over the pricing vendor list. */
+  vendorRules?: string
   onChange: (field: string, value: string) => void
 }
 
@@ -342,6 +344,7 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
   hasUnsavedChanges,
   maxTokenAutoGroupsField,
   groupSpecialUsableGroup,
+  vendorRules,
   onChange,
 }: GroupRatioVisualEditorProps) {
   const { t, i18n } = useTranslation()
@@ -441,6 +444,7 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
           groupDisplayOrder={groupDisplayOrder}
           networkRetryGroups={groupNetworkRetryGroups}
           hasUnsavedChanges={hasUnsavedChanges}
+          vendorRules={vendorRules}
           onChange={onChange}
           onShowDetail={setDetailGroup}
         />
@@ -688,6 +692,7 @@ type GroupPricingTableProps = {
   /** JSON array of groups that retry 502/504/524 on another channel. */
   networkRetryGroups: string
   hasUnsavedChanges: boolean
+  vendorRules?: string
   onChange: (field: string, value: string) => void
   onShowDetail: (name: string) => void
 }
@@ -699,6 +704,7 @@ function GroupPricingTable({
   groupDisplayOrder,
   networkRetryGroups,
   hasUnsavedChanges,
+  vendorRules,
   onChange,
   onShowDetail,
 }: GroupPricingTableProps) {
@@ -907,10 +913,20 @@ function GroupPricingTable({
       new Map((usageQuery.data ?? []).map((u) => [u.name, u.vendors ?? []])),
     [usageQuery.data]
   )
-  const iconByVendor = useMemo(
-    () => new Map((pricingData?.vendors ?? []).map((v) => [v.name, v.icon])),
-    [pricingData]
-  )
+  // Recognition rules are fresh settings; the pricing list may be stale.
+  const iconByVendor = useMemo(() => {
+    const icons = new Map<string, string | undefined>(
+      (pricingData?.vendors ?? []).map((v) => [v.name, v.icon])
+    )
+    const rules = safeJsonParse<{ name?: string; icon?: string }[]>(
+      vendorRules ?? '[]',
+      { fallback: [], context: 'vendor rules' }
+    )
+    for (const rule of Array.isArray(rules) ? rules : []) {
+      if (rule?.name && rule.icon) icons.set(rule.name, rule.icon)
+    }
+    return icons
+  }, [pricingData, vendorRules])
   const vendorOptions = useMemo(() => {
     // Same order as the other surfaces: the backend vendor list.
     const order = new Map(
@@ -1171,22 +1187,21 @@ function GroupPricingTable({
                 header: t('Vendor'),
                 className: 'w-24',
                 cell: (row) => (
-                  <div className='flex flex-wrap items-center gap-1'>
+                  <div className='flex flex-wrap items-center gap-x-2 gap-y-1'>
                     {(vendorsByGroup.get(row.name.trim()) ?? []).map((name) => {
                       const icon = iconByVendor.get(name)
                       const label = name === OTHER_VENDOR ? t('Other') : name
                       return (
-                        <span key={name || 'other'} title={label}>
+                        <span
+                          key={name || 'other'}
+                          className='inline-flex items-center gap-1 whitespace-nowrap'
+                        >
                           {icon ? (
-                            <>
-                              <span aria-hidden='true'>
-                                {getLobeIcon(icon, 16)}
-                              </span>
-                              <span className='sr-only'>{label}</span>
-                            </>
-                          ) : (
-                            label
-                          )}
+                            <span aria-hidden='true'>
+                              {getLobeIcon(icon, 16)}
+                            </span>
+                          ) : null}
+                          <span>{label}</span>
                         </span>
                       )
                     })}

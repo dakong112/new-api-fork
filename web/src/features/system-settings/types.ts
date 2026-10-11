@@ -277,6 +277,7 @@ export type ModelSettings = {
 }
 
 export type BillingSettings = {
+  VendorRules: string
   QuotaForNewUser: number
   QuotaForInviter: number
   QuotaForInvitee: number

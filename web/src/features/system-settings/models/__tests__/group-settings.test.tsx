@@ -68,7 +68,10 @@ const schema = z.object({
 })
 
 /** Query client with group usage and pricing pre-seeded, so the table never fetches it. */
-function seededQueryClient(usage: GroupUsage[] = []) {
+function seededQueryClient(
+  usage: GroupUsage[] = [],
+  pricingVendors: PricingData['vendors'] = []
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
@@ -77,7 +80,7 @@ function seededQueryClient(usage: GroupUsage[] = []) {
   const pricing: PricingData = {
     success: true,
     data: [],
-    vendors: [],
+    vendors: pricingVendors,
     group_ratio: {},
     usable_group: {},
     supported_endpoint: {},
@@ -92,9 +95,13 @@ function Fixture(props: {
   initial?: Partial<typeof defaults>
   isSaving?: boolean
   usage?: GroupUsage[]
+  vendorRules?: string
+  pricingVendors?: PricingData['vendors']
 }) {
   const [actions, setActions] = useState<HTMLDivElement | null>(null)
-  const [queryClient] = useState(() => seededQueryClient(props.usage))
+  const [queryClient] = useState(() =>
+    seededQueryClient(props.usage, props.pricingVendors)
+  )
   const form = useForm({
     defaultValues: { ...defaults, ...props.initial },
     resolver: zodResolver(schema),
@@ -107,6 +114,7 @@ function Fixture(props: {
           form={form}
           onSave={props.onSave ?? (async () => {})}
           isSaving={props.isSaving ?? false}
+          vendorRules={props.vendorRules}
         />
       </SettingsPageProvider>
     </QueryClientProvider>
@@ -274,6 +282,37 @@ describe('group settings workspace', () => {
     expect(
       screen.getByRole('button', { name: 'Drag vip to reorder' })
     ).toHaveAttribute('draggable', 'false')
+  })
+
+  it('shows each vendor as one chip pairing its icon with its name', () => {
+    render(
+      <Fixture
+        usage={[
+          { ...vendorUsage[0], name: 'default', vendors: ['智谱', 'DeepSeek'] },
+        ]}
+        vendorRules='[{"name":"智谱","icon":"SGLang","keywords":["glm"]}]'
+        pricingVendors={[{ id: 1, name: 'DeepSeek', icon: 'SGLang' }]}
+      />
+    )
+    const table = within(screen.getByRole('table', { name: 'Pricing groups' }))
+    for (const name of ['智谱', 'DeepSeek']) {
+      const chip = table.getByText(name).parentElement as HTMLElement
+      expect(chip.textContent).toBe(name)
+      expect(chip.querySelector('[aria-hidden="true"] img')).not.toBeNull()
+    }
+  })
+
+  it('takes the vendor icon from the recognition rules when pricing has no such vendor', () => {
+    render(
+      <Fixture
+        usage={[{ ...vendorUsage[0], vendors: ['Acme'] }]}
+        vendorRules='[{"name":"Acme","icon":"SGLang","keywords":["acme"]}]'
+      />
+    )
+    const chip = within(
+      screen.getByRole('table', { name: 'Pricing groups' })
+    ).getByText('Acme').parentElement as HTMLElement
+    expect(chip.querySelector('img')).not.toBeNull()
   })
 
   it('filters pricing groups by vendor from group usage', async () => {

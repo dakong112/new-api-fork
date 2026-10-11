@@ -184,6 +184,7 @@ type RatioSettingsCardProps = {
   modelDefaults: ModelFormValues
   groupDefaults: GroupFormValues
   toolPricesDefault: string
+  vendorRules?: string
   titleKey?: string
   visibleTabs?: RatioTabId[]
 }
@@ -192,6 +193,7 @@ export function RatioSettingsCard({
   modelDefaults: initialModelDefaults,
   groupDefaults,
   toolPricesDefault,
+  vendorRules,
   titleKey = 'Pricing Ratios',
   visibleTabs = ['models', 'groups', 'tool-prices', 'upstream-sync'],
 }: RatioSettingsCardProps) {
@@ -569,6 +571,7 @@ export function RatioSettingsCard({
           form={groupForm}
           onSave={saveGroupRatios}
           isSaving={updateOption.isPending}
+          vendorRules={vendorRules}
         />
       )
     }
