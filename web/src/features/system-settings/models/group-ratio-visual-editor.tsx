@@ -911,29 +911,40 @@ function GroupPricingTable({
     () => new Map((pricingData?.vendors ?? []).map((v) => [v.name, v.icon])),
     [pricingData]
   )
-  const vendorOptions = useMemo(
-    () =>
-      [...new Set([...vendorsByGroup.values()].flat())]
-        .sort((a, b) => {
-          if (a === OTHER_VENDOR) return 1
-          if (b === OTHER_VENDOR) return -1
-          return a.localeCompare(b)
-        })
-        .map((name) => ({ name, icon: iconByVendor.get(name) })),
-    [vendorsByGroup, iconByVendor]
-  )
+  const vendorOptions = useMemo(() => {
+    // Same order as the other surfaces: the backend vendor list.
+    const order = new Map(
+      (pricingData?.vendors ?? []).map((v, index) => [v.name, index])
+    )
+    return [...new Set([...vendorsByGroup.values()].flat())]
+      .sort((a, b) => {
+        if (a === OTHER_VENDOR) return 1
+        if (b === OTHER_VENDOR) return -1
+        const ia = order.get(a)
+        const ib = order.get(b)
+        if (ia !== undefined && ib !== undefined) return ia - ib
+        if (ia !== undefined) return -1
+        if (ib !== undefined) return 1
+        return a.localeCompare(b)
+      })
+      .map((name) => ({ name, icon: iconByVendor.get(name) }))
+  }, [vendorsByGroup, iconByVendor, pricingData])
+  // A vendor that vanished (or a hidden filter) means "All".
+  const activeVendor = vendorOptions.some((v) => v.name === vendorFilter)
+    ? vendorFilter
+    : null
 
   const query = search.trim().toLowerCase()
   // Reordering a filtered subset would hide where rows land, so it waits.
-  const filtering = Boolean(query) || vendorFilter !== null
+  const filtering = Boolean(query) || activeVendor !== null
   const visibleRows = rows.filter(
     (row) =>
       (!query ||
         row.name.toLowerCase().includes(query) ||
         row.description.toLowerCase().includes(query)) &&
-      (vendorFilter === null ||
+      (activeVendor === null ||
         row.isNew ||
-        (vendorsByGroup.get(row.name.trim()) ?? []).includes(vendorFilter))
+        (vendorsByGroup.get(row.name.trim()) ?? []).includes(activeVendor))
   )
 
   return (
@@ -986,7 +997,7 @@ function GroupPricingTable({
           <GroupVendorFilter
             variant='chips'
             vendors={vendorOptions}
-            value={vendorFilter}
+            value={activeVendor}
             onChange={setVendorFilter}
           />
           {strandedGroups.length > 0 && (

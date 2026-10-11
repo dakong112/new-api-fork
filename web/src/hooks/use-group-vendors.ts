@@ -27,6 +27,8 @@ export function useGroupVendors(enabled = true) {
   const { data } = useQuery({
     ...pricingQueryOptions,
     enabled,
+    // Vendor filtering is optional; failures (e.g. 403) degrade silently.
+    meta: { errorToast: false },
   })
   return useMemo(
     () => ({

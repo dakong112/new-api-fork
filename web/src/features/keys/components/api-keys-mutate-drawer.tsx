@@ -281,12 +281,16 @@ export function ApiKeysMutateDrawer({
   const isFormInitialized = initializedTarget === formTarget
   const selectedGroup = form.watch('group')
   const groupVendors = useGroupVendors(open)
+  // A vendor that vanished (or a hidden filter) means "All".
+  const activeVendor = groupVendors.vendors.some((v) => v.name === vendorFilter)
+    ? vendorFilter
+    : null
   const vendorGroups = useMemo(
     () =>
       filterGroupsByVendor(
         groups,
         (g) => g.value,
-        vendorFilter,
+        activeVendor,
         groupVendors,
         selectedGroup
       ).map((g) => ({
@@ -295,7 +299,7 @@ export function ApiKeysMutateDrawer({
         unavailable:
           groupVendors.ready && !isGroupAvailable(g.value, groupVendors),
       })),
-    [groups, vendorFilter, groupVendors, selectedGroup]
+    [groups, activeVendor, groupVendors, selectedGroup]
   )
   const fallbackGroups =
     groups.find((g) => g.value === selectedGroup)?.fallbackGroups ?? []
@@ -462,7 +466,7 @@ export function ApiKeysMutateDrawer({
                     <GroupVendorFilter
                       variant='cards'
                       vendors={groupVendors.vendors}
-                      value={vendorFilter}
+                      value={activeVendor}
                       onChange={setVendorFilter}
                     />
                     <FormControl>
