@@ -60,7 +60,8 @@ func TestGetGroupUsageListsVendorsOfEnabledModels(t *testing.T) {
 		{Group: "mix", Model: "glm-5.3", ChannelId: 1, Enabled: true},
 		{Group: "mix", Model: "mimo-v2.5", ChannelId: 1, Enabled: true},
 		{Group: "misc", Model: "acme-unknown-1", ChannelId: 1, Enabled: true},
-		{Group: "off", Model: "gpt-5.5", ChannelId: 1, Enabled: false},
+		// Disabled: its vendor (OpenAI) must not show up in mix's vendors.
+		{Group: "mix", Model: "gpt-5.5", ChannelId: 1, Enabled: false},
 	} {
 		require.NoError(t, DB.Create(&ability).Error)
 	}
@@ -83,5 +84,4 @@ func TestGetGroupUsageListsVendorsOfEnabledModels(t *testing.T) {
 	assert.Equal(t, []string{""}, byName["misc"].Vendors)
 	assert.Equal(t, 1, byName["misc"].Channels)
 	assert.Equal(t, 1, byName["misc"].EnabledChannels)
-	assert.NotContains(t, byName, "off", "a disabled ability adds no vendor")
 }
