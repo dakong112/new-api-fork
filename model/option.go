@@ -716,14 +716,16 @@ func updateOptionMap(key string, value string) (err error) {
 	case "VendorRules":
 		// "" restores the built-in rules. It is stored as "" so a restart
 		// (loadOptionsFromDatabase) lands here again and keeps the defaults.
-		rules := DefaultVendorRules()
+		var rules []VendorRule
 		if value == "" {
+			rules = DefaultVendorRules()
 			common.OptionMap[key] = defaultVendorRulesJSON()
 		} else if err = common.UnmarshalJsonStr(value, &rules); err != nil {
 			break
 		}
-		SetVendorRules(rules)
-		InvalidatePricingCache()
+		if SetVendorRules(rules) {
+			InvalidatePricingCache()
+		}
 	//case "ChatLink":
 	//	common.ChatLink = value
 	//case "ChatLink2":

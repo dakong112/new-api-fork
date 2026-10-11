@@ -117,10 +117,24 @@ func TestVendorRulesOptionDrivesPricingAndRestoresDefaults(t *testing.T) {
 	assert.Equal(t, "OpenAI", name)
 
 	SetVendorRules([]VendorRule{{Name: "Stale", Keywords: []string{"gpt"}}})
-	loadOptionsFromDatabase()
 	InvalidatePricingCache()
 	name, _ = vendorOf("gpt-5")
+	require.Equal(t, "Stale", name)
+	loadOptionsFromDatabase() // must invalidate pricing by itself when rules change
+	name, _ = vendorOf("gpt-5")
 	assert.Equal(t, "OpenAI", name)
+}
+
+func TestSavedVendorRulesDoNotInheritDefaults(t *testing.T) {
+	previousMap := common.OptionMap
+	common.OptionMap = map[string]string{}
+	t.Cleanup(func() {
+		SetVendorRules(DefaultVendorRules())
+		common.OptionMap = previousMap
+		InvalidatePricingCache()
+	})
+	require.NoError(t, updateOptionMap("VendorRules", `[{"name":"Acme","keywords":["acme"]}]`))
+	assert.Equal(t, []VendorRule{{Name: "Acme", Keywords: []string{"acme"}}}, currentVendorRules())
 }
 
 func TestDatabaseVendorTakesPrecedenceOverRule(t *testing.T) {

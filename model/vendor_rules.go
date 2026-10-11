@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -61,16 +62,21 @@ func DefaultVendorRules() []VendorRule {
 	}
 }
 
-// SetVendorRules replaces the active rules. Names and icons are trimmed for
-// display; keywords are normalized by matchVendorRule.
-func SetVendorRules(rules []VendorRule) {
+// SetVendorRules replaces the active rules and reports whether they changed.
+// Names and icons are trimmed for display; keywords are normalized by
+// matchVendorRule.
+func SetVendorRules(rules []VendorRule) bool {
 	normalized := make([]VendorRule, 0, len(rules))
 	for _, rule := range rules {
 		normalized = append(normalized, VendorRule{Name: strings.TrimSpace(rule.Name), Icon: strings.TrimSpace(rule.Icon), Keywords: slices.Clone(rule.Keywords)})
 	}
 	vendorRulesLock.Lock()
+	defer vendorRulesLock.Unlock()
+	if reflect.DeepEqual(vendorRules, normalized) {
+		return false
+	}
 	vendorRules = normalized
-	vendorRulesLock.Unlock()
+	return true
 }
 
 // currentVendorRules returns the active rules. SetVendorRules always swaps in a
