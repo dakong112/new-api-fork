@@ -1091,13 +1091,13 @@ func TestVendorManagementDatabaseMatrix(t *testing.T) {
 				model.GetPricing()
 				vendors := model.GetVendors()
 				require.Len(t, vendors, 1)
-				assert.Equal(t, "Google", vendors[0].Name)
+				assert.Equal(t, "Gemini", vendors[0].Name)
 				assert.Equal(t, "Gemini.Color", vendors[0].Icon)
 				assert.Negative(t, vendors[0].ID)
 				var count int64
 				require.NoError(t, db.Model(&model.Vendor{}).Count(&count).Error)
 				assert.Zero(t, count)
-				saved := model.Vendor{Name: "Google", Icon: "Gemini.Color"}
+				saved := model.Vendor{Name: "Gemini", Icon: "Gemini.Color"}
 				require.NoError(t, saved.Insert())
 				assert.Equal(t, saved.Id, model.GetVendors()[0].ID)
 				require.NoError(t, saved.Delete())

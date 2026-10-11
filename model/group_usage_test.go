@@ -76,7 +76,7 @@ func TestGetGroupUsageListsVendorsOfEnabledModels(t *testing.T) {
 	}
 
 	require.Contains(t, byName, "mix")
-	assert.Equal(t, []string{"DeepSeek", "小米", "智谱"}, byName["mix"].Vendors)
+	assert.Equal(t, []string{"DeepSeek", "小米 MiMo", "智谱 GLM"}, byName["mix"].Vendors)
 	assert.Equal(t, 1, byName["mix"].Channels)
 	assert.Equal(t, 1, byName["mix"].EnabledChannels)
 	require.Contains(t, byName, "misc")

@@ -170,6 +170,7 @@ func InitOptionMap() {
 	common.OptionMap["GroupDisplayOrder"] = "[]"
 	common.OptionMap["GroupFallbackGroups"] = "{}"
 	common.OptionMap["GroupNetworkRetryGroups"] = "[]"
+	common.OptionMap["VendorRules"] = defaultVendorRulesJSON()
 	//common.OptionMap["ChatLink"] = common.ChatLink
 	//common.OptionMap["ChatLink2"] = common.ChatLink2
 	common.OptionMap["QuotaPerUnit"] = strconv.FormatFloat(common.QuotaPerUnit, 'f', -1, 64)
@@ -274,6 +275,8 @@ func validateOptionValue(key string, value string) error {
 		if err := common.UnmarshalJsonStr(value, &fallbacks); err != nil {
 			return fmt.Errorf("GroupFallbackGroups must map group names to arrays of group names: %w", err)
 		}
+	case "VendorRules":
+		return ValidateVendorRules(value)
 	case "GroupNetworkRetryGroups":
 		groups := []string{}
 		if err := common.UnmarshalJsonStr(value, &groups); err != nil {
@@ -710,6 +713,17 @@ func updateOptionMap(key string, value string) (err error) {
 		groups := []string{}
 		_ = common.UnmarshalJsonStr(value, &groups)
 		common.GroupNetworkRetryGroups = groups
+	case "VendorRules":
+		// "" restores the built-in rules. It is stored as "" so a restart
+		// (loadOptionsFromDatabase) lands here again and keeps the defaults.
+		rules := DefaultVendorRules()
+		if value == "" {
+			common.OptionMap[key] = defaultVendorRulesJSON()
+		} else if err = common.UnmarshalJsonStr(value, &rules); err != nil {
+			break
+		}
+		SetVendorRules(rules)
+		InvalidatePricingCache()
 	//case "ChatLink":
 	//	common.ChatLink = value
 	//case "ChatLink2":
