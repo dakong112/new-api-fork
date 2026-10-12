@@ -3188,6 +3188,7 @@
     "Incoming path must be unique": "Incoming path must be unique",
     "Incoming path must not include query": "Incoming path must not include query",
     "Incoming path must start with /": "Incoming path must start with /",
+    "Invalid SSO client or redirect URI": "Invalid SSO client or redirect URI",
     "Invalid subscription ID": "Invalid subscription ID",
     "Invalid top-up amount": "Invalid top-up amount",
     "Invalid top-up quota": "Invalid top-up quota",

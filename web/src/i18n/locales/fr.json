@@ -3188,6 +3188,7 @@
     "Incoming path must be unique": "Le chemin entrant doit etre unique",
     "Incoming path must not include query": "Le chemin entrant ne doit pas inclure de query",
     "Incoming path must start with /": "Le chemin entrant doit commencer par /",
+    "Invalid SSO client or redirect URI": "Application ou URI de redirection SSO non valide",
     "Invalid subscription ID": "ID d'abonnement non valide",
     "Invalid top-up amount": "Montant de recharge non valide",
     "Invalid top-up quota": "Quota de recharge non valide",

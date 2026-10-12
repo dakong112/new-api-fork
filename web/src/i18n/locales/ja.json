@@ -3188,6 +3188,7 @@
     "Incoming path must be unique": "受信パスは一意である必要があります",
     "Incoming path must not include query": "受信パスに query を含めることはできません",
     "Incoming path must start with /": "受信パスは / で始める必要があります",
+    "Invalid SSO client or redirect URI": "SSOクライアントまたはリダイレクトURIが無効です",
     "Invalid subscription ID": "無効なサブスクリプション ID です",
     "Invalid top-up amount": "チャージ数量が無効です",
     "Invalid top-up quota": "無効なチャージクォータです",

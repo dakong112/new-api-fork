@@ -3188,6 +3188,7 @@
     "Incoming path must be unique": "Входящий путь должен быть уникальным",
     "Incoming path must not include query": "Входящий путь не должен содержать query",
     "Incoming path must start with /": "Входящий путь должен начинаться с /",
+    "Invalid SSO client or redirect URI": "Недопустимое приложение SSO или URI перенаправления",
     "Invalid subscription ID": "Недопустимый ID подписки",
     "Invalid top-up amount": "Недопустимая сумма пополнения",
     "Invalid top-up quota": "Недопустимая квота пополнения",

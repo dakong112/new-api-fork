@@ -24,6 +24,7 @@ var accessTokenExemptRoutes = []string{
 	// Anonymous pages and setup.
 	"GET /api/setup",
 	"POST /api/setup",
+	"POST /api/sso/exchange",
 	"GET /api/status",
 	"GET /api/uptime/status",
 	"GET /api/notice",

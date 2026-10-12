@@ -72,6 +72,11 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/verify/methods", middleware.UserAuth(), middleware.DisableCache(), controller.GetVerificationMethods)
 		apiRouter.POST("/verify", middleware.UserAuth(), middleware.CriticalRateLimit(), middleware.UserCriticalRateLimit("security-verification"), middleware.DisableCache(), controller.UniversalVerify)
 
+		ssoRoute := apiRouter.Group("/sso")
+		ssoRoute.POST("/code", middleware.UserAuth(), middleware.UserCriticalRateLimit("sso-code"), middleware.DisableCache(), controller.CreateSSOCode)
+		ssoRoute.GET("/apps", middleware.UserAuth(), middleware.DisableCache(), controller.ListSSOApps)
+		ssoRoute.POST("/exchange", middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, controller.ExchangeSSOCode)
+
 		userRoute := apiRouter.Group("/user")
 		{
 			userRoute.POST("/auth/refresh", middleware.SessionCookieOriginGuard(), middleware.CriticalRateLimit(), middleware.DisableCache(), controller.RefreshAuth)

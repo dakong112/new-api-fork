@@ -3188,6 +3188,7 @@
     "Incoming path must be unique": "入口路径必须唯一",
     "Incoming path must not include query": "入口路径不能包含 query",
     "Incoming path must start with /": "入口路径必须以 / 开头",
+    "Invalid SSO client or redirect URI": "无效的应用或回调地址",
     "Invalid subscription ID": "无效的订阅ID",
     "Invalid top-up amount": "充值数量无效",
     "Invalid top-up quota": "无效的充值额度",

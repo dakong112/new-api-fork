@@ -1,11 +1,23 @@
 package controller
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
+	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/i18n"
+	"github.com/QuantumNous/new-api/middleware"
+	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service/authz"
 	"github.com/QuantumNous/new-api/setting"
+	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func TestSSOClientsOptionValidation(t *testing.T) {
@@ -48,4 +60,105 @@ func TestSSOClientsOptionValidation(t *testing.T) {
 
 func sha256Hex(value string) string {
 	return setting.SSOSecretHash(value)
+}
+
+const ssoTestRedirect = "https://www.example.com/sso/callback"
+const ssoTestSecret = "s3cret"
+
+func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+	previousDB, previousLogDB := model.DB, model.LOG_DB
+	previousMain, previousLog := common.MainDatabaseType(), common.LogDatabaseType()
+	previousRedis, previousMaster := common.RedisEnabled, common.IsMasterNode
+	previousClients := setting.SSOClients
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, i18n.Init())
+	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.Log{}, &model.AuditLog{}, &model.CasbinRule{}, &model.AuthzRole{},
+		&model.UserAccessToken{}, &model.Option{}, &model.AuthFlow{}, &model.Token{}))
+	model.DB, model.LOG_DB = db, db
+	common.SetDatabaseTypes(common.DatabaseTypeSQLite, common.DatabaseTypeSQLite)
+	common.RedisEnabled = false
+	common.IsMasterNode = true
+	require.NoError(t, authz.Init(db))
+	require.NoError(t, setting.UpdateSSOClientsByJsonString(`[{"client_id":"infinite","name":"Studio","secret_hash":"`+setting.SSOSecretHash(ssoTestSecret)+`","redirect_uris":["`+ssoTestRedirect+`"],"launch_url":"https://www.example.com/api/auth/newapi/start"}]`))
+	t.Cleanup(func() {
+		model.DB, model.LOG_DB = previousDB, previousLogDB
+		common.SetDatabaseTypes(previousMain, previousLog)
+		common.RedisEnabled, common.IsMasterNode = previousRedis, previousMaster
+		setting.SSOClients = previousClients
+	})
+
+	user := &model.User{Username: "alice", Password: "placeholder", DisplayName: "Alice", Email: "a@example.com", Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", Quota: 1000, AuthVersion: 1, AffCode: "alice"}
+	require.NoError(t, db.Create(user).Error)
+	_, jwt := createAccessTokenTestSession(t, user.Id, "sso-test-session")
+
+	router := gin.New()
+	api := router.Group("/api")
+	api.POST("/sso/code", middleware.UserAuth(), CreateSSOCode)
+	api.POST("/sso/exchange", ExchangeSSOCode)
+	api.GET("/sso/apps", middleware.UserAuth(), ListSSOApps)
+	return router, user, jwt
+}
+
+func ssoPost(router http.Handler, path, bearer, body string) *httptest.ResponseRecorder {
+	request := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	if bearer != "" {
+		request.Header.Set("Authorization", "Bearer "+bearer)
+	}
+	request.RemoteAddr = "192.0.2.8:4567"
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	return response
+}
+
+type ssoCodeResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    struct {
+		Code        string `json:"code"`
+		RedirectURL string `json:"redirect_url"`
+	} `json:"data"`
+}
+
+func issueSSOTestCode(t *testing.T, router http.Handler, jwt string) string {
+	t.Helper()
+	response := ssoPost(router, "/api/sso/code", jwt, `{"client_id":"infinite","redirect_uri":"`+ssoTestRedirect+`","state":"st-1"}`)
+	var body ssoCodeResponse
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body))
+	require.True(t, body.Success, body.Message)
+	return body.Data.Code
+}
+
+func TestCreateSSOCode(t *testing.T) {
+	router, _, jwt := setupSSOTest(t)
+
+	response := ssoPost(router, "/api/sso/code", jwt, `{"client_id":"infinite","redirect_uri":"`+ssoTestRedirect+`","state":"st-1"}`)
+	var body ssoCodeResponse
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body))
+	require.True(t, body.Success, body.Message)
+	require.NotEmpty(t, body.Data.Code)
+	target, err := url.Parse(body.Data.RedirectURL)
+	require.NoError(t, err)
+	assert.Equal(t, "www.example.com", target.Host)
+	assert.Equal(t, "/sso/callback", target.Path)
+	assert.Equal(t, body.Data.Code, target.Query().Get("code"))
+	assert.Equal(t, "st-1", target.Query().Get("state"))
+
+	rejected := []string{
+		`{"client_id":"unknown","redirect_uri":"` + ssoTestRedirect + `"}`,
+		`{"client_id":"infinite","redirect_uri":"https://evil.com/sso/callback"}`,
+		`{"client_id":"infinite","redirect_uri":"` + ssoTestRedirect + `/"}`,
+	}
+	for _, payload := range rejected {
+		response := ssoPost(router, "/api/sso/code", jwt, payload)
+		var body ssoCodeResponse
+		require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body))
+		assert.False(t, body.Success, payload)
+	}
+
+	unauthenticated := ssoPost(router, "/api/sso/code", "", `{"client_id":"infinite","redirect_uri":"`+ssoTestRedirect+`"}`)
+	assert.Equal(t, http.StatusUnauthorized, unauthenticated.Code)
 }

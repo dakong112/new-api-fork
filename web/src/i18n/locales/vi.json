@@ -3188,6 +3188,7 @@
     "Incoming path must be unique": "Path đầu vào phải duy nhất",
     "Incoming path must not include query": "Path đầu vào không được chứa query",
     "Incoming path must start with /": "Path đầu vào phải bắt đầu bằng /",
+    "Invalid SSO client or redirect URI": "Ứng dụng SSO hoặc URI chuyển hướng không hợp lệ",
     "Invalid subscription ID": "ID đăng ký không hợp lệ",
     "Invalid top-up amount": "Số lượng nạp không hợp lệ",
     "Invalid top-up quota": "Hạn mức nạp không hợp lệ",
