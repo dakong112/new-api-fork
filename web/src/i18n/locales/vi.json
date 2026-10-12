@@ -7409,6 +7409,10 @@
     "No charge for failed attempts": "Lần thất bại không tính phí",
     "Timed out after reaching the upstream, which may have billed it": "Hết thời gian sau khi đến máy chủ nguồn, có thể đã bị tính phí",
     "Stream interrupted midway; charged for the output delivered": "Luồng bị gián đoạn giữa chừng; tính phí phần nội dung đã trả về",
-    "Routing decision details": "Chi tiết quyết định định tuyến"
+    "Routing decision details": "Chi tiết quyết định định tuyến",
+    "Application authorization failed": "Ủy quyền ứng dụng thất bại",
+    "Signing you in to the application...": "Đang đăng nhập vào ứng dụng…",
+    "Applications": "Ứng dụng",
+    "No applications available": "Không có ứng dụng nào khả dụng"
   }
 }

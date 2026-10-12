@@ -7408,6 +7408,10 @@
     "No charge for failed attempts": "失败不扣费",
     "Timed out after reaching the upstream, which may have billed it": "超时类失败，上游可能已经计费",
     "Stream interrupted midway; charged for the output delivered": "流式输出中途中断，按已输出内容扣费",
-    "Routing decision details": "路由决策明细"
+    "Routing decision details": "路由决策明细",
+    "Application authorization failed": "应用授权失败",
+    "Signing you in to the application...": "正在登录应用…",
+    "Applications": "应用",
+    "No applications available": "暂无可用应用"
   }
 }

@@ -7408,6 +7408,10 @@
     "No charge for failed attempts": "失敗不扣費",
     "Timed out after reaching the upstream, which may have billed it": "逾時類失敗，上游可能已經計費",
     "Stream interrupted midway; charged for the output delivered": "串流輸出中途中斷，依已輸出內容扣費",
-    "Routing decision details": "路由決策明細"
+    "Routing decision details": "路由決策明細",
+    "Application authorization failed": "應用授權失敗",
+    "Signing you in to the application...": "正在登入應用…",
+    "Applications": "應用",
+    "No applications available": "暫無可用應用"
   }
 }

@@ -7408,6 +7408,10 @@
     "No charge for failed attempts": "No charge for failed attempts",
     "Timed out after reaching the upstream, which may have billed it": "Timed out after reaching the upstream, which may have billed it",
     "Stream interrupted midway; charged for the output delivered": "Stream interrupted midway; charged for the output delivered",
-    "Routing decision details": "Routing decision details"
+    "Routing decision details": "Routing decision details",
+    "Application authorization failed": "Application authorization failed",
+    "Signing you in to the application...": "Signing you in to the application...",
+    "Applications": "Applications",
+    "No applications available": "No applications available"
   }
 }
