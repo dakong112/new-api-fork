@@ -51,6 +51,17 @@ const attempt1: PolicyEvent[] = [
       source: 'routing',
     },
   },
+  {
+    attempt: 1,
+    channel_id: 45,
+    status: 524,
+    elapsed_ms: 125000,
+    decision: {
+      action: 'retry',
+      reason: 'network_error_retry',
+      source: 'group',
+    },
+  },
 ]
 const attempt2: PolicyEvent[] = [
   {
@@ -208,6 +219,13 @@ describe('usage log details retry process', () => {
 
     expect(screen.getByText('Request policy decisions')).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Retry process' })).toBeNull()
+    expect(logRequests()).toEqual([])
+  })
+
+  test('admin opening an error that was not retried keeps the policy block without fetching', () => {
+    renderDetails(makeLog(4, 5, 45, attempt1.slice(0, 2)), true)
+
+    expect(screen.getByText('Request policy decisions')).toBeInTheDocument()
     expect(logRequests()).toEqual([])
   })
 })

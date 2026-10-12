@@ -522,7 +522,8 @@ export function DetailsDialog(props: DetailsDialogProps) {
     props.isAdmin &&
     props.open &&
     !!log.request_id &&
-    (log.type === 5 ||
+    // A first attempt's row already records whether the request moved on.
+    (policyEvents.some((e) => e.decision?.action === 'retry') ||
       new Set(policyEvents.map((e) => e.attempt).filter((n) => n > 0)).size >=
         2)
   const siblingsQuery = useQuery({
@@ -532,6 +533,8 @@ export function DetailsDialog(props: DetailsDialogProps) {
         await getAllLogs({ request_id: log.request_id, p: 1, page_size: 50 })
       ).data?.items ?? []) as UsageLog[],
     enabled: retryEnabled,
+    // Fall back to the old block at once instead of after backoff retries.
+    retry: false,
     meta: { errorToast: false },
   })
   // ponytail: render nothing until siblings load (instead of passing []), so

@@ -155,6 +155,38 @@ describe('buildRetryProcess', () => {
     expect(process?.events).toEqual(policy)
   })
 
+  it('finds the opened record by content when log ids are page positions', () => {
+    // ClickHouse numbers rows by page position, so the sibling list reuses ids.
+    const opened = { ...consumeLog, id: 2 }
+    const siblings = [
+      { ...consumeLog, id: 1 },
+      { ...errorLog, id: 2 },
+    ]
+    const process = buildRetryProcess(opened, siblings)
+    expect(process?.currentAttempt).toBeNull()
+    expect(process?.finalLogId).toBe(1)
+  })
+
+  it('ignores a same-request record without routing events', () => {
+    // e.g. the violation-fee consume row written after the relay gave up.
+    const secondError = {
+      ...errorLog,
+      id: 2,
+      channel: 42,
+      other: JSON.stringify({
+        admin_info: {
+          request_policy: [
+            ...policy.slice(0, 4),
+            { ...policy[1], attempt: 2, channel_id: 42, elapsed_ms: 130000 },
+          ],
+        },
+      }),
+    }
+    const fee = { ...consumeLog, id: 3, quota: 100, other: '{}' }
+    const process = buildRetryProcess(errorLog, [errorLog, secondError, fee])
+    expect(process?.attempts.map((a) => a.channelId)).toEqual([45, 42])
+  })
+
   it('reports a final failure with nothing charged', () => {
     const failed = [
       ...policy.slice(0, 3),

@@ -105,13 +105,18 @@ export function buildRetryProcess(
   opened: RetryLogSource,
   siblings: RetryLogSource[]
 ): RetryProcess | null {
-  const logs = siblings.some((row) => row.id === opened.id)
-    ? siblings
-    : [opened, ...siblings]
+  // Match by content: ClickHouse ids are page positions, so the opened row has
+  // another id in the sibling list. Each attempt's events differ, so other is
+  // unique per row of a request.
+  const isOpened = (log: RetryLogSource) =>
+    log.type === opened.type && log.other === opened.other
+  const logs = siblings.some(isOpened) ? siblings : [opened, ...siblings]
   const rows = logs.map((log): Row => ({ log, events: policyOf(log) }))
+  // A row without routing events (e.g. a violation fee) is not an attempt.
   const isFinal = (row: Row) =>
-    row.log.type === LOG_TYPE_CONSUME ||
-    row.events.at(-1)?.decision.action === 'stop'
+    row.events.length > 0 &&
+    (row.log.type === LOG_TYPE_CONSUME ||
+      row.events.at(-1)?.decision.action === 'stop')
   const finals = rows.filter(isFinal)
   const final =
     longest(finals.filter((row) => row.log.type === LOG_TYPE_CONSUME)) ??
@@ -166,7 +171,7 @@ export function buildRetryProcess(
 
   let totalQuota: number | null = null
   if (final) totalQuota = finalConsumed ? final.log.quota : 0
-  const openedEvents = rows.find((r) => r.log.id === opened.id)?.events ?? []
+  const openedEvents = rows.find((r) => isOpened(r.log))?.events ?? []
   return {
     attempts,
     summary: {
@@ -176,7 +181,7 @@ export function buildRetryProcess(
       totalQuota,
     },
     currentAttempt:
-      final?.log.id === opened.id
+      final && isOpened(final.log)
         ? null
         : (openedEvents.at(-1)?.attempt ?? null),
     finalLogId: final?.log.id ?? null,
