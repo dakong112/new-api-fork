@@ -134,3 +134,22 @@ func (client SSOClient) SecretMatches(secret string) bool {
 	}
 	return subtle.ConstantTimeCompare([]byte(SSOSecretHash(secret)), []byte(client.SecretHash)) == 1
 }
+
+// IsSSOClientOrigin reports whether origin (scheme://host[:port]) is the origin
+// of a redirect_uri of any registered application.
+func IsSSOClientOrigin(origin string) bool {
+	if origin == "" {
+		return false
+	}
+	ssoClientsMu.RLock()
+	defer ssoClientsMu.RUnlock()
+	for _, client := range ssoClients {
+		for _, redirectURI := range client.RedirectURIs {
+			parsed, err := url.Parse(redirectURI)
+			if err == nil && parsed.Scheme+"://"+parsed.Host == origin {
+				return true
+			}
+		}
+	}
+	return false
+}
