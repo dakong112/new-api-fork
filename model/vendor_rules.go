@@ -62,6 +62,24 @@ func DefaultVendorRules() []VendorRule {
 	}
 }
 
+// previousDefaultVendorNames maps a built-in rule to the name the hardcoded
+// defaults used before rules became configurable, so a database vendor saved
+// under that name keeps the models instead of a second brand appearing.
+var previousDefaultVendorNames = map[string]string{
+	"Claude": "Anthropic",
+	"Gemini": "Google",
+	"Kimi":   "Moonshot",
+	"千问":     "阿里巴巴",
+	"智谱 GLM": "智谱",
+	"豆包":     "字节跳动",
+	"Grok":   "xAI",
+	"Llama":  "Meta",
+	"文心":     "百度",
+	"混元":     "腾讯",
+	"星火":     "讯飞",
+	"可灵":     "快手",
+}
+
 // SetVendorRules replaces the active rules and reports whether they changed.
 // Names and icons are trimmed for display; keywords are normalized by
 // matchVendorRule.

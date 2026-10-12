@@ -1097,7 +1097,7 @@ func TestVendorManagementDatabaseMatrix(t *testing.T) {
 				var count int64
 				require.NoError(t, db.Model(&model.Vendor{}).Count(&count).Error)
 				assert.Zero(t, count)
-				saved := model.Vendor{Name: "Gemini", Icon: "Gemini.Color"}
+				saved := model.Vendor{Name: "Google", Icon: "Gemini.Color"}
 				require.NoError(t, saved.Insert())
 				assert.Equal(t, saved.Id, model.GetVendors()[0].ID)
 				require.NoError(t, saved.Delete())

@@ -155,3 +155,18 @@ func TestDatabaseVendorTakesPrecedenceOverRule(t *testing.T) {
 	require.NoError(t, DB.First(&stored, saved.Id).Error)
 	assert.Empty(t, stored.Icon, "display fallback is not written back")
 }
+
+func TestDatabaseVendorWithPreviousDefaultNameKeepsItsModels(t *testing.T) {
+	resetPricingEndpointTestTables(t)
+	insertPricingEndpointChannel(t, 1, 1, dto.ChannelOtherSettings{})
+	insertPricingEndpointAbility(t, 1, "gemini-3-pro")
+	saved := Vendor{Name: "Google", Status: 1}
+	require.NoError(t, DB.Create(&saved).Error)
+	InvalidatePricingCache()
+
+	GetPricing()
+	vendors := GetVendors()
+	require.Len(t, vendors, 1, "no second Gemini vendor next to Google")
+	assert.Equal(t, saved.Id, vendors[0].ID)
+	assert.Equal(t, "Google", vendors[0].Name)
+}
