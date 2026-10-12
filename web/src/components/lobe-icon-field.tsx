@@ -30,6 +30,9 @@ export function LobeIconField(props: {
   allowInheritance?: boolean
   inheritedIcon?: string
   inheritedName?: string
+  /** Only the picker, for table cells that show their own preview. */
+  compact?: boolean
+  'aria-label'?: string
 }) {
   const { t } = useTranslation()
   const [custom, setCustom] = useState(false)
@@ -44,6 +47,20 @@ export function LobeIconField(props: {
     []
   )
   const effectiveIcon = props.value || props.inheritedIcon
+  if (props.compact) {
+    return (
+      <Combobox
+        id={props.id}
+        aria-label={props['aria-label']}
+        options={options}
+        value={props.value}
+        onValueChange={(value) => props.onChange(value ?? '')}
+        allowCustomValue
+        searchPlaceholder={t('Search icons or enter an icon key')}
+        emptyText={t('No matching icons')}
+      />
+    )
+  }
   return (
     <div className='space-y-3'>
       {props.allowInheritance && (

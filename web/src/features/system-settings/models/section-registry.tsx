@@ -23,6 +23,7 @@ import { ClaudeSettingsCard } from './claude-settings-card'
 import { GeminiSettingsCard } from './gemini-settings-card'
 import { GlobalSettingsCard } from './global-settings-card'
 import { GrokSettingsCard } from './grok-settings-card'
+import { VendorRulesCard } from './vendor-rules-card'
 
 function formatJsonForEditor(value: string, fallback: string) {
   const raw = (value ?? '').toString().trim()
@@ -118,6 +119,14 @@ const MODELS_SECTIONS = [
             settings['grok.violation_deduction_amount'] ?? 0.05,
         }}
       />
+    ),
+  },
+
+  {
+    id: 'vendor-rules',
+    titleKey: 'Vendor rules',
+    build: (settings: ModelSettings) => (
+      <VendorRulesCard defaultValue={settings.VendorRules} />
     ),
   },
 

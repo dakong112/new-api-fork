@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next'
 
 import { PromptInputButton } from '@/components/ai-elements/prompt-input'
 import { ModelGroupSelector } from '@/components/model-group-selector'
+import { useGroupVendors } from '@/hooks/use-group-vendors'
 
 import { getInputControlState } from '../../lib'
 import type { GroupOption, ModelOption } from '../../types'
@@ -56,6 +57,7 @@ export function PlaygroundInputControls({
   tools,
 }: PlaygroundInputControlsProps) {
   const { t } = useTranslation()
+  const groupVendors = useGroupVendors()
   const { canSubmit, isSelectorDisabled, shouldShowStop } =
     getInputControlState({
       disabled,
@@ -75,6 +77,7 @@ export function PlaygroundInputControls({
       selectedGroup={groupValue}
       groups={groups}
       onGroupChange={onGroupChange}
+      groupVendors={groupVendors}
       disabled={isSelectorDisabled}
     />
   )

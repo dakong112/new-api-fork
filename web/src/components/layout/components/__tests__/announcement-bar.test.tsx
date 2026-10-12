@@ -114,6 +114,40 @@ describe('HeaderContactLinks', () => {
     expect(copyMock).toHaveBeenCalledWith('a@b.c')
   })
 
+  it.each([
+    ['qq', 'rgb(30, 186, 252)'],
+    ['wechat', 'rgb(7, 193, 96)'],
+    ['telegram', 'rgb(38, 165, 228)'],
+    ['discord', 'rgb(88, 101, 242)'],
+  ])(
+    'shows the %s contact with its brand-colored product icon',
+    (icon, color) => {
+      statusMock.status = {
+        contact_links_enabled: true,
+        contact_links: [{ icon, label: 'Contact', value: '1' }],
+      }
+      render(<HeaderContactLinks />)
+
+      const svg = screen
+        .getByRole('button', { name: 'Contact 1' })
+        .querySelector('svg')
+      expect(svg?.style.color).toBe(color)
+    }
+  )
+
+  it('keeps generic contacts in the text color', () => {
+    statusMock.status = {
+      contact_links_enabled: true,
+      contact_links: [{ icon: 'email', label: 'Email', value: 'a@b.c' }],
+    }
+    render(<HeaderContactLinks />)
+
+    const svg = screen
+      .getByRole('button', { name: 'Email a@b.c' })
+      .querySelector('svg')
+    expect(svg?.style.color).toBe('')
+  })
+
   it('renders nothing when the admin disables contacts', () => {
     statusMock.status = {
       contact_links_enabled: false,

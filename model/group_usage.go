@@ -1,6 +1,9 @@
 package model
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/QuantumNous/new-api/common"
 )
 
@@ -13,6 +16,9 @@ type GroupUsage struct {
 	EnabledChannels int    `json:"enabled_channels"`
 	Tokens          int64  `json:"tokens"`
 	Users           int64  `json:"users"`
+	// Vendors of the group's enabled models, sorted; "" means a model with
+	// no vendor ("Other"). Derived from the cached pricing data.
+	Vendors []string `json:"vendors,omitempty"`
 }
 
 func GetGroupUsage() ([]*GroupUsage, error) {
@@ -62,6 +68,29 @@ func GetGroupUsage() ([]*GroupUsage, error) {
 	}
 	for _, row := range userCounts {
 		entry(row.Name).Users = row.Count
+	}
+
+	pricings := GetPricing()
+	vendorNames := map[int]string{}
+	for _, vendor := range GetVendors() {
+		vendorNames[vendor.ID] = vendor.Name
+	}
+	groupVendors := map[string]map[string]struct{}{}
+	for _, pricing := range pricings {
+		vendor := vendorNames[pricing.VendorID]
+		for _, name := range pricing.EnableGroup {
+			if groupVendors[name] == nil {
+				groupVendors[name] = map[string]struct{}{}
+			}
+			groupVendors[name][vendor] = struct{}{}
+		}
+	}
+	// Only groups something still references get vendors; the pricing cache
+	// must not introduce usage rows of its own.
+	for name, vendors := range groupVendors {
+		if e := usage[name]; e != nil {
+			e.Vendors = slices.Sorted(maps.Keys(vendors))
+		}
 	}
 
 	result := make([]*GroupUsage, 0, len(usage))

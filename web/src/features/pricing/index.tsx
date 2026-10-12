@@ -22,6 +22,10 @@ import { useTranslation } from 'react-i18next'
 import { PublicLayout } from '@/components/layout'
 import { PageTransition } from '@/components/page-transition'
 import { sortGroupNames, useGroupDisplayOrder } from '@/lib/group-order'
+import {
+  buildGroupVendorIndex,
+  filterGroupsByVendor,
+} from '@/lib/group-vendors'
 
 import {
   LoadingSkeleton,
@@ -33,7 +37,7 @@ import {
   ModelCardGrid,
   ModelDetailsDrawer,
 } from './components'
-import { EXCLUDED_GROUPS, VIEW_MODES } from './constants'
+import { EXCLUDED_GROUPS, FILTER_ALL, VIEW_MODES } from './constants'
 import { useFilters } from './hooks/use-filters'
 import { usePricingData } from './hooks/use-pricing-data'
 
@@ -99,15 +103,28 @@ export function Pricing() {
   )
 
   const groupOrder = useGroupDisplayOrder()
+  const groupVendorIndex = useMemo(
+    () => buildGroupVendorIndex(models ?? [], vendors ?? []),
+    [models, vendors]
+  )
   const availableGroups = useMemo(
     () =>
-      sortGroupNames(
-        Object.keys(usableGroup || {}).filter(
-          (g) => !EXCLUDED_GROUPS.includes(g)
+      filterGroupsByVendor(
+        sortGroupNames(
+          Object.keys(usableGroup || {}).filter(
+            (g) => !EXCLUDED_GROUPS.includes(g)
+          ),
+          groupOrder
         ),
-        groupOrder
+        (g) => g,
+        // A stale ?vendor= that no group has must not empty the list.
+        groupVendorIndex.vendors.some((v) => v.name === vendorFilter)
+          ? vendorFilter
+          : null,
+        groupVendorIndex,
+        groupFilter === FILTER_ALL ? undefined : groupFilter
       ),
-    [usableGroup, groupOrder]
+    [usableGroup, groupOrder, vendorFilter, groupFilter, groupVendorIndex]
   )
 
   const handleClearAll = useCallback(() => {

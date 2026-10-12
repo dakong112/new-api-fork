@@ -16,7 +16,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { afterEach, describe, expect, test } from 'vitest'
 
 const { createInstance } = await import('i18next')
@@ -37,6 +43,7 @@ type ApiMethod = (url: string, data?: unknown) => Promise<{ data: unknown }>
 type MockableApi = {
   get: ApiMethod
   post: ApiMethod
+  put: ApiMethod
 }
 type RenderedDrawer = {
   queryClient: InstanceType<typeof QueryClient>
@@ -45,6 +52,7 @@ type RenderedDrawer = {
 const apiClient = api as unknown as MockableApi
 const originalGet = apiClient.get
 const originalPost = apiClient.post
+const originalPut = apiClient.put
 let renderedDrawer: RenderedDrawer | null = null
 
 function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
@@ -66,7 +74,35 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
                 fallback_groups: ['vip'],
               },
               vip: { desc: 'Priority access', ratio: 2 },
+              empty: { desc: 'No channels', ratio: 1 },
+              relay: {
+                desc: 'Fallback only',
+                ratio: 1,
+                fallback_groups: ['vip'],
+              },
             },
+          },
+        }
+      case '/api/pricing':
+        return {
+          data: {
+            success: true,
+            data: [
+              {
+                model_name: 'deepseek-v4',
+                vendor_id: 1,
+                enable_groups: ['vip'],
+              },
+              { model_name: 'glm-5', vendor_id: 2, enable_groups: ['default'] },
+            ],
+            vendors: [
+              { id: 1, name: 'DeepSeek' },
+              { id: 2, name: '智谱' },
+            ],
+            group_ratio: {},
+            usable_group: {},
+            supported_endpoint: {},
+            auto_groups: [],
           },
         }
       case '/api/token/auto-groups':
@@ -76,6 +112,8 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
             data: { groups: ['vip', 'default'], max_count: 3 },
           },
         }
+      case `/api/token/${emptyGroupKey.id}`:
+        return { data: { success: true, data: emptyGroupKey } }
       default:
         throw new Error(`Unexpected GET ${url}`)
     }
@@ -88,7 +126,26 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
   }
 }
 
-async function renderCreateDrawer(): Promise<void> {
+const emptyGroupKey = {
+  id: 7,
+  name: 'legacy',
+  key: 'sk-legacy',
+  status: 1,
+  remain_quota: 0,
+  used_quota: 0,
+  unlimited_quota: true,
+  expired_time: -1,
+  created_time: 0,
+  accessed_time: 0,
+  group: 'empty',
+  auto_groups: null,
+  cross_group_retry: false,
+  model_limits_enabled: false,
+  model_limits: '',
+  allow_ips: '',
+}
+
+async function renderDrawer(currentRow?: typeof emptyGroupKey): Promise<void> {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -115,6 +172,8 @@ async function renderCreateDrawer(): Promise<void> {
           fallback_groups: ['vip'],
         },
         vip: { desc: 'Priority access', ratio: 2 },
+        empty: { desc: 'No channels', ratio: 1 },
+        relay: { desc: 'Fallback only', ratio: 1, fallback_groups: ['vip'] },
       },
     },
     { updatedAt: freshAt }
@@ -133,7 +192,11 @@ async function renderCreateDrawer(): Promise<void> {
     <QueryClientProvider client={queryClient}>
       <I18nextProvider i18n={i18n}>
         <ApiKeysProvider>
-          <ApiKeysMutateDrawer open onOpenChange={() => undefined} />
+          <ApiKeysMutateDrawer
+            open
+            onOpenChange={() => undefined}
+            currentRow={currentRow}
+          />
         </ApiKeysProvider>
       </I18nextProvider>
     </QueryClientProvider>
@@ -204,6 +267,7 @@ function selectComboboxOption(
 afterEach(() => {
   apiClient.get = originalGet
   apiClient.post = originalPost
+  apiClient.put = originalPut
   localStorage.clear()
   if (renderedDrawer) {
     renderedDrawer.queryClient.clear()
@@ -215,7 +279,7 @@ describe('API keys mutate drawer Auto group integration', () => {
   test('inherits the root Auto order and sends an empty override for every batch-created key', async () => {
     const createdPayloads: Array<Record<string, unknown>> = []
     installApiFixtures(createdPayloads)
-    await renderCreateDrawer()
+    await renderDrawer()
 
     const groupTrigger = getControlByLabel('Group')
     expect(groupTrigger.textContent?.includes('auto')).toBe(true)
@@ -248,7 +312,7 @@ describe('API keys mutate drawer Auto group integration', () => {
   test('preserves an unsaved custom order and mode after Auto to ordinary to Auto changes', async () => {
     const createdPayloads: Array<Record<string, unknown>> = []
     installApiFixtures(createdPayloads)
-    await renderCreateDrawer()
+    await renderDrawer()
 
     const autoOrderControl = getControlByLabel('Auto group order')
     const addGroupTrigger = autoOrderControl.querySelector<HTMLButtonElement>(
@@ -289,7 +353,7 @@ describe('API keys mutate drawer Auto group integration', () => {
   test('shows the fallback chain for an ordinary group and saves the switch', async () => {
     const createdPayloads: Array<Record<string, unknown>> = []
     installApiFixtures(createdPayloads)
-    await renderCreateDrawer()
+    await renderDrawer()
 
     selectComboboxOption(getControlByLabel('Group'), 'Standard access')
     const chain = () =>
@@ -316,5 +380,89 @@ describe('API keys mutate drawer Auto group integration', () => {
     await waitFor(() => expect(createdPayloads).toHaveLength(1))
     expect(createdPayloads[0]?.group).toBe('default')
     expect(createdPayloads[0]?.cross_group_retry).toBe(false)
+  })
+
+  test('narrows the group picker to the chosen vendor and keeps auto', async () => {
+    installApiFixtures([])
+    await renderDrawer()
+    const vendorFilter = await screen.findByRole('group', { name: 'Vendor' })
+    fireEvent.click(
+      within(vendorFilter).getByRole('button', { name: 'DeepSeek' })
+    )
+    fireEvent.click(screen.getByRole('combobox', { name: 'Group' }))
+    expect(await screen.findByRole('option', { name: /^vip/ })).toBeTruthy()
+    expect(screen.queryByRole('option', { name: /^default/ })).toBeNull()
+    expect(screen.getByRole('option', { name: /^auto/ })).toBeTruthy()
+  })
+
+  test('clears a selected group that is not in the clicked vendor', async () => {
+    installApiFixtures([])
+    await renderDrawer()
+    selectComboboxOption(getControlByLabel('Group'), 'Priority access')
+    const vendorFilter = await screen.findByRole('group', { name: 'Vendor' })
+    fireEvent.click(within(vendorFilter).getByRole('button', { name: '智谱' }))
+
+    const trigger = screen.getByRole('combobox', { name: 'Group' })
+    await waitFor(() => expect(trigger).toHaveTextContent('Select a group'))
+    fireEvent.click(trigger)
+    expect(await screen.findByRole('option', { name: /^default/ })).toBeTruthy()
+    expect(screen.getByRole('option', { name: /^auto/ })).toBeTruthy()
+    expect(screen.queryByRole('option', { name: /^vip/ })).toBeNull()
+  })
+
+  test('keeps a selected group that belongs to the clicked vendor', async () => {
+    installApiFixtures([])
+    await renderDrawer()
+    selectComboboxOption(getControlByLabel('Group'), 'Priority access')
+    const vendorFilter = await screen.findByRole('group', { name: 'Vendor' })
+    fireEvent.click(
+      within(vendorFilter).getByRole('button', { name: 'DeepSeek' })
+    )
+    expect(screen.getByRole('combobox', { name: 'Group' })).toHaveTextContent(
+      'vip'
+    )
+  })
+
+  test('shows a group without enabled models greyed out and unselectable', async () => {
+    installApiFixtures([])
+    await renderDrawer()
+    await screen.findByRole('group', { name: 'Vendor' })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Group' }))
+    const empty = await screen.findByRole('option', { name: /^empty/ })
+    expect(empty).toHaveAttribute('aria-disabled', 'true')
+    expect(empty).toHaveTextContent('Temporarily unavailable')
+    fireEvent.click(empty)
+    expect(
+      screen.getByRole('combobox', { name: 'Group' })
+    ).not.toHaveTextContent('empty')
+  })
+
+  test('keeps a group without own models selectable when a fallback group serves it', async () => {
+    installApiFixtures([])
+    await renderDrawer()
+    await screen.findByRole('group', { name: 'Vendor' })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Group' }))
+    const relay = await screen.findByRole('option', { name: /^relay/ })
+    expect(relay).not.toHaveAttribute('aria-disabled', 'true')
+    expect(relay).not.toHaveTextContent('Temporarily unavailable')
+  })
+
+  test('editing a key whose group has no enabled models keeps and flags that group', async () => {
+    const updatedPayloads: Array<Record<string, unknown>> = []
+    installApiFixtures([])
+    apiClient.put = async (url, data) => {
+      expect(url).toBe('/api/token/')
+      updatedPayloads.push(data as Record<string, unknown>)
+      return { data: { success: true, data: {} } }
+    }
+    await renderDrawer(emptyGroupKey)
+    await screen.findByRole('group', { name: 'Vendor' })
+    const trigger = screen.getByRole('combobox', { name: 'Group' })
+    expect(trigger).toHaveTextContent('empty')
+    expect(trigger).toHaveTextContent('Temporarily unavailable')
+
+    fireEvent.click(findButton('Save changes', true))
+    await waitFor(() => expect(updatedPayloads).toHaveLength(1))
+    expect(updatedPayloads[0]?.group).toBe('empty')
   })
 })

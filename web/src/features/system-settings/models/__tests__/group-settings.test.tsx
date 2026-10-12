@@ -31,6 +31,7 @@ import { useForm } from 'react-hook-form'
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
+import type { PricingData } from '@/features/pricing/types'
 import { api } from '@/lib/api'
 
 import type { GroupUsage } from '../../api'
@@ -66,12 +67,26 @@ const schema = z.object({
   GroupSpecialUsableGroup: z.string(),
 })
 
-/** Query client with group usage pre-seeded, so the table never fetches it. */
-function seededQueryClient(usage: GroupUsage[] = []) {
+/** Query client with group usage and pricing pre-seeded, so the table never fetches it. */
+function seededQueryClient(
+  usage: GroupUsage[] = [],
+  pricingVendors: PricingData['vendors'] = []
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   client.setQueryData(['group-usage'], usage)
+  // Vendor icons come from the pricing query; seed it empty so it never fetches.
+  const pricing: PricingData = {
+    success: true,
+    data: [],
+    vendors: pricingVendors,
+    group_ratio: {},
+    usable_group: {},
+    supported_endpoint: {},
+    auto_groups: [],
+  }
+  client.setQueryData(['pricing'], pricing)
   return client
 }
 
@@ -80,9 +95,13 @@ function Fixture(props: {
   initial?: Partial<typeof defaults>
   isSaving?: boolean
   usage?: GroupUsage[]
+  vendorRules?: string
+  pricingVendors?: PricingData['vendors']
 }) {
   const [actions, setActions] = useState<HTMLDivElement | null>(null)
-  const [queryClient] = useState(() => seededQueryClient(props.usage))
+  const [queryClient] = useState(() =>
+    seededQueryClient(props.usage, props.pricingVendors)
+  )
   const form = useForm({
     defaultValues: { ...defaults, ...props.initial },
     resolver: zodResolver(schema),
@@ -95,11 +114,31 @@ function Fixture(props: {
           form={form}
           onSave={props.onSave ?? (async () => {})}
           isSaving={props.isSaving ?? false}
+          vendorRules={props.vendorRules}
         />
       </SettingsPageProvider>
     </QueryClientProvider>
   )
 }
+
+const vendorUsage: GroupUsage[] = [
+  {
+    name: 'default',
+    channels: 1,
+    enabled_channels: 1,
+    tokens: 0,
+    users: 0,
+    vendors: ['智谱'],
+  },
+  {
+    name: 'vip',
+    channels: 1,
+    enabled_channels: 1,
+    tokens: 0,
+    users: 0,
+    vendors: ['DeepSeek'],
+  },
+]
 
 describe('group settings workspace', () => {
   it('filters by description and clears search without discarding edits', async () => {
@@ -195,6 +234,161 @@ describe('group settings workspace', () => {
         DefaultUseAutoGroup: true,
       })
     )
+  })
+
+  it('drops a dragged pricing group before the target row and saves that order', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn(async (_values: typeof defaults) => {})
+    render(<Fixture onSave={onSave} />)
+    const handle = screen.getByRole('button', { name: 'Drag vip to reorder' })
+    const target = screen.getByDisplayValue('default').closest('tr')
+    if (!target) throw new Error('default row not rendered')
+    const dataTransfer = {
+      setData: vi.fn(),
+      setDragImage: vi.fn(),
+      effectAllowed: '',
+      dropEffect: '',
+    }
+
+    fireEvent.dragStart(handle, { dataTransfer })
+    // jsdom rows have no height, so clientY 0 sits in the upper half.
+    fireEvent.dragOver(target, { dataTransfer, clientY: 0 })
+    fireEvent.drop(target, { dataTransfer, clientY: 0 })
+
+    const names = screen
+      .getAllByRole('textbox', { name: 'Group name' })
+      .map((input) => (input as HTMLInputElement).value)
+    expect(names).toEqual(['vip', 'default'])
+    await user.click(
+      screen.getByRole('button', { name: 'Save group settings' })
+    )
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+    expect(onSave.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        GroupDisplayOrder: '[\n  "vip",\n  "default"\n]',
+      })
+    )
+  })
+
+  it('stops pricing group dragging while a search filters the rows', async () => {
+    const user = userEvent.setup()
+    render(<Fixture />)
+    await user.type(
+      screen.getByRole('textbox', {
+        name: 'Search groups by name or description',
+      }),
+      'vip'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Drag vip to reorder' })
+    ).toHaveAttribute('draggable', 'false')
+  })
+
+  it('shows each vendor as one chip pairing its icon with its name', () => {
+    render(
+      <Fixture
+        usage={[
+          { ...vendorUsage[0], name: 'default', vendors: ['智谱', 'DeepSeek'] },
+        ]}
+        vendorRules='[{"name":"智谱","icon":"SGLang","keywords":["glm"]}]'
+        pricingVendors={[{ id: 1, name: 'DeepSeek', icon: 'SGLang' }]}
+      />
+    )
+    const table = within(screen.getByRole('table', { name: 'Pricing groups' }))
+    for (const name of ['智谱', 'DeepSeek']) {
+      const chip = table.getByText(name).parentElement as HTMLElement
+      expect(chip.textContent).toBe(name)
+      expect(chip.querySelector('[aria-hidden="true"] img')).not.toBeNull()
+    }
+  })
+
+  it('takes the vendor icon from the recognition rules when pricing has no such vendor', () => {
+    render(
+      <Fixture
+        usage={[{ ...vendorUsage[0], vendors: ['Acme'] }]}
+        vendorRules='[{"name":"Acme","icon":"SGLang","keywords":["acme"]}]'
+      />
+    )
+    const chip = within(
+      screen.getByRole('table', { name: 'Pricing groups' })
+    ).getByText('Acme').parentElement as HTMLElement
+    expect(chip.querySelector('img')).not.toBeNull()
+  })
+
+  it('filters pricing groups by vendor from group usage', async () => {
+    const user = userEvent.setup()
+    render(<Fixture usage={vendorUsage} />)
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
+    )
+    const names = screen
+      .getAllByRole('textbox', { name: 'Group name' })
+      .map((input) => (input as HTMLInputElement).value)
+    expect(names).toEqual(['vip'])
+  })
+
+  it('stops pricing group dragging while a vendor filters the rows', async () => {
+    const user = userEvent.setup()
+    render(<Fixture usage={vendorUsage} />)
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
+    )
+    expect(
+      screen.getByRole('button', { name: 'Drag vip to reorder' })
+    ).toHaveAttribute('draggable', 'false')
+  })
+
+  it('keeps a newly added group visible under a vendor filter', async () => {
+    const user = userEvent.setup()
+    render(<Fixture usage={vendorUsage} />)
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
+    )
+    await user.click(screen.getByRole('button', { name: 'Add group' }))
+    const names = screen
+      .getAllByRole('textbox', { name: 'Group name' })
+      .map((input) => (input as HTMLInputElement).value)
+    expect(names).toEqual(['vip', 'group_1'])
+  })
+
+  it('shows no results when no pricing group matches the vendor filter', async () => {
+    const user = userEvent.setup()
+    render(
+      <Fixture
+        usage={[
+          { ...vendorUsage[0], name: 'legacy', vendors: ['DeepSeek'] },
+          { ...vendorUsage[1], name: 'retired', vendors: ['智谱'] },
+        ]}
+      />
+    )
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
+    )
+    expect(screen.getByText('No results found')).toBeVisible()
+  })
+
+  it('disables the move buttons while a vendor filters the rows', async () => {
+    const user = userEvent.setup()
+    render(<Fixture usage={vendorUsage} />)
+    await user.click(
+      within(screen.getByRole('group', { name: 'Vendor' })).getByRole(
+        'button',
+        { name: 'DeepSeek' }
+      )
+    )
+    expect(screen.getByRole('button', { name: 'Move vip up' })).toBeDisabled()
   })
 
   it('saves fallback groups in the order set with the move controls', async () => {

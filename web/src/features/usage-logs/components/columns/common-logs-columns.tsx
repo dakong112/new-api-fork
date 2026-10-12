@@ -433,7 +433,7 @@ export function useCommonLogsColumns(
                       <div className='flex max-w-[160px] flex-col gap-0.5' />
                     }
                   >
-                    <div className='relative inline-flex w-fit items-center gap-1'>
+                    <div className='relative inline-flex w-fit flex-wrap items-center gap-1'>
                       <StatusBadge
                         label={channelIdDisplay}
                         autoColor={String(log.channel)}
@@ -490,6 +490,19 @@ export function useCommonLogsColumns(
                             </div>
                           </PopoverContent>
                         </Popover>
+                      )}
+                      {hasRetryChain && (
+                        // use_channel holds every channel tried up to this
+                        // log, so its length minus the first try is the retry.
+                        <StatusBadge
+                          label={t('Retry {{index}}', {
+                            index: useChannel.length - 1,
+                          })}
+                          variant='warning'
+                          size='sm'
+                          showDot={false}
+                          copyable={false}
+                        />
                       )}
                       {retryChain?.networkRetry && (
                         <StatusBadge

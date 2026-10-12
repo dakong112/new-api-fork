@@ -42,6 +42,7 @@ import {
   sideDrawerSwitchItemClassName,
 } from '@/components/drawer-layout'
 import { GroupBadge } from '@/components/group-badge'
+import { GroupVendorFilter } from '@/components/group-vendor-filter'
 import { MultiSelect } from '@/components/multi-select'
 import { Button } from '@/components/ui/button'
 import {
@@ -71,10 +72,12 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { RelatedPolicyLink } from '@/features/system-settings/request-policies/related-policy-link'
+import { useGroupVendors } from '@/hooks/use-group-vendors'
 import { useStatus } from '@/hooks/use-status'
 import { getUserModels, getUserGroups } from '@/lib/api'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
 import { sortGroupNames, useGroupDisplayOrder } from '@/lib/group-order'
+import { filterGroupsByVendor, isGroupAvailable } from '@/lib/group-vendors'
 import { handleServerError } from '@/lib/handle-server-error'
 import {
   requireServerSuccess,
@@ -88,7 +91,7 @@ import {
   getApiKey,
   getTokenAutoGroups,
 } from '../api'
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
+import { DEFAULT_GROUP, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
 import {
   getApiKeyFormSchema,
   type ApiKeyFormValues,
@@ -122,6 +125,7 @@ export function ApiKeysMutateDrawer({
   const { status, loading: statusLoading } = useStatus()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [vendorFilter, setVendorFilter] = useState<string | null>(null)
   const [initializedTarget, setInitializedTarget] = useState<string | null>(
     null
   )
@@ -219,6 +223,7 @@ export function ApiKeysMutateDrawer({
   useEffect(() => {
     if (!open) {
       setInitializedTarget(null)
+      setVendorFilter(null)
       return
     }
     if (
@@ -275,6 +280,32 @@ export function ApiKeysMutateDrawer({
     isUpdate && currentRow ? `update:${currentRow.id}` : 'create'
   const isFormInitialized = initializedTarget === formTarget
   const selectedGroup = form.watch('group')
+  const groupVendors = useGroupVendors(open)
+  // A vendor that vanished (or a hidden filter) means "All".
+  const activeVendor =
+    groupVendors.vendors.length >= 2 &&
+    groupVendors.vendors.some((v) => v.name === vendorFilter)
+      ? vendorFilter
+      : null
+  const vendorGroups = useMemo(
+    () =>
+      filterGroupsByVendor(
+        groups,
+        (g) => g.value,
+        activeVendor,
+        groupVendors,
+        selectedGroup
+      ).map((g) => ({
+        ...g,
+        // Before pricing loads every group looks model-less; don't grey yet.
+        // A group without models of its own still serves via its fallbacks.
+        unavailable:
+          groupVendors.ready &&
+          !isGroupAvailable(g.value, groupVendors) &&
+          !g.fallbackGroups?.some((f) => isGroupAvailable(f, groupVendors)),
+      })),
+    [groups, activeVendor, groupVendors, selectedGroup]
+  )
   const fallbackGroups =
     groups.find((g) => g.value === selectedGroup)?.fallbackGroups ?? []
 
@@ -437,9 +468,30 @@ export function ApiKeysMutateDrawer({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t('Group')}</FormLabel>
+                    <GroupVendorFilter
+                      variant='cards'
+                      vendors={groupVendors.vendors}
+                      value={activeVendor}
+                      onChange={(vendor) => {
+                        setVendorFilter(vendor)
+                        // Drop a group the new vendor does not own, so the box and list agree.
+                        if (
+                          vendor !== null &&
+                          field.value !== 'auto' &&
+                          field.value !== DEFAULT_GROUP &&
+                          !groupVendors.vendorsByGroup
+                            .get(field.value ?? '')
+                            ?.includes(vendor)
+                        ) {
+                          form.setValue('group', DEFAULT_GROUP, {
+                            shouldDirty: true,
+                          })
+                        }
+                      }}
+                    />
                     <FormControl>
                       <ApiKeyGroupCombobox
-                        options={groups}
+                        options={vendorGroups}
                         value={field.value}
                         onValueChange={field.onChange}
                         placeholder={t('Select a group')}

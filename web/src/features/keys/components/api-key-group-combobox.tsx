@@ -50,6 +50,8 @@ export type ApiKeyGroupOption = {
   ratio?: number | string
   /** Groups tried next, in order, when every channel of this group fails. */
   fallbackGroups?: string[]
+  /** Shown greyed out and unselectable: the group has no enabled model. */
+  unavailable?: boolean
 }
 
 type ApiKeyGroupComboboxProps = {
@@ -58,6 +60,10 @@ type ApiKeyGroupComboboxProps = {
   onValueChange: (value: string) => void
   placeholder?: string
   disabled?: boolean
+  /** Set by FormControl so the field label names the trigger. */
+  id?: string
+  'aria-describedby'?: string
+  'aria-invalid'?: boolean
 }
 
 export function ApiKeyGroupCombobox({
@@ -66,6 +72,7 @@ export function ApiKeyGroupCombobox({
   onValueChange,
   placeholder,
   disabled,
+  ...triggerProps
 }: ApiKeyGroupComboboxProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -102,6 +109,7 @@ export function ApiKeyGroupCombobox({
           <Button
             type='button'
             variant='outline'
+            {...triggerProps}
             role='combobox'
             aria-expanded={open}
             data-auto-group-effect={isAutoSelected ? 'trigger' : undefined}
@@ -125,6 +133,11 @@ export function ApiKeyGroupCombobox({
             <span className='block truncate font-medium'>
               {selectedOption?.label || placeholder || t('Select a group')}
             </span>
+            {selectedOption?.unavailable && (
+              <span className='text-muted-foreground block truncate text-[11px] sm:text-xs'>
+                {t('Temporarily unavailable')}
+              </span>
+            )}
             {selectedOption?.desc && (
               <span className='text-muted-foreground block truncate text-[11px] sm:text-xs'>
                 {selectedOption.desc}
@@ -166,6 +179,7 @@ export function ApiKeyGroupCombobox({
                   <CommandItem
                     key={option.value}
                     value={option.value}
+                    disabled={option.unavailable}
                     data-auto-group-effect={isAutoOption ? 'option' : undefined}
                     onSelect={() => handleSelect(option.value)}
                     className={cn(
@@ -193,6 +207,11 @@ export function ApiKeyGroupCombobox({
                       <span className='block truncate font-medium'>
                         {option.label}
                       </span>
+                      {option.unavailable && (
+                        <span className='text-muted-foreground block text-[11px]'>
+                          {t('Temporarily unavailable')}
+                        </span>
+                      )}
                       {option.desc && (
                         <span className='text-muted-foreground block truncate text-xs'>
                           {option.desc}

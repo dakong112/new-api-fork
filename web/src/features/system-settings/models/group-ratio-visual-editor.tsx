@@ -22,6 +22,7 @@ import {
   ArrowDown,
   ArrowUp,
   ChevronDown,
+  GripVertical,
   Search,
   X,
   Info,
@@ -50,6 +51,7 @@ import {
   sideDrawerHeaderClassName,
 } from '@/components/drawer-layout'
 import { EmptyState } from '@/components/empty-state'
+import { GroupVendorFilter } from '@/components/group-vendor-filter'
 import { StatusBadge } from '@/components/status-badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -85,10 +87,14 @@ import {
 } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { pricingQueryOptions } from '@/features/pricing/api'
 import { toIntlLocale } from '@/i18n/languages'
 import { formatNumber } from '@/lib/format'
 import { sortGroupNames } from '@/lib/group-order'
+import { OTHER_VENDOR } from '@/lib/group-vendors'
+import { getLobeIcon } from '@/lib/lobe-icon'
 import { requireServerSuccess } from '@/lib/server-error-message'
+import { cn } from '@/lib/utils'
 
 import { getGroupUsage } from '../api'
 import { safeJsonParse } from '../utils/json-parser'
@@ -120,6 +126,8 @@ type GroupRatioVisualEditorProps = {
   hasUnsavedChanges: boolean
   maxTokenAutoGroupsField: ReactNode
   groupSpecialUsableGroup: string
+  /** VendorRules option JSON; its icons win over the pricing vendor list. */
+  vendorRules?: string
   onChange: (field: string, value: string) => void
 }
 
@@ -336,6 +344,7 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
   hasUnsavedChanges,
   maxTokenAutoGroupsField,
   groupSpecialUsableGroup,
+  vendorRules,
   onChange,
 }: GroupRatioVisualEditorProps) {
   const { t, i18n } = useTranslation()
@@ -435,6 +444,7 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
           groupDisplayOrder={groupDisplayOrder}
           networkRetryGroups={groupNetworkRetryGroups}
           hasUnsavedChanges={hasUnsavedChanges}
+          vendorRules={vendorRules}
           onChange={onChange}
           onShowDetail={setDetailGroup}
         />
@@ -682,6 +692,7 @@ type GroupPricingTableProps = {
   /** JSON array of groups that retry 502/504/524 on another channel. */
   networkRetryGroups: string
   hasUnsavedChanges: boolean
+  vendorRules?: string
   onChange: (field: string, value: string) => void
   onShowDetail: (name: string) => void
 }
@@ -693,6 +704,7 @@ function GroupPricingTable({
   groupDisplayOrder,
   networkRetryGroups,
   hasUnsavedChanges,
+  vendorRules,
   onChange,
   onShowDetail,
 }: GroupPricingTableProps) {
@@ -772,6 +784,24 @@ function GroupPricingTable({
       const nextRows = [...rows]
       ;[nextRows[from], nextRows[to]] = [nextRows[to], nextRows[from]]
       emitRows(nextRows)
+    },
+    [emitRows, rows]
+  )
+
+  const [draggingRowId, setDraggingRowId] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<{
+    id: string
+    after: boolean
+  } | null>(null)
+
+  const dropRow = useCallback(
+    (sourceId: string, targetId: string, after: boolean) => {
+      const moving = rows.find((row) => row._id === sourceId)
+      const rest = rows.filter((row) => row._id !== sourceId)
+      const targetIndex = rest.findIndex((row) => row._id === targetId)
+      if (!moving || targetIndex < 0) return
+      const at = targetIndex + (after ? 1 : 0)
+      emitRows([...rest.slice(0, at), moving, ...rest.slice(at)])
     },
     [emitRows, rows]
   )
@@ -869,12 +899,68 @@ function GroupPricingTable({
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [rows, usageQuery.data])
 
+  // Vendors per group come from usage, which covers every group. Icons come
+  // from the pricing response's full vendor list, shared with the model square.
+  // Icons are optional (names show instead), so a 403 when the Pricing module
+  // is disabled must not toast.
+  const { data: pricingData } = useQuery({
+    ...pricingQueryOptions,
+    meta: { errorToast: false },
+  })
+  const [vendorFilter, setVendorFilter] = useState<string | null>(null)
+  const vendorsByGroup = useMemo(
+    () =>
+      new Map((usageQuery.data ?? []).map((u) => [u.name, u.vendors ?? []])),
+    [usageQuery.data]
+  )
+  // Recognition rules are fresh settings; the pricing list may be stale.
+  const iconByVendor = useMemo(() => {
+    const icons = new Map<string, string | undefined>(
+      (pricingData?.vendors ?? []).map((v) => [v.name, v.icon])
+    )
+    const rules = safeJsonParse<{ name?: string; icon?: string }[]>(
+      vendorRules ?? '[]',
+      { fallback: [], context: 'vendor rules' }
+    )
+    for (const rule of Array.isArray(rules) ? rules : []) {
+      if (rule?.name && rule.icon) icons.set(rule.name, rule.icon)
+    }
+    return icons
+  }, [pricingData, vendorRules])
+  const vendorOptions = useMemo(() => {
+    // Same order as the other surfaces: the backend vendor list.
+    const order = new Map(
+      (pricingData?.vendors ?? []).map((v, index) => [v.name, index])
+    )
+    return [...new Set([...vendorsByGroup.values()].flat())]
+      .sort((a, b) => {
+        if (a === OTHER_VENDOR) return 1
+        if (b === OTHER_VENDOR) return -1
+        const ia = order.get(a)
+        const ib = order.get(b)
+        if (ia !== undefined && ib !== undefined) return ia - ib
+        if (ia !== undefined) return -1
+        if (ib !== undefined) return 1
+        return a.localeCompare(b)
+      })
+      .map((name) => ({ name, icon: iconByVendor.get(name) }))
+  }, [vendorsByGroup, iconByVendor, pricingData])
+  // A vendor that vanished (or a hidden filter) means "All".
+  const activeVendor = vendorOptions.some((v) => v.name === vendorFilter)
+    ? vendorFilter
+    : null
+
   const query = search.trim().toLowerCase()
+  // Reordering a filtered subset would hide where rows land, so it waits.
+  const filtering = Boolean(query) || activeVendor !== null
   const visibleRows = rows.filter(
     (row) =>
-      !query ||
-      row.name.toLowerCase().includes(query) ||
-      row.description.toLowerCase().includes(query)
+      (!query ||
+        row.name.toLowerCase().includes(query) ||
+        row.description.toLowerCase().includes(query)) &&
+      (activeVendor === null ||
+        row.isNew ||
+        (vendorsByGroup.get(row.name.trim()) ?? []).includes(activeVendor))
   )
 
   return (
@@ -924,6 +1010,12 @@ function GroupPricingTable({
               </InputGroupAddon>
             )}
           </InputGroup>
+          <GroupVendorFilter
+            variant='chips'
+            vendors={vendorOptions}
+            value={activeVendor}
+            onChange={setVendorFilter}
+          />
           {strandedGroups.length > 0 && (
             <Alert variant='destructive'>
               <AlertTriangle className='h-4 w-4' />
@@ -961,12 +1053,46 @@ function GroupPricingTable({
             tableProps={{ 'aria-label': t('Pricing groups') }}
             data={visibleRows}
             getRowKey={(row) => row._id}
+            getRowClassName={(row) =>
+              cn(
+                draggingRowId === row._id && 'opacity-50',
+                dropTarget?.id === row._id &&
+                  (dropTarget.after
+                    ? 'border-b-primary border-b-2'
+                    : 'border-t-primary border-t-2')
+              )
+            }
+            getRowProps={(row) => ({
+              onDragOver: (event) => {
+                if (filtering) return
+                if (!draggingRowId || draggingRowId === row._id) return
+                event.preventDefault()
+                event.dataTransfer.dropEffect = 'move'
+                const rect = event.currentTarget.getBoundingClientRect()
+                const after = event.clientY > rect.top + rect.height / 2
+                if (dropTarget?.id !== row._id || dropTarget.after !== after) {
+                  setDropTarget({ id: row._id, after })
+                }
+              },
+              onDrop: (event) => {
+                if (filtering || !draggingRowId) return
+                event.preventDefault()
+                const rect = event.currentTarget.getBoundingClientRect()
+                dropRow(
+                  draggingRowId,
+                  row._id,
+                  event.clientY > rect.top + rect.height / 2
+                )
+                setDraggingRowId(null)
+                setDropTarget(null)
+              },
+            })}
             emptyClassName='text-muted-foreground h-20 text-sm'
             emptyContent={
               <EmptyState
                 className='min-h-40'
                 title={
-                  query
+                  filtering
                     ? t('No results found')
                     : t('No groups yet. Add a group to get started.')
                 }
@@ -984,6 +1110,52 @@ function GroupPricingTable({
               />
             }
             columns={[
+              {
+                id: 'drag',
+                header: '',
+                className: 'w-8',
+                cell: (row) => (
+                  // Native drag from the handle only, so text in the row's
+                  // inputs stays selectable; the arrow keys mirror Move up/down.
+                  <Button
+                    variant='ghost'
+                    size='icon-sm'
+                    className='text-muted-foreground cursor-grab active:cursor-grabbing'
+                    draggable={!filtering}
+                    aria-label={t('Drag {{group}} to reorder', {
+                      group: row.name.trim(),
+                    })}
+                    title={t('Drag {{group}} to reorder', {
+                      group: row.name.trim(),
+                    })}
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = 'move'
+                      event.dataTransfer.setData('text/plain', row._id)
+                      const tableRow = event.currentTarget.closest('tr')
+                      if (tableRow) {
+                        event.dataTransfer.setDragImage(tableRow, 0, 0)
+                      }
+                      setDraggingRowId(row._id)
+                    }}
+                    onDragEnd={() => {
+                      setDraggingRowId(null)
+                      setDropTarget(null)
+                    }}
+                    onKeyDown={(event) => {
+                      if (filtering) return
+                      if (
+                        event.key === 'ArrowUp' ||
+                        event.key === 'ArrowDown'
+                      ) {
+                        event.preventDefault()
+                        moveRow(row._id, event.key === 'ArrowUp' ? -1 : 1)
+                      }
+                    }}
+                  >
+                    <GripVertical className='h-4 w-4' aria-hidden='true' />
+                  </Button>
+                ),
+              },
               {
                 id: 'group',
                 header: t('Group name'),
@@ -1008,6 +1180,32 @@ function GroupPricingTable({
                     }
                     aria-invalid={duplicateNames.includes(row.name.trim())}
                   />
+                ),
+              },
+              {
+                id: 'vendors',
+                header: t('Vendor'),
+                className: 'w-24',
+                cell: (row) => (
+                  <div className='flex flex-wrap items-center gap-x-2 gap-y-1'>
+                    {(vendorsByGroup.get(row.name.trim()) ?? []).map((name) => {
+                      const icon = iconByVendor.get(name)
+                      const label = name === OTHER_VENDOR ? t('Other') : name
+                      return (
+                        <span
+                          key={name || 'other'}
+                          className='inline-flex items-center gap-1 whitespace-nowrap'
+                        >
+                          {icon ? (
+                            <span aria-hidden='true'>
+                              {getLobeIcon(icon, 16)}
+                            </span>
+                          ) : null}
+                          <span>{label}</span>
+                        </span>
+                      )
+                    })}
+                  </div>
                 ),
               },
               {
@@ -1167,7 +1365,7 @@ function GroupPricingTable({
                       variant='ghost'
                       size='sm'
                       onClick={() => moveRow(row._id, -1)}
-                      disabled={Boolean(query) || rows[0]?._id === row._id}
+                      disabled={filtering || rows[0]?._id === row._id}
                       aria-label={t('Move {{group}} up', {
                         group: row.name.trim(),
                       })}
@@ -1178,7 +1376,7 @@ function GroupPricingTable({
                       variant='ghost'
                       size='sm'
                       onClick={() => moveRow(row._id, 1)}
-                      disabled={Boolean(query) || rows.at(-1)?._id === row._id}
+                      disabled={filtering || rows.at(-1)?._id === row._id}
                       aria-label={t('Move {{group}} down', {
                         group: row.name.trim(),
                       })}

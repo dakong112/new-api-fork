@@ -118,6 +118,8 @@ export type GroupUsage = {
   enabled_channels: number
   tokens: number
   users: number
+  /** Vendors of the group's enabled models; "" means Other. */
+  vendors?: string[]
 }
 
 export async function getGroupUsage() {

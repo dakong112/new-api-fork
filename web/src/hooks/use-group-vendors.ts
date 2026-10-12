@@ -1,0 +1,42 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
+
+import { pricingQueryOptions } from '@/features/pricing/api'
+import { buildGroupVendorIndex } from '@/lib/group-vendors'
+
+/** Shares the model square's `['pricing']` cache, so it adds no request there. */
+export function useGroupVendors(enabled = true) {
+  const { data } = useQuery({
+    ...pricingQueryOptions,
+    enabled,
+    // Vendor filtering is optional; failures (e.g. 403) degrade silently.
+    meta: { errorToast: false },
+  })
+  return useMemo(
+    () => ({
+      ...buildGroupVendorIndex(data?.data ?? [], data?.vendors ?? []),
+      // Until pricing loads every group looks model-less; callers must not
+      // grey groups out before this is true.
+      ready: data !== undefined,
+    }),
+    [data]
+  )
+}

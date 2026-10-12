@@ -128,6 +128,8 @@ test('marks a network retry and lists the status of each failed channel', async 
   await renderLogs('network_error_retry', 524)
 
   expect(screen.getAllByText('Network retry')[0]).toBeVisible()
+  // Two channels tried: this row is the first retry.
+  expect(screen.getAllByText('Retry 1')[0]).toBeVisible()
   await user.click(screen.getAllByRole('button', { name: 'Retry Chain' })[0])
   expect(await screen.findByText('#1 (524) → #3 ✓')).toBeVisible()
 })
