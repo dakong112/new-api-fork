@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/i18n"
@@ -161,4 +162,101 @@ func TestCreateSSOCode(t *testing.T) {
 
 	unauthenticated := ssoPost(router, "/api/sso/code", "", `{"client_id":"infinite","redirect_uri":"`+ssoTestRedirect+`"}`)
 	assert.Equal(t, http.StatusUnauthorized, unauthenticated.Code)
+}
+
+type ssoExchangeResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    struct {
+		User struct {
+			Id       int    `json:"id"`
+			Username string `json:"username"`
+			Email    string `json:"email"`
+			Role     int    `json:"role"`
+			Group    string `json:"group"`
+			Quota    int    `json:"quota"`
+		} `json:"user"`
+		AccessToken          string `json:"access_token"`
+		AccessTokenExpiresAt int64  `json:"access_token_expires_at"`
+		APIKey               string `json:"api_key"`
+	} `json:"data"`
+}
+
+func exchangeBody(code, secret, redirect string) string {
+	return `{"client_id":"infinite","client_secret":"` + secret + `","code":"` + code + `","redirect_uri":"` + redirect + `"}`
+}
+
+func TestExchangeSSOCode(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+
+	code := issueSSOTestCode(t, router, jwt)
+	response := ssoPost(router, "/api/sso/exchange", "", exchangeBody(code, ssoTestSecret, ssoTestRedirect))
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	var body ssoExchangeResponse
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body))
+	require.True(t, body.Success, body.Message)
+	assert.Equal(t, user.Id, body.Data.User.Id)
+	assert.Equal(t, "alice", body.Data.User.Username)
+	assert.Equal(t, "a@example.com", body.Data.User.Email)
+	assert.Equal(t, 1000, body.Data.User.Quota)
+	assert.True(t, strings.HasPrefix(body.Data.AccessToken, model.AccessTokenPrefix))
+	assert.Greater(t, body.Data.AccessTokenExpiresAt, time.Now().Unix())
+	assert.True(t, strings.HasPrefix(body.Data.APIKey, "sk-"))
+
+	// The issued PAT can read the profile.
+	tokens, err := model.ListUserAccessTokens(user.Id)
+	require.NoError(t, err)
+	require.Len(t, tokens, 1)
+	assert.Equal(t, "sso:infinite", tokens[0].Name)
+
+	// Replay of the same code is rejected.
+	replay := ssoPost(router, "/api/sso/exchange", "", exchangeBody(code, ssoTestSecret, ssoTestRedirect))
+	assert.Equal(t, http.StatusBadRequest, replay.Code)
+
+	// A second login reuses the API key and rotates the PAT.
+	second := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), ssoTestSecret, ssoTestRedirect))
+	var secondBody ssoExchangeResponse
+	require.NoError(t, common.Unmarshal(second.Body.Bytes(), &secondBody))
+	require.True(t, secondBody.Success, secondBody.Message)
+	assert.Equal(t, body.Data.APIKey, secondBody.Data.APIKey)
+	assert.NotEqual(t, body.Data.AccessToken, secondBody.Data.AccessToken)
+	tokens, err = model.ListUserAccessTokens(user.Id)
+	require.NoError(t, err)
+	assert.Len(t, tokens, 1)
+	var keyCount int64
+	require.NoError(t, model.DB.Model(&model.Token{}).Where("user_id = ? AND name = ?", user.Id, "sso:infinite").Count(&keyCount).Error)
+	assert.Equal(t, int64(1), keyCount)
+}
+
+func TestExchangeSSOCodeRejections(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+
+	wrongSecret := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), "wrong", ssoTestRedirect))
+	assert.Equal(t, http.StatusUnauthorized, wrongSecret.Code)
+
+	wrongRedirect := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), ssoTestSecret, "https://www.example.com/other"))
+	assert.Equal(t, http.StatusBadRequest, wrongRedirect.Code)
+
+	garbage := ssoPost(router, "/api/sso/exchange", "", exchangeBody("not-a-code", ssoTestSecret, ssoTestRedirect))
+	assert.Equal(t, http.StatusBadRequest, garbage.Code)
+
+	expiredCode := issueSSOTestCode(t, router, jwt)
+	require.NoError(t, model.DB.Model(&model.AuthFlow{}).Where("purpose = ?", model.AuthFlowPurposeSSOCode).Update("expires_at", time.Now().Add(-time.Second)).Error)
+	expired := ssoPost(router, "/api/sso/exchange", "", exchangeBody(expiredCode, ssoTestSecret, ssoTestRedirect))
+	assert.Equal(t, http.StatusBadRequest, expired.Code)
+
+	bannedCode := issueSSOTestCode(t, router, jwt)
+	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("status", common.UserStatusDisabled).Error)
+	banned := ssoPost(router, "/api/sso/exchange", "", exchangeBody(bannedCode, ssoTestSecret, ssoTestRedirect))
+	assert.Equal(t, http.StatusForbidden, banned.Code)
+}
+
+func TestListSSOApps(t *testing.T) {
+	router, _, jwt := setupSSOTest(t)
+	request := httptest.NewRequest(http.MethodGet, "/api/sso/apps", nil)
+	request.Header.Set("Authorization", "Bearer "+jwt)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	assert.Contains(t, response.Body.String(), `"launch_url":"https://www.example.com/api/auth/newapi/start"`)
+	assert.NotContains(t, response.Body.String(), "secret_hash")
 }

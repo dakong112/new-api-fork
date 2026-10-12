@@ -72,7 +72,46 @@ func ListSSOApps(c *gin.Context) {
 	common.ApiSuccess(c, apps)
 }
 
-// ExchangeSSOCode is completed in Task 3.
+// ExchangeSSOCode redeems a login code for an application server. It is
+// anonymous at the dashboard level; the client secret authenticates the caller.
 func ExchangeSSOCode(c *gin.Context) {
-	common.ApiErrorStatus(c, http.StatusNotImplemented, errors.New("not implemented"))
+	var request struct {
+		ClientID     string `json:"client_id"`
+		ClientSecret string `json:"client_secret"`
+		Code         string `json:"code"`
+		RedirectURI  string `json:"redirect_uri"`
+	}
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiErrorStatus(c, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+	client, ok := setting.FindSSOClient(request.ClientID)
+	if !ok || !client.SecretMatches(request.ClientSecret) {
+		common.ApiErrorStatus(c, http.StatusUnauthorized, errors.New("invalid client credentials"))
+		return
+	}
+	flow, err := model.ConsumeAuthFlow(request.Code, model.AuthFlowMatch{
+		Purpose:  model.AuthFlowPurposeSSOCode,
+		Provider: client.ClientID,
+	})
+	if err != nil || flow.Payload != request.RedirectURI {
+		common.ApiErrorStatus(c, http.StatusBadRequest, errors.New("invalid or expired code"))
+		return
+	}
+	user, err := model.GetUserById(flow.UserId, false)
+	if err != nil || user.Status != common.UserStatusEnabled {
+		common.ApiErrorStatus(c, http.StatusForbidden, errors.New("user unavailable"))
+		return
+	}
+	grant, err := service.IssueSSOGrant(user, client)
+	if errors.Is(err, service.ErrSSOAPIKeyLimit) {
+		common.ApiErrorStatus(c, http.StatusConflict, err)
+		return
+	}
+	if err != nil {
+		common.SysLog(common.LogText("SSO grant failed for user %d client %s: %v", user.Id, client.ClientID, err))
+		common.ApiErrorStatus(c, http.StatusInternalServerError, errors.New("sso grant failed"))
+		return
+	}
+	common.ApiSuccess(c, grant)
 }
