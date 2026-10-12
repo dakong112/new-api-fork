@@ -54,6 +54,7 @@ func TestValidateVendorRules(t *testing.T) {
 		"blank keywords":  `[{"name":"Acme","keywords":[" ",""]}]`,
 		"icon too long":   `[{"name":"Acme","icon":"` + strings.Repeat("x", 129) + `","keywords":["a"]}]`,
 		"missing keyword": `[{"name":"Acme"}]`,
+		"comma keyword":   `[{"name":"Acme","keywords":["a,b"]}]`,
 	} {
 		assert.Error(t, ValidateVendorRules(value), name)
 	}

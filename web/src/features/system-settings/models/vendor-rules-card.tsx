@@ -122,7 +122,12 @@ export function VendorRulesCard(props: { defaultValue: string }) {
       splitKeywords(row.keywords).length === 0
         ? t('At least one keyword is required')
         : undefined
-    return { name, keywords }
+    // Mirrors maxVendorRuleIconLength in model/vendor_rules.go.
+    const icon =
+      row.icon.trim().length > 128
+        ? t('Icon name must be at most 128 characters')
+        : undefined
+    return { name, keywords, icon }
   })
 
   const updateRow = (id: string, patch: Partial<VendorRuleRow>) =>
@@ -160,7 +165,7 @@ export function VendorRulesCard(props: { defaultValue: string }) {
 
   const save = () => {
     if (readFailed) return
-    if (errors.some((error) => error.name || error.keywords)) {
+    if (errors.some((error) => error.name || error.keywords || error.icon)) {
       setShowErrors(true)
       return
     }
@@ -342,12 +347,19 @@ export function VendorRulesCard(props: { defaultValue: string }) {
             header: t('Icon'),
             className: 'min-w-44',
             cell: (row, index) => (
-              <LobeIconField
-                compact
-                aria-label={t('Icon, row {{row}}', { row: index + 1 })}
-                value={row.icon}
-                onChange={(icon) => updateRow(row._id, { icon })}
-              />
+              <div className='space-y-1'>
+                <LobeIconField
+                  compact
+                  aria-label={t('Icon, row {{row}}', { row: index + 1 })}
+                  value={row.icon}
+                  onChange={(icon) => updateRow(row._id, { icon })}
+                />
+                {showErrors && errors[index].icon && (
+                  <p className='text-destructive text-xs'>
+                    {errors[index].icon}
+                  </p>
+                )}
+              </div>
             ),
           },
           {

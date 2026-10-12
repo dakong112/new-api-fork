@@ -117,7 +117,10 @@ export function Pricing() {
           groupOrder
         ),
         (g) => g,
-        vendorFilter === FILTER_ALL ? null : vendorFilter,
+        // A stale ?vendor= that no group has must not empty the list.
+        groupVendorIndex.vendors.some((v) => v.name === vendorFilter)
+          ? vendorFilter
+          : null,
         groupVendorIndex,
         groupFilter === FILTER_ALL ? undefined : groupFilter
       ),

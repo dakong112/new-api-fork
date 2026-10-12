@@ -7379,6 +7379,7 @@
     "Add vendor": "Thêm nhà cung cấp",
     "Vendor name must be unique": "Tên nhà cung cấp không được trùng",
     "At least one keyword is required": "Cần ít nhất một từ khóa",
+    "Icon name must be at most 128 characters": "Tên biểu tượng tối đa 128 ký tự",
     "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "Xác định nhà cung cấp của mô hình theo từ khóa trong tên. Không phân biệt chữ hoa chữ thường và từ khóa dài nhất được ưu tiên. Nhà cung cấp đặt cho mô hình trong Quản lý mô hình được ưu tiên.",
     "Restore the built-in vendor rules? The current rules will be replaced.": "Khôi phục quy tắc nhà cung cấp tích hợp sẵn? Các quy tắc hiện tại sẽ bị thay thế.",
     "Row {{row}}": "Hàng {{row}}",

@@ -7378,6 +7378,7 @@
     "Add vendor": "新增供應商",
     "Vendor name must be unique": "供應商名稱不可重複",
     "At least one keyword is required": "至少填寫一個關鍵字",
+    "Icon name must be at most 128 characters": "圖示名稱最多 128 個字元",
     "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "依據模型名稱中的關鍵字判斷模型所屬供應商。比對不區分大小寫，最長的關鍵字優先比對。在模型管理中為模型個別設定的供應商不受此規則影響。",
     "Restore the built-in vendor rules? The current rules will be replaced.": "確定恢復內建的供應商識別規則嗎？目前的規則將被取代。",
     "Row {{row}}": "第 {{row}} 列",

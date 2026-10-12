@@ -7379,6 +7379,7 @@
     "Add vendor": "ベンダーを追加",
     "Vendor name must be unique": "ベンダー名は重複できません",
     "At least one keyword is required": "キーワードを 1 つ以上入力してください",
+    "Icon name must be at most 128 characters": "アイコン名は 128 文字以内にしてください",
     "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "モデル名に含まれるキーワードでモデルのベンダーを判定します。大文字と小文字は区別せず、最も長いキーワードが優先されます。モデル管理でモデルに設定したベンダーが優先されます。",
     "Restore the built-in vendor rules? The current rules will be replaced.": "組み込みのベンダールールに戻しますか？現在のルールは置き換えられます。",
     "Row {{row}}": "{{row}} 行目",

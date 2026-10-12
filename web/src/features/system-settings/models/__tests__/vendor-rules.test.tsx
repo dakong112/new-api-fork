@@ -132,6 +132,22 @@ describe('vendor rules settings', () => {
     ).toBeInTheDocument()
   })
 
+  it('blocks saving an icon name longer than the server accepts', async () => {
+    const user = userEvent.setup()
+    const put = mockSave()
+    const longIcon = JSON.stringify([
+      { name: 'Acme', icon: 'x'.repeat(129), keywords: ['acme'] },
+    ])
+    render(<Fixture value={longIcon} />)
+
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+
+    expect(put).not.toHaveBeenCalled()
+    expect(
+      screen.getByText('Icon name must be at most 128 characters')
+    ).toBeInTheDocument()
+  })
+
   it('submits an empty value after confirming restore defaults', async () => {
     const user = userEvent.setup()
     const put = mockSave()

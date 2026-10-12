@@ -7378,6 +7378,7 @@
     "Add vendor": "添加供应商",
     "Vendor name must be unique": "供应商名称不能重复",
     "At least one keyword is required": "至少填写一个关键字",
+    "Icon name must be at most 128 characters": "图标名称最多 128 个字符",
     "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "根据模型名称中的关键字判断模型所属供应商。匹配不区分大小写，最长的关键字优先匹配。在模型管理中为模型单独设置的供应商不受此规则影响。",
     "Restore the built-in vendor rules? The current rules will be replaced.": "确定恢复内置的供应商识别规则吗？当前规则将被替换。",
     "Row {{row}}": "第 {{row}} 行",

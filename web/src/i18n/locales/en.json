@@ -7378,6 +7378,7 @@
     "Add vendor": "Add vendor",
     "Vendor name must be unique": "Vendor name must be unique",
     "At least one keyword is required": "At least one keyword is required",
+    "Icon name must be at most 128 characters": "Icon name must be at most 128 characters",
     "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.",
     "Restore the built-in vendor rules? The current rules will be replaced.": "Restore the built-in vendor rules? The current rules will be replaced.",
     "Row {{row}}": "Row {{row}}",

@@ -132,6 +132,10 @@ func ValidateVendorRules(value string) error {
 		if !slices.ContainsFunc(rule.Keywords, func(k string) bool { return strings.TrimSpace(k) != "" }) {
 			return fmt.Errorf("VendorRules[%d] must have at least one keyword", i)
 		}
+		// The settings page edits keywords as one comma-separated field.
+		if slices.ContainsFunc(rule.Keywords, func(k string) bool { return strings.Contains(k, ",") }) {
+			return fmt.Errorf("VendorRules[%d] keywords must not contain commas", i)
+		}
 	}
 	return nil
 }

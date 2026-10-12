@@ -20,7 +20,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '@/lib/api'
 
@@ -31,7 +31,8 @@ vi.mock('@/components/layout', () => ({
     <div>{children}</div>
   ),
 }))
-vi.mock('@tanstack/react-router', () => ({ useSearch: () => ({}) }))
+const search = vi.hoisted(() => ({ value: {} as Record<string, string> }))
+vi.mock('@tanstack/react-router', () => ({ useSearch: () => search.value }))
 vi.mock('@visactor/react-vchart', () => ({ VChart: () => null }))
 
 const pricing = {
@@ -83,6 +84,11 @@ function renderPricing() {
   )
 }
 
+afterEach(() => {
+  search.value = {}
+  vi.restoreAllMocks()
+})
+
 describe('pricing page', () => {
   it('narrows the group filter to groups with the selected vendor', async () => {
     // Anything not seeded in the query cache must not reach the network.
@@ -108,5 +114,19 @@ describe('pricing page', () => {
       within(sidebar).getByRole('button', { name: /^ds/ })
     ).toBeInTheDocument()
     expect(screen.queryAllByRole('button', { name: /^zp/ })).toHaveLength(0)
+  })
+
+  it('ignores an unknown vendor from the URL when listing groups', () => {
+    vi.spyOn(api, 'get').mockRejectedValue(new Error('unexpected request'))
+    search.value = { vendor: 'Gone' }
+    renderPricing()
+    const sidebar = screen.getByRole('complementary')
+
+    expect(
+      within(sidebar).getByRole('button', { name: /^ds/ })
+    ).toBeInTheDocument()
+    expect(
+      within(sidebar).getByRole('button', { name: /^zp/ })
+    ).toBeInTheDocument()
   })
 })

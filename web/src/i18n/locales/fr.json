@@ -7379,6 +7379,7 @@
     "Add vendor": "Ajouter un fournisseur",
     "Vendor name must be unique": "Le nom du fournisseur doit être unique",
     "At least one keyword is required": "Au moins un mot-clé est requis",
+    "Icon name must be at most 128 characters": "Le nom de l'icône ne doit pas dépasser 128 caractères",
     "Decide which vendor a model belongs to by keywords in its name. Matching ignores case and the longest keyword wins. Vendors set on a model in Model management take precedence.": "Détermine le fournisseur d'un modèle à partir des mots-clés de son nom. La correspondance ignore la casse et le mot-clé le plus long l'emporte. Les fournisseurs définis sur un modèle dans la gestion des modèles sont prioritaires.",
     "Restore the built-in vendor rules? The current rules will be replaced.": "Restaurer les règles de fournisseur intégrées ? Les règles actuelles seront remplacées.",
     "Row {{row}}": "Ligne {{row}}",
