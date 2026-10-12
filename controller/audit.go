@@ -30,6 +30,8 @@ var auditContentTemplates = map[string]string{
 	"user.2fa_disable":          "Force-disabled two-factor authentication for the user",
 	"user.passkey_register":     "Registered a passkey",
 	"access_token.generate":     "Generated an access token",
+	"sso.grant":                 "Issued SSO credentials to application ${client_id}",
+	"sso.exchange_failed":       "Rejected SSO code exchange for application ${client_id} (${reason})",
 	"access_token.revoke":       "Revoked an access token",
 	"access_token.rename":       "Renamed an access token",
 	"access_token.update":       "Changed access token permissions",

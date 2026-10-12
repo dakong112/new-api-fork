@@ -75,7 +75,7 @@ func SetApiRouter(router *gin.Engine) {
 		ssoRoute := apiRouter.Group("/sso")
 		ssoRoute.POST("/code", middleware.UserAuth(), middleware.UserCriticalRateLimit("sso-code"), middleware.DisableCache(), controller.CreateSSOCode)
 		ssoRoute.GET("/apps", middleware.UserAuth(), middleware.DisableCache(), controller.ListSSOApps)
-		ssoRoute.POST("/exchange", middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, controller.ExchangeSSOCode)
+		ssoRoute.POST("/exchange", middleware.DisableCache(), anonymousRequestBodyLimit, controller.ExchangeSSOCode)
 
 		userRoute := apiRouter.Group("/user")
 		{

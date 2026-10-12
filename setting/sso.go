@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/QuantumNous/new-api/common"
 )
@@ -23,9 +24,12 @@ type SSOClient struct {
 	LaunchURL    string   `json:"launch_url"`
 }
 
-var SSOClients = make([]SSOClient, 0)
+var (
+	ssoClients   = make([]SSOClient, 0)
+	ssoClientsMu sync.RWMutex
+)
 
-var ssoClientIDPattern = regexp.MustCompile(`^[a-z0-9_-]{1,56}$`)
+var ssoClientIDPattern = regexp.MustCompile(`^[a-z0-9_-]{1,46}$`)
 var ssoSecretHashPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 func SSOSecretHash(secret string) string {
@@ -86,20 +90,33 @@ func UpdateSSOClientsByJsonString(value string) error {
 	if err != nil {
 		return err
 	}
-	SSOClients = clients
+	ssoClientsMu.Lock()
+	ssoClients = clients
+	ssoClientsMu.Unlock()
 	return nil
 }
 
 func SSOClients2JsonString() string {
-	data, err := common.Marshal(SSOClients)
+	ssoClientsMu.RLock()
+	data, err := common.Marshal(ssoClients)
+	ssoClientsMu.RUnlock()
 	if err != nil {
 		return "[]"
 	}
 	return string(data)
 }
 
+// GetSSOClients returns a copy of the registered applications.
+func GetSSOClients() []SSOClient {
+	ssoClientsMu.RLock()
+	defer ssoClientsMu.RUnlock()
+	return slices.Clone(ssoClients)
+}
+
 func FindSSOClient(clientID string) (SSOClient, bool) {
-	for _, client := range SSOClients {
+	ssoClientsMu.RLock()
+	defer ssoClientsMu.RUnlock()
+	for _, client := range ssoClients {
 		if client.ClientID == clientID {
 			return client, true
 		}

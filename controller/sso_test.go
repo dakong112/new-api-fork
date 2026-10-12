@@ -12,6 +12,7 @@ import (
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/service/authz"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/gin-gonic/gin"
@@ -22,7 +23,7 @@ import (
 )
 
 func TestSSOClientsOptionValidation(t *testing.T) {
-	valid := `[{"client_id":"infinite","name":"Studio","secret_hash":"` + sha256Hex("s3cret") + `","redirect_uris":["https://www.example.com/sso/callback","http://localhost:3000/sso/callback"],"launch_url":"https://www.example.com/api/auth/newapi/start"}]`
+	valid := `[{"client_id":"infinite","name":"Studio","secret_hash":"` + setting.SSOSecretHash("s3cret") + `","redirect_uris":["https://www.example.com/sso/callback","http://localhost:3000/sso/callback"],"launch_url":"https://www.example.com/api/auth/newapi/start"}]`
 	cases := []struct {
 		name  string
 		value string
@@ -30,12 +31,13 @@ func TestSSOClientsOptionValidation(t *testing.T) {
 	}{
 		{"valid", valid, true},
 		{"empty list", `[]`, true},
-		{"bad client id", `[{"client_id":"Bad Id","secret_hash":"` + sha256Hex("x") + `","redirect_uris":["https://a.com/cb"]}]`, false},
-		{"duplicate client id", `[{"client_id":"a","secret_hash":"` + sha256Hex("x") + `","redirect_uris":["https://a.com/cb"]},{"client_id":"a","secret_hash":"` + sha256Hex("y") + `","redirect_uris":["https://a.com/cb"]}]`, false},
+		{"bad client id", `[{"client_id":"Bad Id","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"]}]`, false},
+		{"client id too long", `[{"client_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"]}]`, false},
+		{"duplicate client id", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"]},{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("y") + `","redirect_uris":["https://a.com/cb"]}]`, false},
 		{"secret hash not hex64", `[{"client_id":"a","secret_hash":"abc","redirect_uris":["https://a.com/cb"]}]`, false},
-		{"plain http redirect", `[{"client_id":"a","secret_hash":"` + sha256Hex("x") + `","redirect_uris":["http://a.com/cb"]}]`, false},
-		{"redirect with fragment", `[{"client_id":"a","secret_hash":"` + sha256Hex("x") + `","redirect_uris":["https://a.com/cb#x"]}]`, false},
-		{"no redirect", `[{"client_id":"a","secret_hash":"` + sha256Hex("x") + `","redirect_uris":[]}]`, false},
+		{"plain http redirect", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["http://a.com/cb"]}]`, false},
+		{"redirect with fragment", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb#x"]}]`, false},
+		{"no redirect", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":[]}]`, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -59,10 +61,6 @@ func TestSSOClientsOptionValidation(t *testing.T) {
 	assert.False(t, client.SecretMatches(""))
 }
 
-func sha256Hex(value string) string {
-	return setting.SSOSecretHash(value)
-}
-
 const ssoTestRedirect = "https://www.example.com/sso/callback"
 const ssoTestSecret = "s3cret"
 
@@ -72,7 +70,8 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	previousDB, previousLogDB := model.DB, model.LOG_DB
 	previousMain, previousLog := common.MainDatabaseType(), common.LogDatabaseType()
 	previousRedis, previousMaster := common.RedisEnabled, common.IsMasterNode
-	previousClients := setting.SSOClients
+	previousClients := setting.SSOClients2JsonString()
+	ssoExchangeFailures = common.InMemoryRateLimiter{}
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, i18n.Init())
@@ -83,12 +82,12 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	common.RedisEnabled = false
 	common.IsMasterNode = true
 	require.NoError(t, authz.Init(db))
-	require.NoError(t, setting.UpdateSSOClientsByJsonString(`[{"client_id":"infinite","name":"Studio","secret_hash":"`+setting.SSOSecretHash(ssoTestSecret)+`","redirect_uris":["`+ssoTestRedirect+`"],"launch_url":"https://www.example.com/api/auth/newapi/start"}]`))
+	require.NoError(t, setting.UpdateSSOClientsByJsonString(`[{"client_id":"infinite","name":"Studio","secret_hash":"`+setting.SSOSecretHash(ssoTestSecret)+`","redirect_uris":["`+ssoTestRedirect+`"],"launch_url":"https://www.example.com/api/auth/newapi/start"},{"client_id":"other","name":"Other","secret_hash":"`+setting.SSOSecretHash("other-secret")+`","redirect_uris":["https://other.example.com/cb"]}]`))
 	t.Cleanup(func() {
 		model.DB, model.LOG_DB = previousDB, previousLogDB
 		common.SetDatabaseTypes(previousMain, previousLog)
 		common.RedisEnabled, common.IsMasterNode = previousRedis, previousMaster
-		setting.SSOClients = previousClients
+		require.NoError(t, setting.UpdateSSOClientsByJsonString(previousClients))
 	})
 
 	user := &model.User{Username: "alice", Password: "placeholder", DisplayName: "Alice", Email: "a@example.com", Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", Quota: 1000, AuthVersion: 1, AffCode: "alice"}
@@ -259,4 +258,64 @@ func TestListSSOApps(t *testing.T) {
 	router.ServeHTTP(response, request)
 	assert.Contains(t, response.Body.String(), `"launch_url":"https://www.example.com/api/auth/newapi/start"`)
 	assert.NotContains(t, response.Body.String(), "secret_hash")
+}
+
+func TestSSOCodeRejectsAccessToken(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	raw, _ := createScopedAccessToken(t, user.Id, 0, "profile:read")
+
+	response := ssoPost(router, "/api/sso/code", raw, `{"client_id":"infinite","redirect_uri":"`+ssoTestRedirect+`","state":"st-1"}`)
+	assert.Equal(t, http.StatusForbidden, response.Code, response.Body.String())
+}
+
+func TestExchangeSSOCodeBinding(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+
+	// A code issued for one application cannot be redeemed by another.
+	crossClient := `{"client_id":"other","client_secret":"other-secret","code":"` + issueSSOTestCode(t, router, jwt) + `","redirect_uri":"` + ssoTestRedirect + `"}`
+	assert.Equal(t, http.StatusBadRequest, ssoPost(router, "/api/sso/exchange", "", crossClient).Code)
+
+	// Revoking the browser session cancels codes it issued.
+	code := issueSSOTestCode(t, router, jwt)
+	require.NoError(t, model.DB.Model(&model.UserSession{}).Where("user_id = ?", user.Id).Update("status", model.UserSessionStatusRevoked).Error)
+	revoked := ssoPost(router, "/api/sso/exchange", "", exchangeBody(code, ssoTestSecret, ssoTestRedirect))
+	assert.Equal(t, http.StatusBadRequest, revoked.Code)
+}
+
+func TestExchangeSSOCodeCredentialConflicts(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+
+	first := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), ssoTestSecret, ssoTestRedirect))
+	require.Equal(t, http.StatusOK, first.Code, first.Body.String())
+
+	// A disabled application key is not handed out again.
+	require.NoError(t, model.DB.Model(&model.Token{}).Where("user_id = ? AND name = ?", user.Id, "sso:infinite").Update("status", common.TokenStatusDisabled).Error)
+	disabled := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), ssoTestSecret, ssoTestRedirect))
+	assert.Equal(t, http.StatusConflict, disabled.Code)
+}
+
+func TestExchangeSSOCodeAccessTokenLimit(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+	for range service.AccessTokenMaxPerUser {
+		createScopedAccessToken(t, user.Id, 0, "profile:read")
+	}
+
+	full := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), ssoTestSecret, ssoTestRedirect))
+	assert.Equal(t, http.StatusConflict, full.Code)
+
+	// The failed grant is rolled back as a whole, API key included.
+	var keys int64
+	require.NoError(t, model.DB.Model(&model.Token{}).Where("user_id = ?", user.Id).Count(&keys).Error)
+	assert.Zero(t, keys)
+}
+
+func TestExchangeSSOCodeThrottlesWrongSecrets(t *testing.T) {
+	router, _, jwt := setupSSOTest(t)
+
+	for range ssoExchangeMaxFailures {
+		wrong := ssoPost(router, "/api/sso/exchange", "", exchangeBody("x", "wrong", ssoTestRedirect))
+		require.Equal(t, http.StatusUnauthorized, wrong.Code)
+	}
+	blocked := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), ssoTestSecret, ssoTestRedirect))
+	assert.Equal(t, http.StatusTooManyRequests, blocked.Code)
 }
