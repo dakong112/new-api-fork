@@ -282,9 +282,11 @@ export function ApiKeysMutateDrawer({
   const selectedGroup = form.watch('group')
   const groupVendors = useGroupVendors(open)
   // A vendor that vanished (or a hidden filter) means "All".
-  const activeVendor = groupVendors.vendors.some((v) => v.name === vendorFilter)
-    ? vendorFilter
-    : null
+  const activeVendor =
+    groupVendors.vendors.length >= 2 &&
+    groupVendors.vendors.some((v) => v.name === vendorFilter)
+      ? vendorFilter
+      : null
   const vendorGroups = useMemo(
     () =>
       filterGroupsByVendor(
@@ -296,8 +298,11 @@ export function ApiKeysMutateDrawer({
       ).map((g) => ({
         ...g,
         // Before pricing loads every group looks model-less; don't grey yet.
+        // A group without models of its own still serves via its fallbacks.
         unavailable:
-          groupVendors.ready && !isGroupAvailable(g.value, groupVendors),
+          groupVendors.ready &&
+          !isGroupAvailable(g.value, groupVendors) &&
+          !g.fallbackGroups?.some((f) => isGroupAvailable(f, groupVendors)),
       })),
     [groups, activeVendor, groupVendors, selectedGroup]
   )
@@ -473,6 +478,7 @@ export function ApiKeysMutateDrawer({
                         if (
                           vendor !== null &&
                           field.value !== 'auto' &&
+                          field.value !== DEFAULT_GROUP &&
                           !groupVendors.vendorsByGroup
                             .get(field.value ?? '')
                             ?.includes(vendor)

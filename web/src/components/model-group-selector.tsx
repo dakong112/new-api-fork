@@ -601,11 +601,12 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
     [groups, selectedGroup]
   )
   // A filter whose vendor vanished (refetch) or is not rendered means "All".
-  const activeVendor = groupVendors?.vendors.some(
-    (v) => v.name === vendorFilter
-  )
-    ? vendorFilter
-    : null
+  const activeVendor =
+    groupVendors &&
+    groupVendors.vendors.length >= 2 &&
+    groupVendors.vendors.some((v) => v.name === vendorFilter)
+      ? vendorFilter
+      : null
   const visibleGroups = useMemo(
     () =>
       groupVendors

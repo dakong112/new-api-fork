@@ -75,6 +75,11 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
               },
               vip: { desc: 'Priority access', ratio: 2 },
               empty: { desc: 'No channels', ratio: 1 },
+              relay: {
+                desc: 'Fallback only',
+                ratio: 1,
+                fallback_groups: ['vip'],
+              },
             },
           },
         }
@@ -168,6 +173,7 @@ async function renderDrawer(currentRow?: typeof emptyGroupKey): Promise<void> {
         },
         vip: { desc: 'Priority access', ratio: 2 },
         empty: { desc: 'No channels', ratio: 1 },
+        relay: { desc: 'Fallback only', ratio: 1, fallback_groups: ['vip'] },
       },
     },
     { updatedAt: freshAt }
@@ -429,6 +435,16 @@ describe('API keys mutate drawer Auto group integration', () => {
     expect(
       screen.getByRole('combobox', { name: 'Group' })
     ).not.toHaveTextContent('empty')
+  })
+
+  test('keeps a group without own models selectable when a fallback group serves it', async () => {
+    installApiFixtures([])
+    await renderDrawer()
+    await screen.findByRole('group', { name: 'Vendor' })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Group' }))
+    const relay = await screen.findByRole('option', { name: /^relay/ })
+    expect(relay).not.toHaveAttribute('aria-disabled', 'true')
+    expect(relay).not.toHaveTextContent('Temporarily unavailable')
   })
 
   test('editing a key whose group has no enabled models keeps and flags that group', async () => {
