@@ -7364,6 +7364,7 @@
     "When every channel of a group fails for a model, requests move to its fallback groups from top to bottom. Drag or use the arrows to change the order. Fallback groups the user cannot select are skipped, and the request is billed at the ratio of the group that served it.": "Если все каналы группы для модели недоступны, запросы переходят к её резервным группам сверху вниз. Перетащите или используйте стрелки, чтобы изменить порядок. Резервные группы, недоступные пользователю, пропускаются, а запрос тарифицируется по коэффициенту группы, которая его обслужила.",
     "An upstream 502, 504 or 524 moved this request to another channel.": "Ответ 502, 504 или 524 от провайдера перевёл этот запрос на другой канал.",
     "Network retry": "Сетевой повтор",
+    "Retry {{index}}": "Повтор {{index}}",
     "Upstream network error, retrying on an untried channel": "Сетевая ошибка провайдера, повтор на неопробованном канале",
     "Group setting": "Настройка группы",
     "Network retry for {{group}}": "Сетевой повтор для {{group}}",

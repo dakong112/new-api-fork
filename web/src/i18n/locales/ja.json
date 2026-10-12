@@ -7364,6 +7364,7 @@
     "When every channel of a group fails for a model, requests move to its fallback groups from top to bottom. Drag or use the arrows to change the order. Fallback groups the user cannot select are skipped, and the request is billed at the ratio of the group that served it.": "グループ内のモデルのチャネルがすべて失敗した場合、リクエストは上から順に予備グループへ切り替わります。ドラッグまたは矢印で順序を変更できます。ユーザーが選択できない予備グループはスキップされ、実際にリクエストを処理したグループの倍率で課金されます。",
     "An upstream 502, 504 or 524 moved this request to another channel.": "上流の 502・504・524 により、このリクエストは別のチャネルに切り替わりました。",
     "Network retry": "ネットワーク再試行",
+    "Retry {{index}}": "再試行 {{index}}",
     "Upstream network error, retrying on an untried channel": "上流のネットワークエラー、未試行のチャネルで再試行",
     "Group setting": "グループ設定",
     "Network retry for {{group}}": "{{group}} のネットワーク再試行",

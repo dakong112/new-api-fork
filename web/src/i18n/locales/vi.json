@@ -7364,6 +7364,7 @@
     "When every channel of a group fails for a model, requests move to its fallback groups from top to bottom. Drag or use the arrows to change the order. Fallback groups the user cannot select are skipped, and the request is billed at the ratio of the group that served it.": "Khi mọi kênh của một nhóm đều lỗi với một mô hình, yêu cầu chuyển sang các nhóm dự phòng theo thứ tự từ trên xuống. Kéo hoặc dùng mũi tên để đổi thứ tự. Nhóm dự phòng mà người dùng không được chọn sẽ bị bỏ qua, và yêu cầu được tính phí theo hệ số của nhóm đã phục vụ.",
     "An upstream 502, 504 or 524 moved this request to another channel.": "Lỗi 502, 504 hoặc 524 từ upstream đã chuyển yêu cầu này sang kênh khác.",
     "Network retry": "Thử lại mạng",
+    "Retry {{index}}": "Thử lại {{index}}",
     "Upstream network error, retrying on an untried channel": "Lỗi mạng upstream, thử lại trên kênh chưa thử",
     "Group setting": "Cài đặt nhóm",
     "Network retry for {{group}}": "Thử lại mạng cho {{group}}",

@@ -7363,6 +7363,7 @@
     "When every channel of a group fails for a model, requests move to its fallback groups from top to bottom. Drag or use the arrows to change the order. Fallback groups the user cannot select are skipped, and the request is billed at the ratio of the group that served it.": "When every channel of a group fails for a model, requests move to its fallback groups from top to bottom. Drag or use the arrows to change the order. Fallback groups the user cannot select are skipped, and the request is billed at the ratio of the group that served it.",
     "An upstream 502, 504 or 524 moved this request to another channel.": "An upstream 502, 504 or 524 moved this request to another channel.",
     "Network retry": "Network retry",
+    "Retry {{index}}": "Retry {{index}}",
     "Upstream network error, retrying on an untried channel": "Upstream network error, retrying on an untried channel",
     "Group setting": "Group setting",
     "Network retry for {{group}}": "Network retry for {{group}}",
