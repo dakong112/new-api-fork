@@ -7384,6 +7384,27 @@
     "Icon, row {{row}}": "Icon, row {{row}}",
     "Keywords, row {{row}}": "Keywords, row {{row}}",
     "The stored vendor rules could not be read. Restore defaults to continue.": "The stored vendor rules could not be read. Restore defaults to continue.",
-    "Save an empty rule list? Every model will be shown under Other.": "Save an empty rule list? Every model will be shown under Other."
+    "Save an empty rule list? Every model will be shown under Other.": "Save an empty rule list? Every model will be shown under Other.",
+    "Retry process": "Retry process",
+    "Succeeded in the end": "Succeeded in the end",
+    "Failed in the end": "Failed in the end",
+    "Final result unknown": "Final result unknown",
+    "{{count}} attempts": "{{count}} attempts",
+    "Total time {{time}}": "Total time {{time}}",
+    "Charged {{amount}}": "Charged {{amount}}",
+    "Not charged (fully refunded)": "Not charged (fully refunded)",
+    "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.",
+    "This is attempt {{attempt}} of the request. It then succeeded.": "This is attempt {{attempt}} of the request. It then succeeded.",
+    "This is attempt {{attempt}} of the request. It failed after all retries.": "This is attempt {{attempt}} of the request. It failed after all retries.",
+    "The final record of this request was not found": "The final record of this request was not found",
+    "View final record": "View final record",
+    "Upstream timeout": "Upstream timeout",
+    "Gateway timeout": "Gateway timeout",
+    "Upstream error": "Upstream error",
+    "Request rejected": "Request rejected",
+    "No charge for failed attempts": "No charge for failed attempts",
+    "Timed out after reaching the upstream, which may have billed it": "Timed out after reaching the upstream, which may have billed it",
+    "Stream interrupted midway; charged for the output delivered": "Stream interrupted midway; charged for the output delivered",
+    "Routing decision details": "Routing decision details"
   }
 }

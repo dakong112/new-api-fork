@@ -7385,6 +7385,27 @@
     "Icon, row {{row}}": "Biểu tượng, hàng {{row}}",
     "Keywords, row {{row}}": "Từ khóa, hàng {{row}}",
     "The stored vendor rules could not be read. Restore defaults to continue.": "Không thể đọc quy tắc nhà cung cấp đã lưu. Hãy khôi phục mặc định để tiếp tục.",
-    "Save an empty rule list? Every model will be shown under Other.": "Lưu danh sách quy tắc trống? Mọi mô hình sẽ được hiển thị trong mục Khác."
+    "Save an empty rule list? Every model will be shown under Other.": "Lưu danh sách quy tắc trống? Mọi mô hình sẽ được hiển thị trong mục Khác.",
+    "Retry process": "Quá trình thử lại",
+    "Succeeded in the end": "Cuối cùng thành công",
+    "Failed in the end": "Cuối cùng thất bại",
+    "Final result unknown": "Chưa rõ kết quả cuối cùng",
+    "{{count}} attempts": "{{count}} lần thử",
+    "Total time {{time}}": "Tổng thời gian {{time}}",
+    "Charged {{amount}}": "Đã trừ {{amount}}",
+    "Not charged (fully refunded)": "Không trừ phí (hoàn toàn bộ)",
+    "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "Đây là lần thử {{attempt}} của yêu cầu. Sau đó đã thành công trên #{{channel}}.",
+    "This is attempt {{attempt}} of the request. It then succeeded.": "Đây là lần thử {{attempt}} của yêu cầu. Sau đó đã thành công.",
+    "This is attempt {{attempt}} of the request. It failed after all retries.": "Đây là lần thử {{attempt}} của yêu cầu. Yêu cầu vẫn thất bại sau mọi lần thử lại.",
+    "The final record of this request was not found": "Không tìm thấy bản ghi cuối của yêu cầu này",
+    "View final record": "Xem bản ghi cuối",
+    "Upstream timeout": "Máy chủ nguồn hết thời gian",
+    "Gateway timeout": "Cổng hết thời gian",
+    "Upstream error": "Lỗi máy chủ nguồn",
+    "Request rejected": "Yêu cầu bị từ chối",
+    "No charge for failed attempts": "Lần thất bại không tính phí",
+    "Timed out after reaching the upstream, which may have billed it": "Hết thời gian sau khi đến máy chủ nguồn, có thể đã bị tính phí",
+    "Stream interrupted midway; charged for the output delivered": "Luồng bị gián đoạn giữa chừng; tính phí phần nội dung đã trả về",
+    "Routing decision details": "Chi tiết quyết định định tuyến"
   }
 }

@@ -7385,6 +7385,27 @@
     "Icon, row {{row}}": "Icône, ligne {{row}}",
     "Keywords, row {{row}}": "Mots-clés, ligne {{row}}",
     "The stored vendor rules could not be read. Restore defaults to continue.": "Les règles de fournisseur enregistrées sont illisibles. Restaurez les valeurs par défaut pour continuer.",
-    "Save an empty rule list? Every model will be shown under Other.": "Enregistrer une liste de règles vide ? Tous les modèles seront affichés sous Autre."
+    "Save an empty rule list? Every model will be shown under Other.": "Enregistrer une liste de règles vide ? Tous les modèles seront affichés sous Autre.",
+    "Retry process": "Processus de nouvelle tentative",
+    "Succeeded in the end": "Réussi au final",
+    "Failed in the end": "Échec au final",
+    "Final result unknown": "Résultat final inconnu",
+    "{{count}} attempts": "{{count}} tentatives",
+    "Total time {{time}}": "Durée totale {{time}}",
+    "Charged {{amount}}": "Facturé {{amount}}",
+    "Not charged (fully refunded)": "Non facturé (entièrement remboursé)",
+    "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "Ceci est la tentative {{attempt}} de la requête. Elle a ensuite réussi sur #{{channel}}.",
+    "This is attempt {{attempt}} of the request. It then succeeded.": "Ceci est la tentative {{attempt}} de la requête. Elle a ensuite réussi.",
+    "This is attempt {{attempt}} of the request. It failed after all retries.": "Ceci est la tentative {{attempt}} de la requête. Elle a échoué après toutes les tentatives.",
+    "The final record of this request was not found": "L'enregistrement final de cette requête est introuvable",
+    "View final record": "Voir l'enregistrement final",
+    "Upstream timeout": "Délai amont dépassé",
+    "Gateway timeout": "Délai de passerelle dépassé",
+    "Upstream error": "Erreur amont",
+    "Request rejected": "Requête rejetée",
+    "No charge for failed attempts": "Aucun frais pour les échecs",
+    "Timed out after reaching the upstream, which may have billed it": "Délai dépassé après avoir atteint l'amont, qui a peut-être facturé",
+    "Stream interrupted midway; charged for the output delivered": "Flux interrompu en cours de route ; facturé pour la sortie déjà livrée",
+    "Routing decision details": "Détails des décisions de routage"
   }
 }

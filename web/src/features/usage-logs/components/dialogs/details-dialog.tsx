@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { useQuery } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 /*
 Copyright (C) 2023-2026 QuantumNous
@@ -50,6 +51,7 @@ import {
   Info,
   LogIn,
 } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Dialog } from '@/components/dialog'
@@ -64,9 +66,13 @@ import { PolicyDecisionRecord } from '@/features/system-settings/request-policie
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
 import { formatLogQuota, formatTokens, formatUseTime } from '@/lib/format'
-import { translateServerText } from '@/lib/server-error-message'
+import {
+  requireServerSuccess,
+  translateServerText,
+} from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
 
+import { getAllLogs } from '../../api'
 import { AuditDetailFields } from '../../audit/components/audit-detail-fields'
 import type { UsageLog } from '../../data/schema'
 import {
@@ -85,6 +91,7 @@ import {
   renderLogContent,
 } from '../../lib/format'
 import { buildQuotaAuditOperation } from '../../lib/quota-audit-operation'
+import { buildRetryProcess } from '../../lib/retry-attempts'
 import {
   getLogTypeConfig,
   isPerCallBilling,
@@ -94,6 +101,7 @@ import { USAGE_BILLING_PATH, type LogOtherData } from '../../types'
 import { ResponseModelDetails } from '../model-badge'
 import { PluginAuthorLink } from '../plugin-author-link'
 import { DetailRow, DetailSection } from './log-detail-layout'
+import { RetryProcessView } from './retry-process'
 
 // Maps a channel-update changed-field token (as recorded by the backend audit)
 // to its i18n label key for display in the audit details.
@@ -480,14 +488,20 @@ interface DetailsDialogProps {
 export function DetailsDialog(props: DetailsDialogProps) {
   const { t } = useTranslation()
   const { copiedText, copyToClipboard } = useCopyToClipboard({ notify: false })
-  const other = parseLogOther(props.log.other)
-  const typeConfig = getLogTypeConfig(props.log.type)
+  // "View final record" swaps in a sibling log; a new log or reopening resets.
+  const [jump, setJump] = useState<{ from: UsageLog; to: UsageLog } | null>(
+    null
+  )
+  if (jump && (jump.from !== props.log || !props.open)) setJump(null)
+  const log = jump?.to ?? props.log
+  const other = parseLogOther(log.other)
+  const typeConfig = getLogTypeConfig(log.type)
 
   const isViolation = isViolationFeeLog(other)
-  const isRefund = props.log.type === 6
-  const isConsume = props.log.type === 2
-  const isTopup = props.log.type === 1
-  const isManage = props.log.type === 3
+  const isRefund = log.type === 6
+  const isConsume = log.type === 2
+  const isTopup = log.type === 1
+  const isManage = log.type === 3
   const isSubscription = other?.billing_source === 'subscription'
   const isTieredBilling =
     isConsume &&
@@ -496,16 +510,38 @@ export function DetailsDialog(props: DetailsDialogProps) {
     !!other?.expr_b64
   const pricingData = usePricingData(props.open && isTieredBilling)
   const billingUsageSchema = pluginUsageSchema(
-    pricingData.models.find(
-      (model) => model.model_name === props.log.model_name
-    ),
+    pricingData.models.find((model) => model.model_name === log.model_name),
     other?.admin_info?.task_plugin?.key
   )
   const hasAudioTokens = other?.ws || other?.audio
-  const showTiming = isTimingLogType(props.log.type)
-  const showAdminIp =
-    !!props.log.ip && (showTiming || (props.isAdmin && isTopup))
+  const showTiming = isTimingLogType(log.type)
+  const showAdminIp = !!log.ip && (showTiming || (props.isAdmin && isTopup))
   const adminInfo = other?.admin_info
+  const policyEvents = adminInfo?.request_policy ?? []
+  const retryEnabled =
+    props.isAdmin &&
+    props.open &&
+    !!log.request_id &&
+    (log.type === 5 ||
+      new Set(policyEvents.map((e) => e.attempt).filter((n) => n > 0)).size >=
+        2)
+  const siblingsQuery = useQuery({
+    queryKey: ['request-logs', log.request_id],
+    queryFn: async () =>
+      (requireServerSuccess(
+        await getAllLogs({ request_id: log.request_id, p: 1, page_size: 50 })
+      ).data?.items ?? []) as UsageLog[],
+    enabled: retryEnabled,
+    meta: { errorToast: false },
+  })
+  // ponytail: render nothing until siblings load (instead of passing []), so
+  // the outcome never flips from "unknown" and the old block never swaps out.
+  // A failed fetch falls back to the old block.
+  const retryLoading = retryEnabled && siblingsQuery.isPending
+  const retryProcess =
+    retryEnabled && siblingsQuery.isSuccess
+      ? buildRetryProcess(log, siblingsQuery.data)
+      : null
   const topupAuditFields =
     isTopup && props.isAdmin && adminInfo
       ? ([
@@ -571,7 +607,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
   const details =
     (isTopup ? operationText : null) ??
     renderLogContent(other, t) ??
-    props.log.content ??
+    log.content ??
     ''
   const auditRoute = isManage && props.isAdmin ? other?.audit_info : undefined
   // Channel update records which fields changed (stable field tokens); render
@@ -589,16 +625,16 @@ export function DetailsDialog(props: DetailsDialogProps) {
     isManage && props.isAdmin && (operationText != null || auditRoute != null)
 
   // Login audit (type=7); visible to the log owner, not admin-only.
-  const isLogin = props.log.type === 7
+  const isLogin = log.type === 7
   const loginAuditFields = isLogin
     ? ([
         other?.login_method && {
           label: t('Login Method'),
           value: String(other.login_method),
         },
-        props.log.ip && {
+        log.ip && {
           label: t('IP Address'),
-          value: props.log.ip,
+          value: log.ip,
         },
         other?.user_agent && {
           label: t('User Agent'),
@@ -617,7 +653,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
       : conversionChain.join(' -> ')
   const showConversion =
     props.isAdmin &&
-    props.log.type !== 6 &&
+    log.type !== 6 &&
     (other?.request_path || conversionChain.length > 0)
 
   const useChannel = other?.admin_info?.use_channel
@@ -657,31 +693,27 @@ export function DetailsDialog(props: DetailsDialogProps) {
       <div className='w-full max-w-full min-w-0 space-y-2.5 overflow-x-hidden py-1 sm:space-y-3'>
         {/* Overview section - key identifiers */}
         <div className='min-w-0 space-y-1'>
-          {props.log.request_id && (
-            <DetailRow
-              label={t('Request ID')}
-              value={props.log.request_id}
-              mono
-            />
+          {log.request_id && (
+            <DetailRow label={t('Request ID')} value={log.request_id} mono />
           )}
-          {props.log.upstream_request_id && (
+          {log.upstream_request_id && (
             <DetailRow
               label={t('Upstream Request ID')}
-              value={props.log.upstream_request_id}
+              value={log.upstream_request_id}
               mono
             />
           )}
 
-          {props.isAdmin && props.log.channel > 0 && (
+          {props.isAdmin && log.channel > 0 && (
             <DetailRow
               label={t('Channel')}
               value={
                 <span>
-                  {props.log.channel}
-                  {props.log.channel_name && (
+                  {log.channel}
+                  {log.channel_name && (
                     <span className='text-muted-foreground'>
                       {' '}
-                      ({props.log.channel_name})
+                      ({log.channel_name})
                     </span>
                   )}
                 </span>
@@ -694,18 +726,14 @@ export function DetailsDialog(props: DetailsDialogProps) {
             <DetailRow label={t('Retry Chain')} value={channelChain} mono />
           )}
 
-          {props.log.token_name && (
-            <DetailRow
-              label={t('Token')}
-              value={logTokenName(props.log, t)}
-              mono
-            />
+          {log.token_name && (
+            <DetailRow label={t('Token')} value={logTokenName(log, t)} mono />
           )}
 
-          {(props.log.group || other?.group) && (
+          {(log.group || other?.group) && (
             <DetailRow
               label={t('Group')}
-              value={props.log.group || other?.group || ''}
+              value={log.group || other?.group || ''}
               mono
             />
           )}
@@ -716,14 +744,14 @@ export function DetailsDialog(props: DetailsDialogProps) {
               value={
                 <span className='flex items-center gap-1'>
                   <Globe className='size-3 text-amber-500' aria-hidden='true' />
-                  {props.log.ip}
+                  {log.ip}
                 </span>
               }
               mono
             />
           )}
 
-          {showTiming && props.log.use_time > 0 && (
+          {showTiming && log.use_time > 0 && (
             <DetailRow
               label={t('Response Time')}
               value={
@@ -731,34 +759,40 @@ export function DetailsDialog(props: DetailsDialogProps) {
                   className={cn(
                     'font-medium',
                     timingTextColorClass(
-                      getResponseTimeColor(
-                        props.log.use_time,
-                        props.log.completion_tokens
-                      )
+                      getResponseTimeColor(log.use_time, log.completion_tokens)
                     )
                   )}
                 >
-                  {formatUseTime(props.log.use_time)}
-                  {props.log.is_stream &&
-                    other?.frt != null &&
-                    other.frt > 0 && (
-                      <span
-                        className={cn(
-                          'font-normal',
-                          timingTextColorClass(
-                            getFirstResponseTimeColor(other.frt / 1000)
-                          )
-                        )}
-                      >
-                        {' '}
-                        (FRT: {formatUseTime(other.frt / 1000)})
-                      </span>
-                    )}
+                  {formatUseTime(log.use_time)}
+                  {log.is_stream && other?.frt != null && other.frt > 0 && (
+                    <span
+                      className={cn(
+                        'font-normal',
+                        timingTextColorClass(
+                          getFirstResponseTimeColor(other.frt / 1000)
+                        )
+                      )}
+                    >
+                      {' '}
+                      (FRT: {formatUseTime(other.frt / 1000)})
+                    </span>
+                  )}
                 </span>
               }
             />
           )}
         </div>
+
+        {retryProcess && (
+          <RetryProcessView
+            process={retryProcess}
+            events={retryProcess.events}
+            onViewLog={(id) => {
+              const target = siblingsQuery.data?.find((row) => row.id === id)
+              if (target) setJump({ from: props.log, to: target })
+            }}
+          />
+        )}
 
         {/* Request conversion (admin only, not for refund) */}
         {showConversion && (
@@ -801,12 +835,15 @@ export function DetailsDialog(props: DetailsDialogProps) {
         )}
 
         {/* Quota saturation marker (admin only) */}
-        {props.isAdmin && adminInfo?.request_policy?.length ? (
+        {props.isAdmin &&
+        policyEvents.length > 0 &&
+        !retryLoading &&
+        !retryProcess ? (
           <DetailSection
             label={t('Request policy decisions')}
             icon={<Route className='size-4' />}
           >
-            <PolicyDecisionRecord events={adminInfo.request_policy} />
+            <PolicyDecisionRecord events={policyEvents} />
           </DetailSection>
         ) : null}
         {props.isAdmin && other?.admin_info?.quota_saturation && (
@@ -876,7 +913,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
             )}
             <DetailRow
               label={t('Fee Amount')}
-              value={formatLogQuota(other.fee_quota ?? props.log.quota)}
+              value={formatLogQuota(other.fee_quota ?? log.quota)}
               mono
             />
           </DetailSection>
@@ -1154,7 +1191,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
             <DetailSection label={t('Model Mapping')}>
               <DetailRow
                 label={t('Request Model')}
-                value={props.log.model_name}
+                value={log.model_name}
                 mono
               />
               <DetailRow
@@ -1166,17 +1203,13 @@ export function DetailsDialog(props: DetailsDialogProps) {
           )}
 
         {/* Token breakdown (for consume/error types with token data) */}
-        {isDisplayableType(props.log.type) && other && (
-          <TokenBreakdown log={props.log} other={other} />
+        {isDisplayableType(log.type) && other && (
+          <TokenBreakdown log={log} other={other} />
         )}
 
         {/* Billing breakdown (consume type) */}
         {isConsume && other && !isViolation && (
-          <BillingBreakdown
-            log={props.log}
-            other={other}
-            isAdmin={props.isAdmin}
-          />
+          <BillingBreakdown log={log} other={other} isAdmin={props.isAdmin} />
         )}
 
         {/* Tiered pricing breakdown (when billing_mode is tiered_expr) */}
@@ -1203,26 +1236,23 @@ export function DetailsDialog(props: DetailsDialogProps) {
         )}
 
         {/* Admin billing mode indicator for non-consume */}
-        {props.isAdmin &&
-          !isConsume &&
-          props.log.type !== 6 &&
-          other?.admin_info && (
-            <DetailRow
-              label={t('Billing Path')}
-              value={
-                <span className='flex items-center gap-1'>
-                  {isUsageBillingPathLocal(other.admin_info) ? (
-                    <Monitor className='size-3 text-blue-500' />
-                  ) : (
-                    <Cloud className='size-3 text-emerald-500' />
-                  )}
-                  <span className='text-xs'>
-                    {getUsageBillingPathLabel(t, other.admin_info)}
-                  </span>
+        {props.isAdmin && !isConsume && log.type !== 6 && other?.admin_info && (
+          <DetailRow
+            label={t('Billing Path')}
+            value={
+              <span className='flex items-center gap-1'>
+                {isUsageBillingPathLocal(other.admin_info) ? (
+                  <Monitor className='size-3 text-blue-500' />
+                ) : (
+                  <Cloud className='size-3 text-emerald-500' />
+                )}
+                <span className='text-xs'>
+                  {getUsageBillingPathLabel(t, other.admin_info)}
                 </span>
-              }
-            />
-          )}
+              </span>
+            }
+          />
+        )}
 
         {/* Stream status details */}
         {other?.stream_status && other.stream_status.status !== 'ok' && (

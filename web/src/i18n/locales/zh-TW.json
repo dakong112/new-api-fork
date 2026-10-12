@@ -7384,6 +7384,27 @@
     "Icon, row {{row}}": "圖示，第 {{row}} 列",
     "Keywords, row {{row}}": "關鍵字，第 {{row}} 列",
     "The stored vendor rules could not be read. Restore defaults to continue.": "無法讀取已儲存的供應商識別規則。請恢復預設後繼續。",
-    "Save an empty rule list? Every model will be shown under Other.": "確定儲存空的規則清單嗎？所有模型都將顯示為「其他」。"
+    "Save an empty rule list? Every model will be shown under Other.": "確定儲存空的規則清單嗎？所有模型都將顯示為「其他」。",
+    "Retry process": "重試過程",
+    "Succeeded in the end": "最終成功",
+    "Failed in the end": "最終失敗",
+    "Final result unknown": "最終結果未知",
+    "{{count}} attempts": "共嘗試 {{count}} 次",
+    "Total time {{time}}": "總耗時 {{time}}",
+    "Charged {{amount}}": "實際扣費 {{amount}}",
+    "Not charged (fully refunded)": "未扣費（已全額退款）",
+    "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "這是該請求的第 {{attempt}} 次嘗試（失敗），請求隨後在 #{{channel}} 重試成功。",
+    "This is attempt {{attempt}} of the request. It then succeeded.": "這是該請求的第 {{attempt}} 次嘗試（失敗），請求隨後重試成功。",
+    "This is attempt {{attempt}} of the request. It failed after all retries.": "這是該請求的第 {{attempt}} 次嘗試（失敗），請求在重試後仍然失敗。",
+    "The final record of this request was not found": "找不到該請求的最終記錄",
+    "View final record": "查看最終記錄",
+    "Upstream timeout": "上游逾時",
+    "Gateway timeout": "閘道逾時",
+    "Upstream error": "上游回傳錯誤",
+    "Request rejected": "請求被拒絕",
+    "No charge for failed attempts": "失敗不扣費",
+    "Timed out after reaching the upstream, which may have billed it": "逾時類失敗，上游可能已經計費",
+    "Stream interrupted midway; charged for the output delivered": "串流輸出中途中斷，依已輸出內容扣費",
+    "Routing decision details": "路由決策明細"
   }
 }

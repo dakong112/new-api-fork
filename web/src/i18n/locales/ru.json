@@ -7385,6 +7385,27 @@
     "Icon, row {{row}}": "Значок, строка {{row}}",
     "Keywords, row {{row}}": "Ключевые слова, строка {{row}}",
     "The stored vendor rules could not be read. Restore defaults to continue.": "Не удалось прочитать сохранённые правила поставщиков. Восстановите значения по умолчанию, чтобы продолжить.",
-    "Save an empty rule list? Every model will be shown under Other.": "Сохранить пустой список правил? Все модели будут отображаться в категории «Другое»."
+    "Save an empty rule list? Every model will be shown under Other.": "Сохранить пустой список правил? Все модели будут отображаться в категории «Другое».",
+    "Retry process": "Ход повторных попыток",
+    "Succeeded in the end": "В итоге успешно",
+    "Failed in the end": "В итоге неудачно",
+    "Final result unknown": "Итоговый результат неизвестен",
+    "{{count}} attempts": "Попыток: {{count}}",
+    "Total time {{time}}": "Общее время {{time}}",
+    "Charged {{amount}}": "Списано {{amount}}",
+    "Not charged (fully refunded)": "Не списано (полный возврат)",
+    "This is attempt {{attempt}} of the request. It then succeeded on #{{channel}}.": "Это попытка {{attempt}} запроса. Затем запрос выполнен на #{{channel}}.",
+    "This is attempt {{attempt}} of the request. It then succeeded.": "Это попытка {{attempt}} запроса. Затем запрос выполнен успешно.",
+    "This is attempt {{attempt}} of the request. It failed after all retries.": "Это попытка {{attempt}} запроса. Все повторы завершились неудачей.",
+    "The final record of this request was not found": "Итоговая запись этого запроса не найдена",
+    "View final record": "Открыть итоговую запись",
+    "Upstream timeout": "Тайм-аут вышестоящего сервера",
+    "Gateway timeout": "Тайм-аут шлюза",
+    "Upstream error": "Ошибка вышестоящего сервера",
+    "Request rejected": "Запрос отклонён",
+    "No charge for failed attempts": "За неудачные попытки не списывается",
+    "Timed out after reaching the upstream, which may have billed it": "Тайм-аут после обращения к вышестоящему серверу; он мог выставить счёт",
+    "Stream interrupted midway; charged for the output delivered": "Поток прерван на середине; списано за уже выданный ответ",
+    "Routing decision details": "Подробности решений маршрутизации"
   }
 }
