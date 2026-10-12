@@ -35,7 +35,7 @@ func IssueSSOCredentials(userID int, name string, maxKeys, maxPATs int, newKey *
 		err := tx.Where("user_id = ? AND name = ?", userID, name).First(&key).Error
 		switch {
 		case err == nil:
-			if key.Status != common.TokenStatusEnabled {
+			if key.Status != common.TokenStatusEnabled || (key.ExpiredTime != -1 && key.ExpiredTime < common.GetTimestamp()) {
 				return ErrSSOAPIKeyDisabled
 			}
 		case errors.Is(err, gorm.ErrRecordNotFound):

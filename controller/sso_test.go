@@ -71,7 +71,7 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	previousMain, previousLog := common.MainDatabaseType(), common.LogDatabaseType()
 	previousRedis, previousMaster := common.RedisEnabled, common.IsMasterNode
 	previousClients := setting.SSOClients2JsonString()
-	ssoExchangeFailures = common.InMemoryRateLimiter{}
+	ssoExchangeFailures = newSSOExchangeLimiter()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, i18n.Init())
@@ -292,6 +292,11 @@ func TestExchangeSSOCodeCredentialConflicts(t *testing.T) {
 	require.NoError(t, model.DB.Model(&model.Token{}).Where("user_id = ? AND name = ?", user.Id, "sso:infinite").Update("status", common.TokenStatusDisabled).Error)
 	disabled := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), ssoTestSecret, ssoTestRedirect))
 	assert.Equal(t, http.StatusConflict, disabled.Code)
+
+	// An expired key is refused as well.
+	require.NoError(t, model.DB.Model(&model.Token{}).Where("user_id = ?", user.Id).Updates(map[string]any{"status": common.TokenStatusEnabled, "expired_time": time.Now().Unix() - 10}).Error)
+	expired := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), ssoTestSecret, ssoTestRedirect))
+	assert.Equal(t, http.StatusConflict, expired.Code)
 }
 
 func TestExchangeSSOCodeAccessTokenLimit(t *testing.T) {
@@ -316,6 +321,15 @@ func TestExchangeSSOCodeThrottlesWrongSecrets(t *testing.T) {
 		wrong := ssoPost(router, "/api/sso/exchange", "", exchangeBody("x", "wrong", ssoTestRedirect))
 		require.Equal(t, http.StatusUnauthorized, wrong.Code)
 	}
-	blocked := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), ssoTestSecret, ssoTestRedirect))
+	code := issueSSOTestCode(t, router, jwt)
+	blocked := ssoPost(router, "/api/sso/exchange", "", exchangeBody(code, ssoTestSecret, ssoTestRedirect))
 	assert.Equal(t, http.StatusTooManyRequests, blocked.Code)
+
+	// Another caller is not affected by the failures of the first one.
+	request := httptest.NewRequest(http.MethodPost, "/api/sso/exchange", strings.NewReader(exchangeBody(code, ssoTestSecret, ssoTestRedirect)))
+	request.Header.Set("Content-Type", "application/json")
+	request.RemoteAddr = "192.0.2.99:4567"
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	assert.Equal(t, http.StatusOK, response.Code, response.Body.String())
 }

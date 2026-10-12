@@ -20,7 +20,13 @@ const (
 
 // ponytail: per-process counter; with several nodes each allows its own
 // budget. Move to a Redis counter if multi-node brute force matters.
-var ssoExchangeFailures common.InMemoryRateLimiter
+var ssoExchangeFailures = newSSOExchangeLimiter()
+
+func newSSOExchangeLimiter() *common.InMemoryRateLimiter {
+	limiter := &common.InMemoryRateLimiter{}
+	limiter.Init(common.RateLimitKeyExpirationDuration)
+	return limiter
+}
 
 // CreateSSOCode issues a single-use login code for a registered application.
 // The caller must hold a browser session; personal access tokens are rejected
@@ -97,12 +103,12 @@ func ExchangeSSOCode(c *gin.Context) {
 	}
 	client, ok := setting.FindSSOClient(request.ClientID)
 	if !ok {
-		recordSSOExchangeFailure(c, 0, request.ClientID, "invalid_client", http.StatusUnauthorized)
+		// No audit row: client_id is attacker-controlled for unknown clients.
 		common.ApiErrorStatus(c, http.StatusUnauthorized, errors.New("invalid client credentials"))
 		return
 	}
-	ssoExchangeFailures.Init(common.RateLimitKeyExpirationDuration)
-	attempt := ssoExchangeFailures.Reserve("sso-exchange-fail:"+client.ClientID, ssoExchangeMaxFailures, ssoExchangeFailureWindow)
+	// Keyed by caller too, so a stranger cannot lock the real app out.
+	attempt := ssoExchangeFailures.Reserve("sso-exchange-fail:"+client.ClientID+":"+c.ClientIP(), ssoExchangeMaxFailures, ssoExchangeFailureWindow)
 	if attempt == nil {
 		recordSSOExchangeFailure(c, 0, client.ClientID, "throttled", http.StatusTooManyRequests)
 		common.ApiErrorStatus(c, http.StatusTooManyRequests, errors.New("too many failed attempts"))
@@ -119,8 +125,13 @@ func ExchangeSSOCode(c *gin.Context) {
 		Purpose:  model.AuthFlowPurposeSSOCode,
 		Provider: client.ClientID,
 	})
-	if err != nil || flow.Payload != request.RedirectURI || !ssoSessionActive(flow.SessionId) {
+	if err != nil || flow.Payload != request.RedirectURI {
 		recordSSOExchangeFailure(c, 0, client.ClientID, "invalid_code", http.StatusBadRequest)
+		common.ApiErrorStatus(c, http.StatusBadRequest, errors.New("invalid or expired code"))
+		return
+	}
+	if !ssoSessionActive(flow.SessionId) {
+		recordSSOExchangeFailure(c, flow.UserId, client.ClientID, "session_inactive", http.StatusBadRequest)
 		common.ApiErrorStatus(c, http.StatusBadRequest, errors.New("invalid or expired code"))
 		return
 	}
@@ -149,8 +160,7 @@ func ExchangeSSOCode(c *gin.Context) {
 		"token_ref":                result.TokenRef,
 		"deleted_access_token_ids": result.DeletedPATIDs,
 	}
-	model.RecordOperationAuditLog(user.Id, user.Role, auditContentEN("sso.grant", params), c.ClientIP(), "sso.grant", params, nil,
-		&model.AuditRequestInfo{Method: c.Request.Method, Route: c.FullPath(), Path: c.FullPath(), Status: http.StatusOK, Success: true}, c)
+	recordSSOAudit(c, user.Id, user.Role, "sso.grant", params, http.StatusOK, true)
 	common.ApiSuccess(c, result.Grant)
 }
 
@@ -164,7 +174,20 @@ func ssoSessionActive(sid string) bool {
 // recordSSOExchangeFailure audits a rejected exchange with the client and a
 // reason only; codes, secrets and credentials never enter the log.
 func recordSSOExchangeFailure(c *gin.Context, userID int, clientID, reason string, status int) {
-	params := map[string]any{"client_id": clientID, "reason": reason}
-	model.RecordOperationAuditLog(userID, 0, auditContentEN("sso.exchange_failed", params), c.ClientIP(), "sso.exchange_failed", params, nil,
-		&model.AuditRequestInfo{Method: c.Request.Method, Route: c.FullPath(), Path: c.FullPath(), Status: status, Success: false}, c)
+	recordSSOAudit(c, userID, 0, "sso.exchange_failed", map[string]any{"client_id": clientID, "reason": reason}, status, false)
+}
+
+// recordSSOAudit writes a security audit row for a request authenticated by an
+// application secret, not by a user session.
+func recordSSOAudit(c *gin.Context, userID, role int, action string, params map[string]any, status int, success bool) {
+	username, _ := model.GetUsernameById(userID, false)
+	model.RecordAuditLog(c, model.AuditLog{
+		UserId: userID, Username: username, ActorRole: role, Category: model.AuditCategorySecurity,
+		Action: action, Content: auditContentEN(action, params), Ip: c.ClientIP(), AuthMethod: "sso_client",
+		Status: status, Success: success,
+		Other: model.AuditOther{
+			Op:        &model.AuditOperation{Action: action, Params: params},
+			AuditInfo: &model.AuditRequestInfo{Method: c.Request.Method, Route: c.FullPath(), Path: c.FullPath(), Status: status, Success: success},
+		},
+	})
 }
