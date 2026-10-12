@@ -29,7 +29,7 @@ export const Route = createFileRoute('/_authenticated/sso/authorize')({
   component: SSOAuthorizePage,
 })
 
-function SSOAuthorizePage() {
+export function SSOAuthorizePage() {
   const { t } = useTranslation()
   const started = useRef(false)
   const [failed, setFailed] = useState(false)

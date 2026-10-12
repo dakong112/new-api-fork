@@ -41,7 +41,9 @@ export const Route = createFileRoute('/_authenticated/apps')({
 function AppsPage() {
   const { t } = useTranslation()
   const query = useQuery({ queryKey: ['sso-apps'], queryFn: listSSOApps })
-  const apps = query.data ?? []
+  const apps = (query.data ?? []).filter((app) =>
+    /^https?:\/\//i.test(app.launch_url)
+  )
 
   let content = (
     <ItemGroup className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
