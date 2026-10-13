@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/url"
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -81,8 +82,12 @@ func isAllowedSSORedirect(raw string) bool {
 	if parsed.Scheme == "https" {
 		return true
 	}
+	if parsed.Scheme != "http" {
+		return false
+	}
 	host := parsed.Hostname()
-	return parsed.Scheme == "http" && (host == "localhost" || host == "127.0.0.1")
+	// SSO_ALLOW_INSECURE_REDIRECTS lets IP-only test deployments register http callbacks; never enable it in production.
+	return host == "localhost" || host == "127.0.0.1" || os.Getenv("SSO_ALLOW_INSECURE_REDIRECTS") == "true"
 }
 
 func UpdateSSOClientsByJsonString(value string) error {

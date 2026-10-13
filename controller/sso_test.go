@@ -59,6 +59,14 @@ func TestSSOClientsOptionValidation(t *testing.T) {
 	assert.True(t, client.SecretMatches("s3cret"))
 	assert.False(t, client.SecretMatches("S3cret"))
 	assert.False(t, client.SecretMatches(""))
+
+	plainHTTP := `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["http://203.0.113.5:23580/sso/callback"]}]`
+	t.Setenv("SSO_ALLOW_INSECURE_REDIRECTS", "true")
+	_, err = setting.ParseSSOClients(plainHTTP)
+	assert.NoError(t, err, "test deployments may opt in to http callbacks")
+	t.Setenv("SSO_ALLOW_INSECURE_REDIRECTS", "")
+	_, err = setting.ParseSSOClients(plainHTTP)
+	assert.Error(t, err, "http callbacks stay rejected unless explicitly enabled")
 }
 
 const ssoTestRedirect = "https://www.example.com/sso/callback"
