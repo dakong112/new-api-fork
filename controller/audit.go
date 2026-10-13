@@ -33,7 +33,7 @@ var auditContentTemplates = map[string]string{
 	"sso.grant":                 "Issued SSO credentials to application ${client_id}",
 	"sso.exchange_failed":       "Rejected SSO code exchange for application ${client_id} (${reason})",
 	"sso.ticket_issue":          "Issued a login ticket for application ${client_id}",
-	"sso.ticket_redeem":         "Redeemed a login ticket from application ${client_id}",
+	"sso.ticket_accepted":       "Accepted a login ticket from application ${client_id}",
 	"sso.ticket_failed":         "Rejected login ticket for application ${client_id} (${reason})",
 	"access_token.revoke":       "Revoked an access token",
 	"access_token.rename":       "Renamed an access token",

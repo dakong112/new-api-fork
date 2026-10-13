@@ -11,7 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const ssoTicketTTL = 60 * time.Second
+// Long enough for a person to read the confirmation page.
+const ssoTicketTTL = 120 * time.Second
 
 var errSSOTicketInvalid = errors.New("invalid or expired ticket")
 
@@ -65,6 +66,11 @@ func CreateSSOTicket(c *gin.Context) {
 		fail("user_unavailable", http.StatusForbidden, "user unavailable")
 		return
 	}
+	// ponytail: admins keep to the sign-in page; a stolen app PAT must not open an admin console.
+	if user.Role >= common.RoleAdminUser {
+		fail("role_not_allowed", http.StatusForbidden, "role not allowed")
+		return
+	}
 	payload, err := common.Marshal(map[string]any{"auth_version": user.AuthVersion})
 	if err != nil {
 		fail("ticket_failed", http.StatusInternalServerError, "ticket creation failed")
@@ -112,12 +118,12 @@ func PreviewSSOTicket(c *gin.Context) {
 		common.ApiErrorStatus(c, http.StatusBadRequest, errSSOTicketInvalid)
 		return
 	}
-	user, err := model.GetUserById(flow.UserId, false)
-	client, clientOK := setting.FindSSOClient(flow.Provider)
-	if err != nil || user.Status != common.UserStatusEnabled || !clientOK {
+	user, _, reason := checkSSOTicketFlow(flow)
+	if reason != "" {
 		common.ApiErrorStatus(c, http.StatusBadRequest, errSSOTicketInvalid)
 		return
 	}
+	client, _ := setting.FindSSOClient(flow.Provider)
 	common.ApiSuccess(c, gin.H{"username": user.Username, "display_name": user.DisplayName, "client_name": client.Name})
 }
 
@@ -138,39 +144,45 @@ func RedeemSSOTicket(c *gin.Context) {
 		recordSSOAudit(c, flow.UserId, 0, "sso.ticket_failed", map[string]any{"client_id": flow.Provider, "reason": reason}, http.StatusBadRequest, false)
 		common.ApiErrorStatus(c, http.StatusBadRequest, errSSOTicketInvalid)
 	}
+	user, tokenID, reason := checkSSOTicketFlow(flow)
+	if reason != "" {
+		reject(reason)
+		return
+	}
+	recordSSOAudit(c, user.Id, user.Role, "sso.ticket_accepted", map[string]any{"client_id": flow.Provider, "token_id": tokenID}, http.StatusOK, true)
+	// Accepted means the ticket passed every check; setupLogin may still answer with a 2FA challenge.
+	c.Set("login_method", "sso_ticket")
+	setupLogin(user, nil, c)
+}
+
+// checkSSOTicketFlow re-validates everything a ticket depends on and returns
+// the user and issuing PAT id, or a failure reason.
+func checkSSOTicketFlow(flow *model.AuthFlow) (*model.User, int, string) {
 	var payload struct {
 		AuthVersion int64 `json:"auth_version"`
 	}
 	if err := common.UnmarshalJsonStr(flow.Payload, &payload); err != nil {
-		reject("payload_invalid")
-		return
+		return nil, 0, "payload_invalid"
 	}
 	tokenID, ok := model.ParseAccessTokenSessionID(flow.SessionId)
 	if !ok {
-		reject("token_invalid")
-		return
+		return nil, 0, "token_invalid"
 	}
 	// The issuing PAT must still exist; revoking it cancels pending tickets.
 	token, err := model.GetUserAccessToken(flow.UserId, tokenID)
 	if err != nil || token.Name != "sso:"+flow.Provider || token.Expired(time.Now().Unix()) {
-		reject("token_revoked")
-		return
+		return nil, 0, "token_revoked"
 	}
 	if _, found := setting.FindSSOClient(flow.Provider); !found {
-		reject("client_removed")
-		return
+		return nil, 0, "client_removed"
 	}
 	user, err := model.GetUserById(flow.UserId, false)
 	if err != nil || user.Status != common.UserStatusEnabled {
-		reject("user_unavailable")
-		return
+		return nil, 0, "user_unavailable"
 	}
 	// A password change or revocation bumps AuthVersion and kills old tickets.
 	if user.AuthVersion != payload.AuthVersion {
-		reject("auth_version_changed")
-		return
+		return nil, 0, "auth_version_changed"
 	}
-	recordSSOAudit(c, user.Id, user.Role, "sso.ticket_redeem", map[string]any{"client_id": flow.Provider, "token_id": tokenID}, http.StatusOK, true)
-	c.Set("login_method", "sso_ticket")
-	setupLogin(user, nil, c)
+	return user, tokenID, ""
 }

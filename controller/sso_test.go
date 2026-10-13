@@ -100,8 +100,8 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	api.POST("/sso/exchange", ExchangeSSOCode)
 	api.GET("/sso/apps", middleware.UserAuth(), ListSSOApps)
 	api.POST("/sso/ticket", middleware.UserAuth(), CreateSSOTicket)
-	api.POST("/sso/ticket/preview", PreviewSSOTicket)
-	api.POST("/sso/ticket/redeem", RedeemSSOTicket)
+	api.POST("/sso/ticket/preview", middleware.SameSiteJSONOnly(), PreviewSSOTicket)
+	api.POST("/sso/ticket/redeem", middleware.SameSiteJSONOnly(), RedeemSSOTicket)
 	return router, user, jwt
 }
 
@@ -362,7 +362,7 @@ func issueSSOTestTicket(t *testing.T, router http.Handler, pat string) string {
 	}
 	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body))
 	require.NotEmpty(t, body.Data.Ticket)
-	assert.InDelta(t, time.Now().Add(service.SSOCodeTTL).Unix(), body.Data.ExpiresAt, 5)
+	assert.InDelta(t, time.Now().Add(ssoTicketTTL).Unix(), body.Data.ExpiresAt, 5)
 	return body.Data.Ticket
 }
 
@@ -476,4 +476,69 @@ func TestRedeemSSOTicketRequiresSecondFactor(t *testing.T) {
 	var sessions int64
 	require.NoError(t, model.DB.Model(&model.UserSession{}).Where("user_id = ?", user.Id).Count(&sessions).Error)
 	assert.EqualValues(t, 1, sessions) // no session before the challenge is answered
+}
+
+func TestSSOTicketRoutesRejectLoginCSRF(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	pat, _ := issueSSOTestPAT(t, user.Id, "sso:infinite")
+	ticket := issueSSOTestTicket(t, router, pat)
+
+	send := func(contentType string, headers map[string]string) *httptest.ResponseRecorder {
+		request := httptest.NewRequest(http.MethodPost, "/api/sso/ticket/redeem", strings.NewReader(ssoTicketRequest(ticket)))
+		request.Header.Set("Content-Type", contentType)
+		for key, value := range headers {
+			request.Header.Set(key, value)
+		}
+		request.RemoteAddr = "192.0.2.8:4567"
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+		return response
+	}
+	cases := []struct {
+		name        string
+		contentType string
+		headers     map[string]string
+		status      int
+	}{
+		{"form encoded body", "application/x-www-form-urlencoded", nil, http.StatusUnsupportedMediaType},
+		{"text/plain body", "text/plain", nil, http.StatusUnsupportedMediaType},
+		{"cross-site fetch", "application/json", map[string]string{"Sec-Fetch-Site": "cross-site"}, http.StatusForbidden},
+		{"same-site sibling", "application/json", map[string]string{"Sec-Fetch-Site": "same-site"}, http.StatusForbidden},
+		{"foreign Origin", "application/json", map[string]string{"Origin": "https://evil.example.com"}, http.StatusForbidden},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.status, send(tc.contentType, tc.headers).Code)
+		})
+	}
+	// None of the rejected requests spent the ticket.
+	response := send("application/json; charset=utf-8", map[string]string{"Origin": "http://example.com", "Sec-Fetch-Site": "same-origin"})
+	assert.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	assert.Contains(t, response.Body.String(), `"success":true`)
+}
+
+func TestCreateSSOTicketRefusesAdmins(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	pat, _ := issueSSOTestPAT(t, user.Id, "sso:infinite")
+	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("role", common.RoleAdminUser).Error)
+
+	response := ssoPost(router, "/api/sso/ticket", pat, ssoTicketBody("infinite", ssoTestSecret))
+	assert.Equal(t, http.StatusForbidden, response.Code, response.Body.String())
+	var audit model.AuditLog
+	require.NoError(t, model.DB.Where("action = ?", "sso.ticket_failed").First(&audit).Error)
+	assert.Contains(t, audit.Content, "role_not_allowed")
+}
+
+func TestPreviewSSOTicketRejectsWhatRedeemWouldReject(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	pat, token := issueSSOTestPAT(t, user.Id, "sso:infinite")
+
+	changed := issueSSOTestTicket(t, router, pat)
+	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("auth_version", 2).Error)
+	assert.Equal(t, http.StatusBadRequest, ssoPost(router, "/api/sso/ticket/preview", "", ssoTicketRequest(changed)).Code)
+	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("auth_version", 1).Error)
+
+	revoked := issueSSOTestTicket(t, router, pat)
+	require.NoError(t, model.DB.Delete(token).Error)
+	assert.Equal(t, http.StatusBadRequest, ssoPost(router, "/api/sso/ticket/preview", "", ssoTicketRequest(revoked)).Code)
 }

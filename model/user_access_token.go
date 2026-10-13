@@ -327,3 +327,9 @@ func LegacyAccessTokensRetired(now int64) bool {
 	retireAt := legacyAccessTokenRetireAt.Load()
 	return retireAt <= 0 || now >= retireAt
 }
+
+// IsReservedSSOTokenName reports whether a credential name belongs to the SSO
+// grant ("sso:<client_id>"); only the server may create such credentials.
+func IsReservedSSOTokenName(name string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(name)), "sso:")
+}

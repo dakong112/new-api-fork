@@ -7420,6 +7420,7 @@
     "Confirm sign-in": "Confirm sign-in",
     "You are about to sign in to the account center as {{name}} (from {{client}}).": "You are about to sign in to the account center as {{name}} (from {{client}}).",
     "If you did not start this, cancel.": "If you did not start this, cancel.",
-    "App redirect sign-in": "App redirect sign-in"
+    "App redirect sign-in": "App redirect sign-in",
+    "Names starting with sso: are reserved": "Names starting with sso: are reserved"
   }
 }

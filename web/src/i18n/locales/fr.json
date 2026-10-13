@@ -7421,6 +7421,7 @@
     "Confirm sign-in": "Confirmer la connexion",
     "You are about to sign in to the account center as {{name}} (from {{client}}).": "Vous allez vous connecter au centre de compte en tant que {{name}} (depuis {{client}}).",
     "If you did not start this, cancel.": "Si vous n'êtes pas à l'origine de cette demande, annulez.",
-    "App redirect sign-in": "Connexion par redirection d'application"
+    "App redirect sign-in": "Connexion par redirection d'application",
+    "Names starting with sso: are reserved": "Les noms commençant par sso: sont réservés"
   }
 }

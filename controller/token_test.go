@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -891,4 +892,37 @@ func verifyAPITokenAudit(t *testing.T) {
 		require.NoError(t, model.DB.Model(&model.Token{}).Where("name = ?", "audit-down").Count(&count).Error)
 		assert.EqualValues(t, 1, count)
 	})
+}
+
+func TestAPIKeyNamesWithSSOPrefixAreReserved(t *testing.T) {
+	db := setupTokenControllerTestDB(t)
+	seedToken(t, db, 1, "plain", "abcd1234efgh5678")
+	granted := seedToken(t, db, 1, "sso:infinite", "wxyz1234cdef5678")
+	base := map[string]any{"expired_time": -1, "remain_quota": 100, "unlimited_quota": true, "group": "default"}
+	with := func(fields map[string]any) map[string]any {
+		body := map[string]any{}
+		maps.Copy(body, base)
+		maps.Copy(body, fields)
+		return body
+	}
+
+	for _, name := range []string{"sso:infinite", " SSO:x"} {
+		ctx, recorder := newAuthenticatedContext(t, http.MethodPost, "/api/token/", with(map[string]any{"name": name}), 1)
+		AddToken(ctx)
+		assert.False(t, decodeAPIResponse(t, recorder).Success, name)
+	}
+	var count int64
+	require.NoError(t, db.Model(&model.Token{}).Where("user_id = 1").Count(&count).Error)
+	assert.EqualValues(t, 2, count)
+
+	var plain model.Token
+	require.NoError(t, db.Where("name = ?", "plain").First(&plain).Error)
+	ctx, recorder := newAuthenticatedContext(t, http.MethodPut, "/api/token/", with(map[string]any{"id": plain.Id, "name": "sso:other"}), 1)
+	UpdateToken(ctx)
+	assert.False(t, decodeAPIResponse(t, recorder).Success, "renaming into the reserved prefix")
+
+	// The server-issued key keeps its own name when the owner edits it.
+	ctx, recorder = newAuthenticatedContext(t, http.MethodPut, "/api/token/", with(map[string]any{"id": granted.Id, "name": "sso:infinite"}), 1)
+	UpdateToken(ctx)
+	assert.True(t, decodeAPIResponse(t, recorder).Success)
 }
