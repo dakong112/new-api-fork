@@ -7422,6 +7422,7 @@
     "You are about to sign in to the account center as {{name}} (from {{client}}).": "{{name}} としてアカウントセンターにログインします（{{client}} から）。",
     "If you did not start this, cancel.": "心当たりがない場合はキャンセルしてください。",
     "App redirect sign-in": "アプリからのリダイレクトログイン",
-    "Names starting with sso: are reserved": "sso: で始まる名前は予約されています"
+    "Names starting with sso: are reserved": "sso: で始まる名前は予約されています",
+    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "現在 {{current}} としてログイン中です。確認すると {{name}} に切り替わります。"
   }
 }

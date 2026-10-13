@@ -7422,6 +7422,7 @@
     "You are about to sign in to the account center as {{name}} (from {{client}}).": "Bạn sắp đăng nhập vào trung tâm tài khoản với tư cách {{name}} (từ {{client}}).",
     "If you did not start this, cancel.": "Nếu bạn không thực hiện, hãy hủy.",
     "App redirect sign-in": "Đăng nhập chuyển hướng từ ứng dụng",
-    "Names starting with sso: are reserved": "Tên bắt đầu bằng sso: được dành riêng"
+    "Names starting with sso: are reserved": "Tên bắt đầu bằng sso: được dành riêng",
+    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "Hiện đang đăng nhập với tư cách {{current}}; xác nhận sẽ chuyển sang {{name}}."
   }
 }

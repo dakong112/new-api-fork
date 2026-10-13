@@ -7422,6 +7422,7 @@
     "You are about to sign in to the account center as {{name}} (from {{client}}).": "Вы собираетесь войти в личный кабинет как {{name}} (из {{client}}).",
     "If you did not start this, cancel.": "Если это были не вы, отмените вход.",
     "App redirect sign-in": "Вход через переход из приложения",
-    "Names starting with sso: are reserved": "Имена, начинающиеся с sso:, зарезервированы"
+    "Names starting with sso: are reserved": "Имена, начинающиеся с sso:, зарезервированы",
+    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "Сейчас выполнен вход как {{current}}; подтверждение переключит на {{name}}."
   }
 }

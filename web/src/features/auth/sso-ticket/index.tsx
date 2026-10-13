@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
 import { handleServerError } from '@/lib/handle-server-error'
 import { AuthOperationError } from '@/lib/secure-verification'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { AuthLayout } from '../auth-layout'
 import { useAuthRedirect } from '../hooks/use-auth-redirect'
@@ -60,6 +61,7 @@ export function SsoTicket() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { handleLoginResult } = useAuthRedirect()
+  const currentUser = useAuthStore((state) => state.auth.user)
   const [state, setState] = useState<TicketState>({ status: 'loading' })
   const ticket = useRef('')
   const target = useRef(DEFAULT_TARGET)
@@ -146,6 +148,17 @@ export function SsoTicket() {
               { name, client: preview.client_name }
             )}
           </p>
+          {currentUser && currentUser.username !== preview.username && (
+            <p className='text-sm font-medium'>
+              {t(
+                'Currently signed in as {{current}}; confirming will switch to {{name}}.',
+                {
+                  current: currentUser.display_name || currentUser.username,
+                  name,
+                }
+              )}
+            </p>
+          )}
           <p className='text-muted-foreground text-sm'>
             {t('If you did not start this, cancel.')}
           </p>

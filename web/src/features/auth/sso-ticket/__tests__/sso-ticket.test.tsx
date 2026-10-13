@@ -181,3 +181,22 @@ it('moves to the verification step instead of signing in when a challenge is ret
   expect(useAuthStore.getState().auth.user).toBeNull()
   expect(useAuthStore.getState().auth.pendingLoginVerification).not.toBeNull()
 })
+
+it('warns that confirming switches the account when someone else is already signed in', async () => {
+  vi.spyOn(api, 'post').mockResolvedValueOnce(preview)
+  renderTicketPage('#ticket=t1')
+  useAuthStore.getState().auth.setUser({ id: 99, username: 'bob', role: 1 })
+  expect(
+    await screen.findByText(
+      'Currently signed in as bob; confirming will switch to Alice.'
+    )
+  ).toBeVisible()
+})
+
+it('does not warn when the ticket is for the account that is already signed in', async () => {
+  vi.spyOn(api, 'post').mockResolvedValueOnce(preview)
+  renderTicketPage('#ticket=t1')
+  useAuthStore.getState().auth.setUser({ id: 7, username: 'alice', role: 1 })
+  await screen.findByRole('button', { name: 'Confirm sign-in' })
+  expect(screen.queryByText(/Currently signed in as/)).not.toBeInTheDocument()
+})

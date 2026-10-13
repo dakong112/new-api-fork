@@ -7421,6 +7421,7 @@
     "You are about to sign in to the account center as {{name}} (from {{client}}).": "你即將以 {{name}} 的身分登入帳戶中心（來自 {{client}}）。",
     "If you did not start this, cancel.": "如果不是你本人發起的，請取消。",
     "App redirect sign-in": "應用程式跳轉登入",
-    "Names starting with sso: are reserved": "以 sso: 開頭的名稱為系統保留"
+    "Names starting with sso: are reserved": "以 sso: 開頭的名稱為系統保留",
+    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "目前已登入為 {{current}}，確認後將切換為 {{name}}。"
   }
 }
