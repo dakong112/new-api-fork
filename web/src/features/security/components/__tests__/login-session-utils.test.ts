@@ -26,6 +26,9 @@ const translate = ((key: string) => key) as TFunction
 describe('login session presentation', () => {
   test('labels built-in and provider OAuth login methods', () => {
     expect(loginMethodLabel('password', translate)).toBe('Password')
+    expect(loginMethodLabel('sso_ticket', translate)).toBe(
+      'App redirect sign-in'
+    )
     expect(loginMethodLabel('2fa', translate)).toBe('Two-factor Authentication')
     expect(loginMethodLabel('oauth:github', translate)).toBe('OAuth · GitHub')
     expect(loginMethodLabel('oauth:custom-provider', translate)).toBe(

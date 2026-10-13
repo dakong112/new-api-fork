@@ -7412,6 +7412,14 @@
     "Application authorization failed": "Application authorization failed",
     "Signing you in to the application...": "Signing you in to the application...",
     "Applications": "Applications",
-    "No applications available": "No applications available"
+    "No applications available": "No applications available",
+    "Checking your sign-in link...": "Checking your sign-in link...",
+    "This sign-in link is invalid or has expired": "This sign-in link is invalid or has expired",
+    "Open the app again to get a new link, or sign in directly.": "Open the app again to get a new link, or sign in directly.",
+    "Go to sign in": "Go to sign in",
+    "Confirm sign-in": "Confirm sign-in",
+    "You are about to sign in to the account center as {{name}} (from {{client}}).": "You are about to sign in to the account center as {{name}} (from {{client}}).",
+    "If you did not start this, cancel.": "If you did not start this, cancel.",
+    "App redirect sign-in": "App redirect sign-in"
   }
 }

@@ -7413,6 +7413,14 @@
     "Application authorization failed": "Échec de l'autorisation de l'application",
     "Signing you in to the application...": "Connexion à l'application…",
     "Applications": "Applications",
-    "No applications available": "Aucune application disponible"
+    "No applications available": "Aucune application disponible",
+    "Checking your sign-in link...": "Vérification de votre lien de connexion...",
+    "This sign-in link is invalid or has expired": "Ce lien de connexion est invalide ou a expiré",
+    "Open the app again to get a new link, or sign in directly.": "Rouvrez l'application pour obtenir un nouveau lien, ou connectez-vous directement.",
+    "Go to sign in": "Aller à la connexion",
+    "Confirm sign-in": "Confirmer la connexion",
+    "You are about to sign in to the account center as {{name}} (from {{client}}).": "Vous allez vous connecter au centre de compte en tant que {{name}} (depuis {{client}}).",
+    "If you did not start this, cancel.": "Si vous n'êtes pas à l'origine de cette demande, annulez.",
+    "App redirect sign-in": "Connexion par redirection d'application"
   }
 }

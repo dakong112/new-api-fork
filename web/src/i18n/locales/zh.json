@@ -7412,6 +7412,14 @@
     "Application authorization failed": "应用授权失败",
     "Signing you in to the application...": "正在登录应用…",
     "Applications": "应用",
-    "No applications available": "暂无可用应用"
+    "No applications available": "暂无可用应用",
+    "Checking your sign-in link...": "正在检查登录链接...",
+    "This sign-in link is invalid or has expired": "此登录链接无效或已过期",
+    "Open the app again to get a new link, or sign in directly.": "请重新从应用打开以获取新链接，或直接登录。",
+    "Go to sign in": "前往登录",
+    "Confirm sign-in": "确认登录",
+    "You are about to sign in to the account center as {{name}} (from {{client}}).": "你即将以 {{name}} 的身份登录账户中心（来自 {{client}}）。",
+    "If you did not start this, cancel.": "如果不是你本人发起的，请取消。",
+    "App redirect sign-in": "应用跳转登录"
   }
 }

@@ -7413,6 +7413,14 @@
     "Application authorization failed": "Ủy quyền ứng dụng thất bại",
     "Signing you in to the application...": "Đang đăng nhập vào ứng dụng…",
     "Applications": "Ứng dụng",
-    "No applications available": "Không có ứng dụng nào khả dụng"
+    "No applications available": "Không có ứng dụng nào khả dụng",
+    "Checking your sign-in link...": "Đang kiểm tra liên kết đăng nhập...",
+    "This sign-in link is invalid or has expired": "Liên kết đăng nhập này không hợp lệ hoặc đã hết hạn",
+    "Open the app again to get a new link, or sign in directly.": "Hãy mở lại ứng dụng để lấy liên kết mới, hoặc đăng nhập trực tiếp.",
+    "Go to sign in": "Đến trang đăng nhập",
+    "Confirm sign-in": "Xác nhận đăng nhập",
+    "You are about to sign in to the account center as {{name}} (from {{client}}).": "Bạn sắp đăng nhập vào trung tâm tài khoản với tư cách {{name}} (từ {{client}}).",
+    "If you did not start this, cancel.": "Nếu bạn không thực hiện, hãy hủy.",
+    "App redirect sign-in": "Đăng nhập chuyển hướng từ ứng dụng"
   }
 }

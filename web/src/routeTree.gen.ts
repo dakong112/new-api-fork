@@ -34,6 +34,7 @@ import { Route as OauthProviderRouteImport } from './routes/oauth/$provider'
 import { Route as PricingIndexRouteImport } from './routes/pricing/index'
 import { Route as RankingsIndexRouteImport } from './routes/rankings/index'
 import { Route as SetupIndexRouteImport } from './routes/setup/index'
+import { Route as SsoTicketRouteImport } from './routes/sso/ticket'
 import { Route as authUserResetRouteImport } from './routes/(auth)/user/reset'
 import { Route as AuthenticatedChannelCostIndexRouteImport } from './routes/_authenticated/channel-cost/index'
 import { Route as AuthenticatedChannelsIndexRouteImport } from './routes/_authenticated/channels/index'
@@ -198,6 +199,11 @@ const RankingsIndexRoute = RankingsIndexRouteImport.update({
 const SetupIndexRoute = SetupIndexRouteImport.update({
   id: '/setup/',
   path: '/setup/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SsoTicketRoute = SsoTicketRouteImport.update({
+  id: '/sso/ticket',
+  path: '/sso/ticket',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authUserResetRoute = authUserResetRouteImport.update({
@@ -462,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/apps': typeof AuthenticatedAppsRoute
   '/chat2link': typeof AuthenticatedChat2linkRoute
   '/oauth/$provider': typeof OauthProviderRoute
+  '/sso/ticket': typeof SsoTicketRoute
   '/about/': typeof AboutIndexRoute
   '/pricing/': typeof PricingIndexRoute
   '/rankings/': typeof RankingsIndexRoute
@@ -527,6 +534,7 @@ export interface FileRoutesByTo {
   '/apps': typeof AuthenticatedAppsRoute
   '/chat2link': typeof AuthenticatedChat2linkRoute
   '/oauth/$provider': typeof OauthProviderRoute
+  '/sso/ticket': typeof SsoTicketRoute
   '/about': typeof AboutIndexRoute
   '/pricing': typeof PricingIndexRoute
   '/rankings': typeof RankingsIndexRoute
@@ -596,6 +604,7 @@ export interface FileRoutesById {
   '/_authenticated/apps': typeof AuthenticatedAppsRoute
   '/_authenticated/chat2link': typeof AuthenticatedChat2linkRoute
   '/oauth/$provider': typeof OauthProviderRoute
+  '/sso/ticket': typeof SsoTicketRoute
   '/about/': typeof AboutIndexRoute
   '/pricing/': typeof PricingIndexRoute
   '/rankings/': typeof RankingsIndexRoute
@@ -664,6 +673,7 @@ export interface FileRouteTypes {
     | '/apps'
     | '/chat2link'
     | '/oauth/$provider'
+    | '/sso/ticket'
     | '/about/'
     | '/pricing/'
     | '/rankings/'
@@ -729,6 +739,7 @@ export interface FileRouteTypes {
     | '/apps'
     | '/chat2link'
     | '/oauth/$provider'
+    | '/sso/ticket'
     | '/about'
     | '/pricing'
     | '/rankings'
@@ -797,6 +808,7 @@ export interface FileRouteTypes {
     | '/_authenticated/apps'
     | '/_authenticated/chat2link'
     | '/oauth/$provider'
+    | '/sso/ticket'
     | '/about/'
     | '/pricing/'
     | '/rankings/'
@@ -856,6 +868,7 @@ export interface RootRouteChildren {
   errors500Route: typeof errors500Route
   errors503Route: typeof errors503Route
   OauthProviderRoute: typeof OauthProviderRoute
+  SsoTicketRoute: typeof SsoTicketRoute
   AboutIndexRoute: typeof AboutIndexRoute
   PricingIndexRoute: typeof PricingIndexRoute
   RankingsIndexRoute: typeof RankingsIndexRoute
@@ -1038,6 +1051,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup/'
       preLoaderRoute: typeof SetupIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sso/ticket': {
+      id: '/sso/ticket'
+      path: '/sso/ticket'
+      fullPath: '/sso/ticket'
+      preLoaderRoute: typeof SsoTicketRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(auth)/user/reset': {
@@ -1492,6 +1512,7 @@ const rootRouteChildren: RootRouteChildren = {
   errors500Route: errors500Route,
   errors503Route: errors503Route,
   OauthProviderRoute: OauthProviderRoute,
+  SsoTicketRoute: SsoTicketRoute,
   AboutIndexRoute: AboutIndexRoute,
   PricingIndexRoute: PricingIndexRoute,
   RankingsIndexRoute: RankingsIndexRoute,

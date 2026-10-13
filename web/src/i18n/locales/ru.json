@@ -7413,6 +7413,14 @@
     "Application authorization failed": "Не удалось авторизовать приложение",
     "Signing you in to the application...": "Вход в приложение…",
     "Applications": "Приложения",
-    "No applications available": "Нет доступных приложений"
+    "No applications available": "Нет доступных приложений",
+    "Checking your sign-in link...": "Проверка ссылки для входа...",
+    "This sign-in link is invalid or has expired": "Ссылка для входа недействительна или истекла",
+    "Open the app again to get a new link, or sign in directly.": "Откройте приложение снова, чтобы получить новую ссылку, или войдите напрямую.",
+    "Go to sign in": "Перейти ко входу",
+    "Confirm sign-in": "Подтвердить вход",
+    "You are about to sign in to the account center as {{name}} (from {{client}}).": "Вы собираетесь войти в личный кабинет как {{name}} (из {{client}}).",
+    "If you did not start this, cancel.": "Если это были не вы, отмените вход.",
+    "App redirect sign-in": "Вход через переход из приложения"
   }
 }

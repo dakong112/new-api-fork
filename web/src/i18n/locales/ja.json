@@ -7413,6 +7413,14 @@
     "Application authorization failed": "アプリケーションの認可に失敗しました",
     "Signing you in to the application...": "アプリケーションにサインインしています…",
     "Applications": "アプリケーション",
-    "No applications available": "利用可能なアプリケーションはありません"
+    "No applications available": "利用可能なアプリケーションはありません",
+    "Checking your sign-in link...": "ログインリンクを確認しています...",
+    "This sign-in link is invalid or has expired": "このログインリンクは無効か、期限切れです",
+    "Open the app again to get a new link, or sign in directly.": "アプリからもう一度開いて新しいリンクを取得するか、直接ログインしてください。",
+    "Go to sign in": "ログインへ",
+    "Confirm sign-in": "ログインを確認",
+    "You are about to sign in to the account center as {{name}} (from {{client}}).": "{{name}} としてアカウントセンターにログインします（{{client}} から）。",
+    "If you did not start this, cancel.": "心当たりがない場合はキャンセルしてください。",
+    "App redirect sign-in": "アプリからのリダイレクトログイン"
   }
 }
