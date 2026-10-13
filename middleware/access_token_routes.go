@@ -51,6 +51,7 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"POST /api/oauth/state":               accessTokenSessionRule,
 	"POST /api/sso/code":                  accessTokenSessionRule,
 	"GET /api/sso/apps":                   accessTokenSessionRule,
+	"POST /api/sso/ticket":                accessTokenScopeRule("profile:read"),
 	"POST /api/oauth/email/bind/start":    accessTokenScopeRule("account_security:write"),
 	"POST /api/oauth/email/bind/resend":   accessTokenScopeRule("account_security:write"),
 	"POST /api/oauth/email/bind":          accessTokenScopeRule("account_security:write"),

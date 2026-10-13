@@ -28,6 +28,8 @@ var accessTokenExemptRoutes = []string{
 	"GET /api/setup",
 	"POST /api/setup",
 	"POST /api/sso/exchange",
+	"POST /api/sso/ticket/preview",
+	"POST /api/sso/ticket/redeem",
 	"OPTIONS /api/status",
 	"OPTIONS /api/verification",
 	"OPTIONS /api/sso/code",

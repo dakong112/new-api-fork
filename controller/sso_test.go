@@ -76,7 +76,7 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	require.NoError(t, err)
 	require.NoError(t, i18n.Init())
 	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.Log{}, &model.AuditLog{}, &model.CasbinRule{}, &model.AuthzRole{},
-		&model.UserAccessToken{}, &model.Option{}, &model.AuthFlow{}, &model.Token{}))
+		&model.UserAccessToken{}, &model.Option{}, &model.AuthFlow{}, &model.Token{}, &model.TwoFA{}, &model.TwoFABackupCode{}, &model.PasskeyCredential{}, &model.UserOAuthBinding{}))
 	model.DB, model.LOG_DB = db, db
 	common.SetDatabaseTypes(common.DatabaseTypeSQLite, common.DatabaseTypeSQLite)
 	common.RedisEnabled = false
@@ -99,6 +99,9 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	api.POST("/sso/code", middleware.UserAuth(), CreateSSOCode)
 	api.POST("/sso/exchange", ExchangeSSOCode)
 	api.GET("/sso/apps", middleware.UserAuth(), ListSSOApps)
+	api.POST("/sso/ticket", middleware.UserAuth(), CreateSSOTicket)
+	api.POST("/sso/ticket/preview", PreviewSSOTicket)
+	api.POST("/sso/ticket/redeem", RedeemSSOTicket)
 	return router, user, jwt
 }
 
@@ -333,4 +336,144 @@ func TestExchangeSSOCodeThrottlesWrongSecrets(t *testing.T) {
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, request)
 	assert.Equal(t, http.StatusOK, response.Code, response.Body.String())
+}
+
+func ssoTicketBody(client, secret string) string {
+	return `{"client_id":"` + client + `","client_secret":"` + secret + `"}`
+}
+
+// issueSSOTestPAT creates an application-scoped PAT like the SSO grant does.
+func issueSSOTestPAT(t *testing.T, userID int, name string) (string, *model.UserAccessToken) {
+	t.Helper()
+	raw, token := createScopedAccessToken(t, userID, 0, "profile:read")
+	require.NoError(t, model.DB.Model(token).Update("name", name).Error)
+	return raw, token
+}
+
+func issueSSOTestTicket(t *testing.T, router http.Handler, pat string) string {
+	t.Helper()
+	response := ssoPost(router, "/api/sso/ticket", pat, ssoTicketBody("infinite", ssoTestSecret))
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	var body struct {
+		Data struct {
+			Ticket    string `json:"ticket"`
+			ExpiresAt int64  `json:"expires_at"`
+		} `json:"data"`
+	}
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body))
+	require.NotEmpty(t, body.Data.Ticket)
+	assert.InDelta(t, time.Now().Add(service.SSOCodeTTL).Unix(), body.Data.ExpiresAt, 5)
+	return body.Data.Ticket
+}
+
+func ssoTicketRequest(ticket string) string {
+	return `{"ticket":"` + ticket + `"}`
+}
+
+func TestCreateSSOTicketRejections(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+	pat, _ := issueSSOTestPAT(t, user.Id, "sso:infinite")
+	otherPAT, _ := issueSSOTestPAT(t, user.Id, "sso:other")
+	legacyPAT, _ := createScopedAccessToken(t, user.Id, 0, "profile:read")
+
+	cases := []struct {
+		name   string
+		bearer string
+		body   string
+		status int
+	}{
+		{"browser session", jwt, ssoTicketBody("infinite", ssoTestSecret), http.StatusForbidden},
+		{"pat of another application", otherPAT, ssoTicketBody("infinite", ssoTestSecret), http.StatusForbidden},
+		{"unnamed pat", legacyPAT, ssoTicketBody("infinite", ssoTestSecret), http.StatusForbidden},
+		{"wrong secret", pat, ssoTicketBody("infinite", "wrong"), http.StatusUnauthorized},
+		{"unknown client", pat, ssoTicketBody("nope", ssoTestSecret), http.StatusUnauthorized},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			response := ssoPost(router, "/api/sso/ticket", tc.bearer, tc.body)
+			assert.Equal(t, tc.status, response.Code, response.Body.String())
+			assert.NotContains(t, response.Body.String(), `"ticket"`)
+		})
+	}
+	var flows int64
+	require.NoError(t, model.DB.Model(&model.AuthFlow{}).Where("purpose = ?", model.AuthFlowPurposeSSOTicket).Count(&flows).Error)
+	assert.Zero(t, flows)
+}
+
+func TestSSOTicketPreviewDoesNotConsume(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	pat, _ := issueSSOTestPAT(t, user.Id, "sso:infinite")
+	ticket := issueSSOTestTicket(t, router, pat)
+
+	for range 2 {
+		response := ssoPost(router, "/api/sso/ticket/preview", "", ssoTicketRequest(ticket))
+		require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+		assert.Contains(t, response.Body.String(), `"username":"alice"`)
+		assert.Contains(t, response.Body.String(), `"client_name":"Studio"`)
+	}
+	assert.Equal(t, http.StatusBadRequest, ssoPost(router, "/api/sso/ticket/preview", "", ssoTicketRequest("unknown")).Code)
+}
+
+func TestRedeemSSOTicket(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	pat, _ := issueSSOTestPAT(t, user.Id, "sso:infinite")
+	ticket := issueSSOTestTicket(t, router, pat)
+
+	response := ssoPost(router, "/api/sso/ticket/redeem", "", ssoTicketRequest(ticket))
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	assert.Contains(t, response.Body.String(), `"success":true`)
+	assert.NotContains(t, response.Body.String(), "challenge")
+	var method string
+	require.NoError(t, model.DB.Model(&model.UserSession{}).Where("user_id = ? AND sid <> ?", user.Id, "sso-test-session").Select("login_method").Scan(&method).Error)
+	assert.Equal(t, "sso_ticket", method)
+
+	// A ticket works once, and the audit trail never holds it.
+	assert.Equal(t, http.StatusBadRequest, ssoPost(router, "/api/sso/ticket/redeem", "", ssoTicketRequest(ticket)).Code)
+	var audits []model.AuditLog
+	require.NoError(t, model.DB.Where("action LIKE ?", "sso.ticket%").Find(&audits).Error)
+	require.NotEmpty(t, audits)
+	for _, audit := range audits {
+		raw, err := common.Marshal(audit)
+		require.NoError(t, err)
+		assert.NotContains(t, string(raw), ticket)
+		assert.NotContains(t, string(raw), pat)
+	}
+}
+
+func TestRedeemSSOTicketInvalidation(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	pat, token := issueSSOTestPAT(t, user.Id, "sso:infinite")
+
+	expired := issueSSOTestTicket(t, router, pat)
+	require.NoError(t, model.DB.Model(&model.AuthFlow{}).Where("purpose = ?", model.AuthFlowPurposeSSOTicket).Update("expires_at", time.Now().Add(-time.Second)).Error)
+	assert.Equal(t, http.StatusBadRequest, ssoPost(router, "/api/sso/ticket/redeem", "", ssoTicketRequest(expired)).Code)
+	assert.Equal(t, http.StatusBadRequest, ssoPost(router, "/api/sso/ticket/preview", "", ssoTicketRequest(expired)).Code)
+
+	changed := issueSSOTestTicket(t, router, pat)
+	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("auth_version", 2).Error)
+	assert.Equal(t, http.StatusBadRequest, ssoPost(router, "/api/sso/ticket/redeem", "", ssoTicketRequest(changed)).Code)
+	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("auth_version", 1).Error)
+
+	revoked := issueSSOTestTicket(t, router, pat)
+	require.NoError(t, model.DB.Delete(token).Error)
+	assert.Equal(t, http.StatusBadRequest, ssoPost(router, "/api/sso/ticket/redeem", "", ssoTicketRequest(revoked)).Code)
+
+	var sessions int64
+	require.NoError(t, model.DB.Model(&model.UserSession{}).Where("user_id = ?", user.Id).Count(&sessions).Error)
+	assert.EqualValues(t, 1, sessions) // only the fixture session
+}
+
+func TestRedeemSSOTicketRequiresSecondFactor(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	require.NoError(t, model.DB.Create(&model.TwoFA{UserId: user.Id, Secret: "JBSWY3DPEHPK3PXP", IsEnabled: true}).Error)
+	pat, _ := issueSSOTestPAT(t, user.Id, "sso:infinite")
+	ticket := issueSSOTestTicket(t, router, pat)
+
+	response := ssoPost(router, "/api/sso/ticket/redeem", "", ssoTicketRequest(ticket))
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	assert.Contains(t, response.Body.String(), "flow_token")
+	assert.NotContains(t, response.Body.String(), "access_token")
+	var sessions int64
+	require.NoError(t, model.DB.Model(&model.UserSession{}).Where("user_id = ?", user.Id).Count(&sessions).Error)
+	assert.EqualValues(t, 1, sessions) // no session before the challenge is answered
 }
