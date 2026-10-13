@@ -207,6 +207,7 @@ func TestExchangeSSOCode(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, tokens, 1)
 	assert.Equal(t, "sso:infinite", tokens[0].Name)
+	assert.ElementsMatch(t, []string{"profile:read", "wallet:read", "wallet:write"}, tokens[0].GetScopes())
 
 	// Replay of the same code is rejected.
 	replay := ssoPost(router, "/api/sso/exchange", "", exchangeBody(code, ssoTestSecret, ssoTestRedirect))

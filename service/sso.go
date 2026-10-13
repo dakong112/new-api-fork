@@ -79,7 +79,7 @@ func IssueSSOGrant(user *model.User, client setting.SSOClient) (*SSOGrantResult,
 		ExpiresAt: expiresAt,
 		CreatedAt: created.Unix(),
 	}
-	scopes, err := NormalizeAccessTokenScopes(user.Id, user.Role, []string{"profile:read"})
+	scopes, err := NormalizeAccessTokenScopes(user.Id, user.Role, []string{"profile:read", "wallet:read", "wallet:write"})
 	if err != nil {
 		return nil, err
 	}
