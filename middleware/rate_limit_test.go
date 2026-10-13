@@ -290,3 +290,30 @@ func TestGlobalWebRateLimitCountsFrontendFilesInStaticBucket(t *testing.T) {
 		assert.Equal(t, "1", webCount)
 	})
 }
+
+func TestUserRateLimiterLimitsUsersIndependentlyFromSameIP(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	previousRedisEnabled := common.RedisEnabled
+	common.RedisEnabled = false
+	t.Cleanup(func() { common.RedisEnabled = previousRedisEnabled })
+
+	router := gin.New()
+	router.GET(
+		"/limited",
+		func(c *gin.Context) { c.Set("id", 1000+int(c.GetHeader("X-Uid")[0]-'0')) },
+		userRateLimitFactory(1, 60, "UC:independent-test"),
+		func(c *gin.Context) { c.Status(http.StatusNoContent) },
+	)
+	do := func(uid string) int {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodGet, "/limited", nil)
+		request.RemoteAddr = "192.0.2.1:1234"
+		request.Header.Set("X-Uid", uid)
+		router.ServeHTTP(recorder, request)
+		return recorder.Code
+	}
+
+	assert.Equal(t, http.StatusNoContent, do("1"))
+	assert.Equal(t, http.StatusTooManyRequests, do("1"))
+	assert.Equal(t, http.StatusNoContent, do("2"))
+}

@@ -3188,6 +3188,7 @@
     "Incoming path must be unique": "Path đầu vào phải duy nhất",
     "Incoming path must not include query": "Path đầu vào không được chứa query",
     "Incoming path must start with /": "Path đầu vào phải bắt đầu bằng /",
+    "Invalid SSO client or redirect URI": "Ứng dụng SSO hoặc URI chuyển hướng không hợp lệ",
     "Invalid subscription ID": "ID đăng ký không hợp lệ",
     "Invalid top-up amount": "Số lượng nạp không hợp lệ",
     "Invalid top-up quota": "Hạn mức nạp không hợp lệ",
@@ -7408,6 +7409,20 @@
     "No charge for failed attempts": "Lần thất bại không tính phí",
     "Timed out after reaching the upstream, which may have billed it": "Hết thời gian sau khi đến máy chủ nguồn, có thể đã bị tính phí",
     "Stream interrupted midway; charged for the output delivered": "Luồng bị gián đoạn giữa chừng; tính phí phần nội dung đã trả về",
-    "Routing decision details": "Chi tiết quyết định định tuyến"
+    "Routing decision details": "Chi tiết quyết định định tuyến",
+    "Application authorization failed": "Ủy quyền ứng dụng thất bại",
+    "Signing you in to the application...": "Đang đăng nhập vào ứng dụng…",
+    "Applications": "Ứng dụng",
+    "No applications available": "Không có ứng dụng nào khả dụng",
+    "Checking your sign-in link...": "Đang kiểm tra liên kết đăng nhập...",
+    "This sign-in link is invalid or has expired": "Liên kết đăng nhập này không hợp lệ hoặc đã hết hạn",
+    "Open the app again to get a new link, or sign in directly.": "Hãy mở lại ứng dụng để lấy liên kết mới, hoặc đăng nhập trực tiếp.",
+    "Go to sign in": "Đến trang đăng nhập",
+    "Confirm sign-in": "Xác nhận đăng nhập",
+    "You are about to sign in to the account center as {{name}} (from {{client}}).": "Bạn sắp đăng nhập vào trung tâm tài khoản với tư cách {{name}} (từ {{client}}).",
+    "If you did not start this, cancel.": "Nếu bạn không thực hiện, hãy hủy.",
+    "App redirect sign-in": "Đăng nhập chuyển hướng từ ứng dụng",
+    "Names starting with sso: are reserved": "Tên bắt đầu bằng sso: được dành riêng",
+    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "Hiện đang đăng nhập với tư cách {{current}}; xác nhận sẽ chuyển sang {{name}}."
   }
 }

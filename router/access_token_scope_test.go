@@ -4,6 +4,8 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -13,6 +15,7 @@ import (
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/service/authz"
+	"github.com/QuantumNous/new-api/setting"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,6 +27,16 @@ var accessTokenExemptRoutes = []string{
 	// Anonymous pages and setup.
 	"GET /api/setup",
 	"POST /api/setup",
+	"POST /api/sso/exchange",
+	"POST /api/sso/ticket/preview",
+	"POST /api/sso/ticket/redeem",
+	"OPTIONS /api/status",
+	"OPTIONS /api/verification",
+	"OPTIONS /api/sso/code",
+	"OPTIONS /api/user/register",
+	"OPTIONS /api/user/login/encryption-key",
+	"OPTIONS /api/user/login",
+	"OPTIONS /api/user/login/verify",
 	"GET /api/status",
 	"GET /api/uptime/status",
 	"GET /api/notice",
@@ -198,5 +211,43 @@ func TestAccessTokenVerificationScopesAreAllListed(t *testing.T) {
 	for _, scope := range scopes {
 		_, listed := service.AccessTokenVerificationScope(scope)
 		assert.True(t, listed, "verification scope %s has no access token rule", scope)
+	}
+}
+
+func TestSSOClientCORSOnSignInRoutes(t *testing.T) {
+	previous := setting.SSOClients2JsonString()
+	t.Cleanup(func() { _ = setting.UpdateSSOClientsByJsonString(previous) })
+	require.NoError(t, setting.UpdateSSOClientsByJsonString(`[{"client_id":"infinite","secret_hash":"`+setting.SSOSecretHash("s")+`","redirect_uris":["https://app.example.com/sso/callback"]}]`))
+	engine := newAccessTokenScopeTestEngine(t)
+
+	cases := []struct {
+		name, method, path, origin string
+		wantStatus                 int // 0 = any
+		wantOrigin                 string
+	}{
+		{"preflight sso code", http.MethodOptions, "/api/sso/code", "https://app.example.com", http.StatusNoContent, "https://app.example.com"},
+		{"preflight login", http.MethodOptions, "/api/user/login", "https://app.example.com", http.StatusNoContent, "https://app.example.com"},
+		{"preflight other origin", http.MethodOptions, "/api/sso/code", "https://evil.example.com", http.StatusNoContent, ""},
+		{"preflight prefix origin", http.MethodOptions, "/api/sso/code", "https://app.example.com.evil.com", http.StatusNoContent, ""},
+		{"login response", http.MethodPost, "/api/user/login", "https://app.example.com", 0, "https://app.example.com"},
+		{"status response", http.MethodGet, "/api/status", "https://app.example.com", 0, "https://app.example.com"},
+		{"login other origin", http.MethodPost, "/api/user/login", "https://evil.example.com", 0, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			request := httptest.NewRequest(tc.method, tc.path, strings.NewReader(`{}`))
+			request.Header.Set("Origin", tc.origin)
+			request.Header.Set("Content-Type", "application/json")
+			response := httptest.NewRecorder()
+			engine.ServeHTTP(response, request)
+			if tc.wantStatus != 0 {
+				assert.Equal(t, tc.wantStatus, response.Code)
+			}
+			assert.Equal(t, tc.wantOrigin, response.Header().Get("Access-Control-Allow-Origin"))
+			assert.Empty(t, response.Header().Get("Access-Control-Allow-Credentials"))
+			if tc.method == http.MethodOptions && tc.wantOrigin != "" {
+				assert.Contains(t, response.Header().Get("Access-Control-Allow-Headers"), "Authorization")
+			}
+		})
 	}
 }

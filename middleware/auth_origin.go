@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"crypto/subtle"
+	"mime"
 	"net/http"
 	"net/url"
 	"strings"
@@ -73,4 +74,30 @@ func isAllowedSessionOrigin(request *http.Request, origin string) bool {
 		}
 	}
 	return false
+}
+
+// SameSiteJSONOnly blocks login CSRF on anonymous endpoints that create a
+// session: the body must be application/json (a cross-site form can only send
+// simple content types), Sec-Fetch-Site must be same-origin when the browser
+// sends it, and an Origin header, when present, must be an allowed origin.
+func SameSiteJSONOnly() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		mediaType, _, _ := mime.ParseMediaType(c.GetHeader("Content-Type"))
+		if mediaType != "application/json" {
+			c.AbortWithStatusJSON(http.StatusUnsupportedMediaType, gin.H{"success": false, "message": "content type must be application/json"})
+			return
+		}
+		if site := c.GetHeader("Sec-Fetch-Site"); site != "" && site != "same-origin" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"success": false, "code": "AUTH_ORIGIN_FORBIDDEN", "message": "request origin is not allowed"})
+			return
+		}
+		if len(c.Request.Header.Values("Origin")) > 0 {
+			origin, ok := requestBrowserOrigin(c.Request)
+			if !ok || !isAllowedSessionOrigin(c.Request, origin) {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"success": false, "code": "AUTH_ORIGIN_FORBIDDEN", "message": "request origin is not allowed"})
+				return
+			}
+		}
+		c.Next()
+	}
 }

@@ -3188,6 +3188,7 @@
     "Incoming path must be unique": "Входящий путь должен быть уникальным",
     "Incoming path must not include query": "Входящий путь не должен содержать query",
     "Incoming path must start with /": "Входящий путь должен начинаться с /",
+    "Invalid SSO client or redirect URI": "Недопустимое приложение SSO или URI перенаправления",
     "Invalid subscription ID": "Недопустимый ID подписки",
     "Invalid top-up amount": "Недопустимая сумма пополнения",
     "Invalid top-up quota": "Недопустимая квота пополнения",
@@ -7408,6 +7409,20 @@
     "No charge for failed attempts": "За неудачные попытки не списывается",
     "Timed out after reaching the upstream, which may have billed it": "Тайм-аут после обращения к вышестоящему серверу; он мог выставить счёт",
     "Stream interrupted midway; charged for the output delivered": "Поток прерван на середине; списано за уже выданный ответ",
-    "Routing decision details": "Подробности решений маршрутизации"
+    "Routing decision details": "Подробности решений маршрутизации",
+    "Application authorization failed": "Не удалось авторизовать приложение",
+    "Signing you in to the application...": "Вход в приложение…",
+    "Applications": "Приложения",
+    "No applications available": "Нет доступных приложений",
+    "Checking your sign-in link...": "Проверка ссылки для входа...",
+    "This sign-in link is invalid or has expired": "Ссылка для входа недействительна или истекла",
+    "Open the app again to get a new link, or sign in directly.": "Откройте приложение снова, чтобы получить новую ссылку, или войдите напрямую.",
+    "Go to sign in": "Перейти ко входу",
+    "Confirm sign-in": "Подтвердить вход",
+    "You are about to sign in to the account center as {{name}} (from {{client}}).": "Вы собираетесь войти в личный кабинет как {{name}} (из {{client}}).",
+    "If you did not start this, cancel.": "Если это были не вы, отмените вход.",
+    "App redirect sign-in": "Вход через переход из приложения",
+    "Names starting with sso: are reserved": "Имена, начинающиеся с sso:, зарезервированы",
+    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "Сейчас выполнен вход как {{current}}; подтверждение переключит на {{name}}."
   }
 }

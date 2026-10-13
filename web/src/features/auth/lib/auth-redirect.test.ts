@@ -45,6 +45,10 @@ describe('authentication redirect validation', () => {
       '//attacker.example/path',
       'https://attacker.example/path',
       'javascript:alert(1)',
+      '/.//attacker.example',
+      '/..//attacker.example',
+      '/%2e//attacker.example',
+      'https://dashboard.example.com//attacker.example',
       '/\\attacker.example/path',
       'https:\\attacker.example/path',
     ]

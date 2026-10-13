@@ -3188,6 +3188,7 @@
     "Incoming path must be unique": "受信パスは一意である必要があります",
     "Incoming path must not include query": "受信パスに query を含めることはできません",
     "Incoming path must start with /": "受信パスは / で始める必要があります",
+    "Invalid SSO client or redirect URI": "SSOクライアントまたはリダイレクトURIが無効です",
     "Invalid subscription ID": "無効なサブスクリプション ID です",
     "Invalid top-up amount": "チャージ数量が無効です",
     "Invalid top-up quota": "無効なチャージクォータです",
@@ -7408,6 +7409,20 @@
     "No charge for failed attempts": "失敗分は請求なし",
     "Timed out after reaching the upstream, which may have billed it": "上流到達後のタイムアウトのため、上流で課金された可能性があります",
     "Stream interrupted midway; charged for the output delivered": "ストリームが途中で中断されました。出力済みの分が請求されます",
-    "Routing decision details": "ルーティング判断の詳細"
+    "Routing decision details": "ルーティング判断の詳細",
+    "Application authorization failed": "アプリケーションの認可に失敗しました",
+    "Signing you in to the application...": "アプリケーションにサインインしています…",
+    "Applications": "アプリケーション",
+    "No applications available": "利用可能なアプリケーションはありません",
+    "Checking your sign-in link...": "ログインリンクを確認しています...",
+    "This sign-in link is invalid or has expired": "このログインリンクは無効か、期限切れです",
+    "Open the app again to get a new link, or sign in directly.": "アプリからもう一度開いて新しいリンクを取得するか、直接ログインしてください。",
+    "Go to sign in": "ログインへ",
+    "Confirm sign-in": "ログインを確認",
+    "You are about to sign in to the account center as {{name}} (from {{client}}).": "{{name}} としてアカウントセンターにログインします（{{client}} から）。",
+    "If you did not start this, cancel.": "心当たりがない場合はキャンセルしてください。",
+    "App redirect sign-in": "アプリからのリダイレクトログイン",
+    "Names starting with sso: are reserved": "sso: で始まる名前は予約されています",
+    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "現在 {{current}} としてログイン中です。確認すると {{name}} に切り替わります。"
   }
 }

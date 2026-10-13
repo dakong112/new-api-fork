@@ -439,6 +439,13 @@ func TestAccessTokenUpdateRenamesFreelyAndChangesGrantOnlyWithProof(t *testing.T
 	assert.Equal(t, "renamed", stored.Name)
 	assert.Equal(t, []string{"profile:read"}, stored.GetScopes(), "a rename keeps the grant")
 
+	response = accessTokenRequest(router, "PATCH", tokenPath, browser, "", `{"name":"SSO:infinite"}`)
+	assert.Equal(t, http.StatusBadRequest, response.Code)
+	assert.Contains(t, response.Body.String(), `"code":"ACCESS_TOKEN_NAME_RESERVED"`)
+	response = accessTokenRequest(router, "POST", "/api/user/access_tokens", browser, "", `{"name":" sso:infinite","scopes":["profile:read"]}`)
+	assert.Equal(t, http.StatusBadRequest, response.Code)
+	assert.Contains(t, response.Body.String(), `"code":"ACCESS_TOKEN_NAME_RESERVED"`)
+
 	response = accessTokenRequest(router, "PATCH", tokenPath, browser, "", `{"name":"ci","scopes":["usage:read"]}`)
 	assert.Equal(t, http.StatusForbidden, response.Code)
 	assert.Contains(t, response.Body.String(), `"code":"SECURITY_PROOF_REQUIRED"`)

@@ -125,6 +125,10 @@ func CreateAccessToken(c *gin.Context) {
 		return
 	}
 	name, ok := normalizeAccessTokenName(req.Name)
+	if ok && model.IsReservedSSOTokenName(name) {
+		writeAccessTokenError(c, http.StatusBadRequest, "ACCESS_TOKEN_NAME_RESERVED", "Names starting with sso: are reserved")
+		return
+	}
 	if !ok {
 		writeAccessTokenError(c, http.StatusBadRequest, "ACCESS_TOKEN_NAME_INVALID", "Access token name must be 1 to 64 characters.")
 		return
@@ -204,6 +208,14 @@ func UpdateAccessToken(c *gin.Context) {
 		return
 	}
 	name, ok := normalizeAccessTokenName(req.Name)
+	if ok && model.IsReservedSSOTokenName(name) {
+		// Only an existing server-issued token may keep its own reserved name.
+		current, err := model.GetUserAccessToken(identity.UserID, id)
+		if err != nil || current.Name != name {
+			writeAccessTokenError(c, http.StatusBadRequest, "ACCESS_TOKEN_NAME_RESERVED", "Names starting with sso: are reserved")
+			return
+		}
+	}
 	if !ok {
 		writeAccessTokenError(c, http.StatusBadRequest, "ACCESS_TOKEN_NAME_INVALID", "Access token name must be 1 to 64 characters.")
 		return

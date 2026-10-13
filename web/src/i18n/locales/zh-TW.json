@@ -3188,6 +3188,7 @@
     "Incoming path must be unique": "入口路徑必須唯一",
     "Incoming path must not include query": "入口路徑不能包含 query",
     "Incoming path must start with /": "入口路徑必須以 / 開頭",
+    "Invalid SSO client or redirect URI": "無效的應用程式或回呼位址",
     "Invalid subscription ID": "無效的訂閱ID",
     "Invalid top-up amount": "儲值數量無效",
     "Invalid top-up quota": "無效的充值額度",
@@ -7407,6 +7408,20 @@
     "No charge for failed attempts": "失敗不扣費",
     "Timed out after reaching the upstream, which may have billed it": "逾時類失敗，上游可能已經計費",
     "Stream interrupted midway; charged for the output delivered": "串流輸出中途中斷，依已輸出內容扣費",
-    "Routing decision details": "路由決策明細"
+    "Routing decision details": "路由決策明細",
+    "Application authorization failed": "應用授權失敗",
+    "Signing you in to the application...": "正在登入應用…",
+    "Applications": "應用",
+    "No applications available": "暫無可用應用",
+    "Checking your sign-in link...": "正在檢查登入連結...",
+    "This sign-in link is invalid or has expired": "此登入連結無效或已過期",
+    "Open the app again to get a new link, or sign in directly.": "請重新從應用程式開啟以取得新連結，或直接登入。",
+    "Go to sign in": "前往登入",
+    "Confirm sign-in": "確認登入",
+    "You are about to sign in to the account center as {{name}} (from {{client}}).": "你即將以 {{name}} 的身分登入帳戶中心（來自 {{client}}）。",
+    "If you did not start this, cancel.": "如果不是你本人發起的，請取消。",
+    "App redirect sign-in": "應用程式跳轉登入",
+    "Names starting with sso: are reserved": "以 sso: 開頭的名稱為系統保留",
+    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "目前已登入為 {{current}}，確認後將切換為 {{name}}。"
   }
 }
