@@ -4,7 +4,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -92,7 +94,7 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	require.NoError(t, err)
 	require.NoError(t, i18n.Init())
 	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.Log{}, &model.AuditLog{}, &model.CasbinRule{}, &model.AuthzRole{},
-		&model.UserAccessToken{}, &model.Option{}, &model.AuthFlow{}, &model.Token{}, &model.TwoFA{}, &model.TwoFABackupCode{}, &model.PasskeyCredential{}, &model.UserOAuthBinding{}))
+		&model.UserAccessToken{}, &model.Option{}, &model.AuthFlow{}, &model.Token{}, &model.TwoFA{}, &model.TwoFABackupCode{}, &model.PasskeyCredential{}, &model.UserOAuthBinding{}, &model.SSOConsumeRecord{}))
 	model.DB, model.LOG_DB = db, db
 	common.SetDatabaseTypes(common.DatabaseTypeSQLite, common.DatabaseTypeSQLite)
 	common.RedisEnabled = false
@@ -120,6 +122,7 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	api.POST("/sso/ticket/redeem", middleware.SameSiteJSONOnly(), RedeemSSOTicket)
 	api.POST("/sso/key", middleware.UserAuth(), CreateSSOKey)
 	api.GET("/sso/client", GetSSOClient)
+	api.POST("/sso/consume", middleware.UserAuth(), ConsumeSSOQuota)
 	return router, user, jwt
 }
 
@@ -716,4 +719,148 @@ func TestGetSSOClient(t *testing.T) {
 	var audit model.AuditLog
 	require.NoError(t, model.DB.Where("action = ?", "sso.client_failed").First(&audit).Error)
 	assert.Contains(t, audit.Content, "invalid_client")
+}
+
+func ssoConsumeBody(client, secret, key string, quota int, title string) string {
+	return `{"client_id":"` + client + `","client_secret":"` + secret + `","idempotency_key":"` + key + `","quota":` + strconv.Itoa(quota) + `,"title":"` + title + `"}`
+}
+
+// issueSSOWalletPAT returns a token like the one the SSO grant issues, which
+// carries wallet:write for charges.
+func issueSSOWalletPAT(t *testing.T, userID int, name string) string {
+	t.Helper()
+	raw, token := createScopedAccessToken(t, userID, 0, "profile:read", "wallet:write")
+	require.NoError(t, model.DB.Model(token).Update("name", name).Error)
+	return raw
+}
+
+type ssoConsumeResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    struct {
+		Quota   int `json:"quota"`
+		Balance int `json:"balance"`
+	} `json:"data"`
+}
+
+func consumeSSOTestQuota(t *testing.T, router http.Handler, pat, key string, quota int) (int, ssoConsumeResponse) {
+	t.Helper()
+	response := ssoPost(router, "/api/sso/consume", pat, ssoConsumeBody("infinite", ssoTestSecret, key, quota, "Poster"))
+	var body ssoConsumeResponse
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body), response.Body.String())
+	return response.Code, body
+}
+
+func TestConsumeSSOQuota(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	pat := issueSSOWalletPAT(t, user.Id, "sso:infinite")
+	sqlDB, err := model.DB.DB()
+	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(1) // every connection to :memory: is a separate database
+	userState := func() model.User {
+		var stored model.User
+		require.NoError(t, model.DB.First(&stored, user.Id).Error)
+		return stored
+	}
+	consumeLogs := func() []model.Log {
+		var logs []model.Log
+		require.NoError(t, model.DB.Where("user_id = ? AND type = ?", user.Id, model.LogTypeConsume).Order("id").Find(&logs).Error)
+		return logs
+	}
+
+	status, body := consumeSSOTestQuota(t, router, pat, "job-1", 300)
+	require.Equal(t, http.StatusOK, status, body.Message)
+	assert.Equal(t, 300, body.Data.Quota)
+	assert.Equal(t, 700, body.Data.Balance)
+	assert.Equal(t, 700, userState().Quota)
+	assert.Equal(t, 300, userState().UsedQuota)
+	logs := consumeLogs()
+	require.Len(t, logs, 1)
+	assert.Equal(t, "infinite:Poster", logs[0].ModelName)
+	assert.Equal(t, 300, logs[0].Quota)
+	assert.Contains(t, logs[0].Content, "infinite")
+
+	// A retry returns the first result, even with another amount, and charges nothing.
+	status, body = consumeSSOTestQuota(t, router, pat, "job-1", 500)
+	require.Equal(t, http.StatusOK, status, body.Message)
+	assert.Equal(t, 300, body.Data.Quota)
+	assert.Equal(t, 700, body.Data.Balance)
+	assert.Equal(t, 700, userState().Quota)
+	assert.Len(t, consumeLogs(), 1)
+
+	// More than the balance is refused whole.
+	status, body = consumeSSOTestQuota(t, router, pat, "job-2", 701)
+	assert.Equal(t, http.StatusPaymentRequired, status)
+	assert.Equal(t, "insufficient quota", body.Message)
+	assert.Equal(t, 700, userState().Quota)
+
+	// Concurrent retries of one key charge once.
+	var wg sync.WaitGroup
+	statuses := make([]int, 5)
+	charged := make([]int, 5)
+	for i := range 5 {
+		wg.Go(func() {
+			response := ssoPost(router, "/api/sso/consume", pat, ssoConsumeBody("infinite", ssoTestSecret, "job-3", 100, "Poster"))
+			var body ssoConsumeResponse
+			_ = common.Unmarshal(response.Body.Bytes(), &body)
+			statuses[i], charged[i] = response.Code, body.Data.Quota
+		})
+	}
+	wg.Wait()
+	assert.Equal(t, []int{200, 200, 200, 200, 200}, statuses)
+	assert.Equal(t, []int{100, 100, 100, 100, 100}, charged)
+	assert.Equal(t, 600, userState().Quota)
+	assert.Equal(t, 400, userState().UsedQuota)
+	assert.Len(t, consumeLogs(), 2)
+	var records int64
+	require.NoError(t, model.DB.Model(&model.SSOConsumeRecord{}).Where("user_id = ?", user.Id).Count(&records).Error)
+	assert.Equal(t, int64(2), records)
+}
+
+func TestConsumeSSOQuotaRejections(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+	pat := issueSSOWalletPAT(t, user.Id, "sso:infinite")
+	otherPAT := issueSSOWalletPAT(t, user.Id, "sso:other")
+	plainPAT, _ := createScopedAccessToken(t, user.Id, 0, "profile:read", "wallet:write")
+	readOnlyPAT, _ := issueSSOTestPAT(t, user.Id, "sso:infinite")
+	maxQuota := 10 * int(common.QuotaPerUnit)
+	// Enough balance that only the request checks can refuse.
+	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("quota", 2*maxQuota).Error)
+
+	cases := []struct {
+		name   string
+		bearer string
+		body   string
+		status int
+	}{
+		{"browser session", jwt, ssoConsumeBody("infinite", ssoTestSecret, "k", 10, "t"), http.StatusForbidden},
+		{"access token not issued by sso", plainPAT, ssoConsumeBody("infinite", ssoTestSecret, "k", 10, "t"), http.StatusForbidden},
+		{"pat of another application", otherPAT, ssoConsumeBody("infinite", ssoTestSecret, "k", 10, "t"), http.StatusForbidden},
+		{"pat without wallet scope", readOnlyPAT, ssoConsumeBody("infinite", ssoTestSecret, "k", 10, "t"), http.StatusForbidden},
+		{"wrong secret", pat, ssoConsumeBody("infinite", "wrong", "k", 10, "t"), http.StatusUnauthorized},
+		{"unknown client", pat, ssoConsumeBody("nope", ssoTestSecret, "k", 10, "t"), http.StatusUnauthorized},
+		{"over the per-charge limit", pat, ssoConsumeBody("infinite", ssoTestSecret, "k", maxQuota+1, "t"), http.StatusBadRequest},
+		{"zero quota", pat, ssoConsumeBody("infinite", ssoTestSecret, "k", 0, "t"), http.StatusBadRequest},
+		{"negative quota", pat, ssoConsumeBody("infinite", ssoTestSecret, "k", -10, "t"), http.StatusBadRequest},
+		{"empty key", pat, ssoConsumeBody("infinite", ssoTestSecret, "", 10, "t"), http.StatusBadRequest},
+		{"key too long", pat, ssoConsumeBody("infinite", ssoTestSecret, strings.Repeat("k", 65), 10, "t"), http.StatusBadRequest},
+		{"empty title", pat, ssoConsumeBody("infinite", ssoTestSecret, "k", 10, " "), http.StatusBadRequest},
+		{"title too long", pat, ssoConsumeBody("infinite", ssoTestSecret, "k", 10, strings.Repeat("标", 101)), http.StatusBadRequest},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			response := ssoPost(router, "/api/sso/consume", tc.bearer, tc.body)
+			assert.Equal(t, tc.status, response.Code, response.Body.String())
+		})
+	}
+	var stored model.User
+	require.NoError(t, model.DB.First(&stored, user.Id).Error)
+	assert.Equal(t, 2*maxQuota, stored.Quota)
+	var records int64
+	require.NoError(t, model.DB.Model(&model.SSOConsumeRecord{}).Count(&records).Error)
+	assert.Zero(t, records)
+
+	// The limit itself is allowed.
+	status, body := consumeSSOTestQuota(t, router, pat, "max", maxQuota)
+	assert.Equal(t, http.StatusOK, status, body.Message)
 }

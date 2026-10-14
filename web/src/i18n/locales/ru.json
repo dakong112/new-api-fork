@@ -7423,6 +7423,7 @@
     "If you did not start this, cancel.": "Если это были не вы, отмените вход.",
     "App redirect sign-in": "Вход через переход из приложения",
     "Names starting with sso: are reserved": "Имена, начинающиеся с sso:, зарезервированы",
-    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "Сейчас выполнен вход как {{current}}; подтверждение переключит на {{name}}."
+    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "Сейчас выполнен вход как {{current}}; подтверждение переключит на {{name}}.",
+    "Charged by application {{app}}": "Списано приложением {{app}}"
   }
 }

@@ -4,7 +4,9 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
@@ -309,4 +311,57 @@ func GetSSOClient(c *gin.Context) {
 		return
 	}
 	common.ApiSuccess(c, gin.H{"name": client.Name, "defaults": client.Defaults})
+}
+
+// ssoConsumeMaxUSD caps one application charge so a client bug cannot drain a
+// wallet in a single call.
+const ssoConsumeMaxUSD = 10
+
+// ConsumeSSOQuota charges the user a fee the application sets (for example a
+// paid template), once per idempotency key: a retry returns the first result
+// without charging again. Authentication is CreateSSOKey's.
+func ConsumeSSOQuota(c *gin.Context) {
+	var request struct {
+		ClientID       string `json:"client_id"`
+		ClientSecret   string `json:"client_secret"`
+		IdempotencyKey string `json:"idempotency_key"`
+		Quota          int    `json:"quota"`
+		Title          string `json:"title"`
+	}
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiErrorStatus(c, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+	client, user, ok := ssoClientTokenAuth(c, "consume", request.ClientID, request.ClientSecret)
+	if !ok {
+		return
+	}
+	title := strings.TrimSpace(request.Title)
+	titleLen := utf8.RuneCountInString(title)
+	maxQuota := common.QuotaFromFloat(ssoConsumeMaxUSD * common.QuotaPerUnit)
+	if request.IdempotencyKey == "" || len(request.IdempotencyKey) > 64 || request.Quota < 1 || request.Quota > maxQuota ||
+		titleLen < 1 || titleLen > 100 || !utf8.ValidString(title) {
+		recordSSOAudit(c, user.Id, user.Role, "sso.consume_failed", map[string]any{"client_id": client.ClientID, "reason": "invalid_request"}, http.StatusBadRequest, false)
+		common.ApiErrorStatus(c, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+	result, err := model.ConsumeSSOQuota(user.Id, client.ClientID, request.IdempotencyKey, request.Quota)
+	if errors.Is(err, model.ErrSSOInsufficientQuota) {
+		common.ApiErrorStatus(c, http.StatusPaymentRequired, err)
+		return
+	}
+	if err != nil {
+		common.SysLog(common.LogText("SSO charge failed for user %d client %s: %v", user.Id, client.ClientID, err))
+		common.ApiErrorStatus(c, http.StatusInternalServerError, errors.New("sso consume failed"))
+		return
+	}
+	if !result.Replayed {
+		model.RecordConsumeLog(c, user.Id, model.RecordConsumeLogParams{
+			ModelName: client.ClientID + ":" + title,
+			Quota:     result.Quota,
+			Content:   []*common.Message{common.NewMessage("Charged by application {{app}}", map[string]any{"app": client.ClientID})},
+			Other:     model.NewLogOther(),
+		})
+	}
+	common.ApiSuccess(c, gin.H{"quota": result.Quota, "balance": result.Balance})
 }

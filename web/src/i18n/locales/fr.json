@@ -7423,6 +7423,7 @@
     "If you did not start this, cancel.": "Si vous n'êtes pas à l'origine de cette demande, annulez.",
     "App redirect sign-in": "Connexion par redirection d'application",
     "Names starting with sso: are reserved": "Les noms commençant par sso: sont réservés",
-    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "Actuellement connecté en tant que {{current}} ; la confirmation basculera vers {{name}}."
+    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "Actuellement connecté en tant que {{current}} ; la confirmation basculera vers {{name}}.",
+    "Charged by application {{app}}": "Débité par l'application {{app}}"
   }
 }
