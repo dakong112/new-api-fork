@@ -15,14 +15,25 @@ import (
 	"github.com/QuantumNous/new-api/common"
 )
 
+// SSOClientDefaults are the group and models an application preselects for
+// its users. Every field is optional and the models need not exist yet.
+type SSOClientDefaults struct {
+	Group string `json:"group"`
+	Image string `json:"image"`
+	Text  string `json:"text"`
+	Video string `json:"video"`
+	Audio string `json:"audio"`
+}
+
 // SSOClient is an application allowed to obtain one-time login codes for
 // new-api users and exchange them server-to-server.
 type SSOClient struct {
-	ClientID     string   `json:"client_id"`
-	Name         string   `json:"name"`
-	SecretHash   string   `json:"secret_hash"`
-	RedirectURIs []string `json:"redirect_uris"`
-	LaunchURL    string   `json:"launch_url"`
+	ClientID     string            `json:"client_id"`
+	Name         string            `json:"name"`
+	SecretHash   string            `json:"secret_hash"`
+	RedirectURIs []string          `json:"redirect_uris"`
+	LaunchURL    string            `json:"launch_url"`
+	Defaults     SSOClientDefaults `json:"defaults"`
 }
 
 var (
@@ -69,6 +80,11 @@ func ParseSSOClients(value string) ([]SSOClient, error) {
 		}
 		if client.LaunchURL != "" && !isAllowedSSORedirect(client.LaunchURL) {
 			return nil, fmt.Errorf("SSOClients: launch_url of %q must be https (or http://localhost)", client.ClientID)
+		}
+		for _, value := range []string{client.Defaults.Group, client.Defaults.Image, client.Defaults.Text, client.Defaults.Video, client.Defaults.Audio} {
+			if len(value) > 128 {
+				return nil, fmt.Errorf("SSOClients: defaults of %q must be at most 128 characters each", client.ClientID)
+			}
 		}
 	}
 	return clients, nil

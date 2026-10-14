@@ -38,6 +38,8 @@ func TestSSOClientsOptionValidation(t *testing.T) {
 		{"plain http redirect", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["http://a.com/cb"]}]`, false},
 		{"redirect with fragment", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb#x"]}]`, false},
 		{"no redirect", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":[]}]`, false},
+		{"defaults", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"],"defaults":{"group":"vip","image":"gpt-image-1","text":"deepseek-chat"}}]`, true},
+		{"default model too long", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"],"defaults":{"image":"` + strings.Repeat("m", 129) + `"}}]`, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -67,6 +69,10 @@ func TestSSOClientsOptionValidation(t *testing.T) {
 	t.Setenv("SSO_ALLOW_INSECURE_REDIRECTS", "")
 	_, err = setting.ParseSSOClients(plainHTTP)
 	assert.Error(t, err, "http callbacks stay rejected unless explicitly enabled")
+
+	withDefaults, err := setting.ParseSSOClients(`[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"],"defaults":{"group":"vip","image":"gpt-image-1"}}]`)
+	require.NoError(t, err)
+	assert.Equal(t, setting.SSOClientDefaults{Group: "vip", Image: "gpt-image-1"}, withDefaults[0].Defaults)
 }
 
 const ssoTestRedirect = "https://www.example.com/sso/callback"
