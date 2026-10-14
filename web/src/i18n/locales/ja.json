@@ -2847,6 +2847,7 @@
     "Group #{{index}} category name duplicates another group": "グループ #{{index}} のカテゴリ名が他のグループと重複しています",
     "Group #{{index}} contains disallowed content": "グループ #{{index}} に許可されていない内容が含まれています",
     "Invalid contact links format: {{error}}": "連絡先の形式が無効です：{{error}}",
+    "Contact us": "お問い合わせ",
     "Contact links cannot exceed 10 entries": "連絡先は 10 件を超えられません",
     "Contact #{{index}} has an invalid icon type": "連絡先 #{{index}} のアイコンタイプが無効です",
     "Contact #{{index}} is missing the name field": "連絡先 #{{index}} に名前フィールドがありません",

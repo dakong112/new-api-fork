@@ -2847,6 +2847,7 @@
     "Group #{{index}} category name duplicates another group": "Le nom de catégorie du groupe n° {{index}} est en double avec un autre groupe",
     "Group #{{index}} contains disallowed content": "Le groupe n° {{index}} contient du contenu non autorisé",
     "Invalid contact links format: {{error}}": "Format des contacts invalide : {{error}}",
+    "Contact us": "Nous contacter",
     "Contact links cannot exceed 10 entries": "Les contacts ne peuvent pas dépasser 10 entrées",
     "Contact #{{index}} has an invalid icon type": "Le contact #{{index}} a un type d'icône invalide",
     "Contact #{{index}} is missing the name field": "Le contact #{{index}} n'a pas de champ nom",

@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { toPlainSummary } from '../../lib/announcement-bar'
@@ -146,6 +146,32 @@ describe('HeaderContactLinks', () => {
       .getByRole('button', { name: 'Email a@b.c' })
       .querySelector('svg')
     expect(svg?.style.color).toBe('')
+  })
+
+  it('gathers several contacts into one menu for narrow screens', async () => {
+    statusMock.status = {
+      contact_links_enabled: true,
+      contact_links: [
+        { icon: 'qq', label: 'QQ Group', value: '123456' },
+        { icon: 'telegram', label: 'Telegram', value: '@kid' },
+      ],
+    }
+    render(<HeaderContactLinks />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Contact us' }))
+    const menu = await screen.findByRole('dialog')
+    expect(within(menu).getByText('QQ Group')).toBeInTheDocument()
+    expect(within(menu).getByText('@kid')).toBeInTheDocument()
+  })
+
+  it('keeps a single contact as its own button', () => {
+    statusMock.status = {
+      contact_links_enabled: true,
+      contact_links: [{ icon: 'qq', label: 'QQ Group', value: '1' }],
+    }
+    render(<HeaderContactLinks />)
+
+    expect(screen.queryByRole('button', { name: 'Contact us' })).toBeNull()
   })
 
   it('renders nothing when the admin disables contacts', () => {

@@ -2847,6 +2847,7 @@
     "Group #{{index}} category name duplicates another group": "Tên danh mục của nhóm #{{index}} trùng với nhóm khác",
     "Group #{{index}} contains disallowed content": "Nhóm #{{index}} chứa nội dung không được phép",
     "Invalid contact links format: {{error}}": "Định dạng liên hệ không hợp lệ: {{error}}",
+    "Contact us": "Liên hệ với chúng tôi",
     "Contact links cannot exceed 10 entries": "Số liên hệ không được vượt quá 10",
     "Contact #{{index}} has an invalid icon type": "Liên hệ #{{index}} có loại biểu tượng không hợp lệ",
     "Contact #{{index}} is missing the name field": "Liên hệ #{{index}} thiếu trường tên",

@@ -2847,6 +2847,7 @@
     "Group #{{index}} category name duplicates another group": "第 {{index}} 個分組的分類名稱與其他分組重複",
     "Group #{{index}} contains disallowed content": "第 {{index}} 個分組包含不允許的內容",
     "Invalid contact links format: {{error}}": "聯絡方式格式錯誤：{{error}}",
+    "Contact us": "聯絡我們",
     "Contact links cannot exceed 10 entries": "聯絡方式數量不能超過10個",
     "Contact #{{index}} has an invalid icon type": "第{{index}}個聯絡方式的圖示類型不合法",
     "Contact #{{index}} is missing the name field": "第{{index}}個聯絡方式缺少名稱欄位",

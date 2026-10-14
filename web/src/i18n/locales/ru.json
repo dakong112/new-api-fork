@@ -2847,6 +2847,7 @@
     "Group #{{index}} category name duplicates another group": "Название категории группы № {{index}} совпадает с другой группой",
     "Group #{{index}} contains disallowed content": "Группа № {{index}} содержит недопустимое содержимое",
     "Invalid contact links format: {{error}}": "Неверный формат контактов: {{error}}",
+    "Contact us": "Связаться с нами",
     "Contact links cannot exceed 10 entries": "Контактов не может быть больше 10",
     "Contact #{{index}} has an invalid icon type": "У контакта #{{index}} недопустимый тип значка",
     "Contact #{{index}} is missing the name field": "У контакта #{{index}} отсутствует поле названия",

@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Link as LinkIcon, Mail, Megaphone, X } from 'lucide-react'
+import { Headset, Link as LinkIcon, Mail, Megaphone, X } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -72,7 +72,8 @@ function readDismissedKey(): string | null {
   }
 }
 
-function ContactItem(props: { link: ContactLink }) {
+// inMenu: listed in the narrow-screen menu, always with its label.
+function ContactItem(props: { link: ContactLink; inMenu?: boolean }) {
   const { t } = useTranslation()
   const { copyToClipboard } = useCopyToClipboard()
   const { Icon, color } = CONTACT_ICONS[props.link.icon] ?? CONTACT_ICONS.link
@@ -82,7 +83,12 @@ function ContactItem(props: { link: ContactLink }) {
   const content = (
     <>
       <Icon className='size-4' style={{ color }} aria-hidden='true' />
-      <span className='hidden max-w-48 truncate md:inline'>
+      <span
+        className={cn(
+          'max-w-48 min-w-0 truncate',
+          !props.inMenu && 'hidden md:block'
+        )}
+      >
         {props.link.label}
         {props.link.value ? (
           <span className='ms-1 font-semibold tabular-nums'>
@@ -98,7 +104,12 @@ function ContactItem(props: { link: ContactLink }) {
     title: text,
     'aria-label': text,
     className:
-      'border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary rounded-full font-medium',
+      // Buttons default to shrink-0; let them shrink so labels truncate
+      // first, but never below the icon.
+      cn(
+        'border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary min-w-9 shrink rounded-full font-medium',
+        props.inMenu && 'w-full justify-start'
+      ),
   }
 
   if (props.link.icon === 'wechat' && props.link.url) {
@@ -142,6 +153,7 @@ function ContactItem(props: { link: ContactLink }) {
 
 /** Admin-configured contact buttons shown in the middle of the header. */
 export function HeaderContactLinks(props: { className?: string }) {
+  const { t } = useTranslation()
   const { status } = useStatus()
   const contacts =
     status?.contact_links_enabled === false
@@ -149,12 +161,49 @@ export function HeaderContactLinks(props: { className?: string }) {
       : ((status?.contact_links as ContactLink[] | undefined) ?? [])
 
   if (contacts.length === 0) return null
+  const items = (inMenu?: boolean) =>
+    contacts.map((link) => (
+      <ContactItem
+        key={`${link.icon}:${link.label}`}
+        link={link}
+        inMenu={inMenu}
+      />
+    ))
+  const collapse = contacts.length > 1
 
   return (
-    <div className={cn('flex min-w-0 items-center gap-1.5', props.className)}>
-      {contacts.map((link) => (
-        <ContactItem key={`${link.icon}:${link.label}`} link={link} />
-      ))}
+    <div className={cn('flex min-w-0 items-center', props.className)}>
+      {/* Clip instead of spilling over the nav when contacts outgrow the
+          space; py-1 keeps the focus ring visible. */}
+      <div
+        className={cn(
+          'min-w-0 items-center gap-1.5 overflow-hidden py-1',
+          collapse ? 'hidden md:flex' : 'flex'
+        )}
+      >
+        {items()}
+      </div>
+      {collapse && (
+        // Phones have no room for a row of contacts: one button lists them.
+        <Popover>
+          <PopoverTrigger
+            render={
+              <Button
+                variant='outline'
+                size='icon-sm'
+                aria-label={t('Contact us')}
+                title={t('Contact us')}
+                className='border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary rounded-full md:hidden'
+              />
+            }
+          >
+            <Headset aria-hidden='true' />
+          </PopoverTrigger>
+          <PopoverContent align='center' className='w-64'>
+            <div className='flex flex-col gap-1.5'>{items(true)}</div>
+          </PopoverContent>
+        </Popover>
+      )}
     </div>
   )
 }
