@@ -679,3 +679,36 @@ func TestCreateSSOKeyCredentialConflicts(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, status)
 	assert.Empty(t, key)
 }
+
+func TestGetSSOClient(t *testing.T) {
+	router, _, _ := setupSSOTest(t)
+	require.NoError(t, setting.UpdateSSOClientsByJsonString(`[{"client_id":"infinite","name":"Studio","secret_hash":"`+setting.SSOSecretHash(ssoTestSecret)+`","redirect_uris":["`+ssoTestRedirect+`"],"defaults":{"group":"vip","image":"gpt-image-1","text":"deepseek-chat"}}]`))
+	get := func(clientID, secret string) *httptest.ResponseRecorder {
+		request := httptest.NewRequest(http.MethodGet, "/api/sso/client", nil)
+		request.SetBasicAuth(clientID, secret)
+		request.RemoteAddr = "192.0.2.8:4567"
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+		return response
+	}
+
+	ok := get("infinite", ssoTestSecret)
+	require.Equal(t, http.StatusOK, ok.Code, ok.Body.String())
+	var body struct {
+		Data struct {
+			Name     string                    `json:"name"`
+			Defaults setting.SSOClientDefaults `json:"defaults"`
+		} `json:"data"`
+	}
+	require.NoError(t, common.Unmarshal(ok.Body.Bytes(), &body))
+	assert.Equal(t, "Studio", body.Data.Name)
+	assert.Equal(t, setting.SSOClientDefaults{Group: "vip", Image: "gpt-image-1", Text: "deepseek-chat"}, body.Data.Defaults)
+	assert.NotContains(t, ok.Body.String(), "secret_hash")
+	assert.NotContains(t, ok.Body.String(), "redirect_uris")
+
+	assert.Equal(t, http.StatusUnauthorized, get("infinite", "wrong").Code)
+	assert.Equal(t, http.StatusUnauthorized, get("nope", ssoTestSecret).Code)
+	var audit model.AuditLog
+	require.NoError(t, model.DB.Where("action = ?", "sso.client_failed").First(&audit).Error)
+	assert.Contains(t, audit.Content, "invalid_client")
+}
