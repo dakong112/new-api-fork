@@ -124,7 +124,7 @@ func IssueSSOGroupKey(user *model.User, client setting.SSOClient, group string) 
 	}
 	name := "sso:" + client.ClientID + "@" + group
 	now := common.GetTimestamp()
-	return model.GetOrCreateSSOKey(user.Id, name, operation_setting.GetMaxUserTokens(), &model.Token{
+	token, err := model.GetOrCreateSSOKey(user.Id, name, operation_setting.GetMaxUserTokens(), &model.Token{
 		UserId:         user.Id,
 		Name:           name,
 		Key:            key,
@@ -134,4 +134,11 @@ func IssueSSOGroupKey(user *model.User, client setting.SSOClient, group string) 
 		UnlimitedQuota: true,
 		Group:          group,
 	})
+	if err != nil {
+		return nil, err
+	}
+	if token.Group != group {
+		return nil, model.ErrSSOAPIKeyDisabled
+	}
+	return token, nil
 }

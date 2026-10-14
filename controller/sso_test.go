@@ -623,6 +623,11 @@ func TestCreateSSOKey(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, key, adminKey)
 
+	// A key whose group was edited in the console is refused rather than handed out for the wrong group.
+	require.NoError(t, model.DB.Model(&model.Token{}).Where("id = ?", stored.Id).Update("group", "default").Error)
+	status, _ = requestSSOTestKey(t, router, pat, "vip")
+	assert.Equal(t, http.StatusConflict, status)
+
 	var audit model.AuditLog
 	require.NoError(t, model.DB.Where("action = ?", "sso.key_issue").First(&audit).Error)
 	assert.Contains(t, audit.Content, "vip")
