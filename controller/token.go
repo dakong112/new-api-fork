@@ -287,10 +287,6 @@ func AddToken(c *gin.Context) {
 		common.ApiErrorT(c, "Token name is too long")
 		return
 	}
-	if model.IsReservedSSOTokenName(token.Name) {
-		common.ApiErrorT(c, "Names starting with sso: are reserved")
-		return
-	}
 	params := tokenAuditParams(c)
 	params["name"] = token.Name
 	// 非无限额度时，检查额度值是否超出有效范围
@@ -416,10 +412,6 @@ func UpdateToken(c *gin.Context) {
 		return
 	}
 	params["name"] = cleanToken.Name
-	if statusOnly == "" && token.Name != cleanToken.Name && model.IsReservedSSOTokenName(token.Name) {
-		common.ApiErrorT(c, "Names starting with sso: are reserved")
-		return
-	}
 	previous := *cleanToken
 	if token.Status == common.TokenStatusEnabled {
 		if cleanToken.Status == common.TokenStatusExpired && cleanToken.ExpiredTime <= common.GetTimestamp() && cleanToken.ExpiredTime != -1 {

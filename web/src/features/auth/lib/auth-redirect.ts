@@ -76,9 +76,5 @@ export function sanitizeAuthRedirect(
     return null
   }
 
-  const result = `${redirectURL.pathname}${redirectURL.search}${redirectURL.hash}`
-  // Paths such as /.//evil.com normalize to //evil.com, which a router or
-  // location assignment would read as a protocol-relative URL.
-  if (result.startsWith('//') || result.startsWith('/\\')) return null
-  return result
+  return `${redirectURL.pathname}${redirectURL.search}${redirectURL.hash}`
 }

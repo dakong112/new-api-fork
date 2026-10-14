@@ -129,7 +129,6 @@ func InitOptionMap() {
 	common.OptionMap["WaffoPancakeProductID"] = setting.WaffoPancakeProductID
 	common.OptionMap["TopupGroupRatio"] = common.TopupGroupRatio2JSONString()
 	common.OptionMap["Chats"] = setting.Chats2JsonString()
-	common.OptionMap["SSOClients"] = setting.SSOClients2JsonString()
 	common.OptionMap["AutoGroups"] = setting.AutoGroups2JsonString()
 	common.OptionMap["DefaultUseAutoGroup"] = strconv.FormatBool(setting.DefaultUseAutoGroup)
 	common.OptionMap["MaxTokenAutoGroups"] = strconv.Itoa(setting.GetMaxTokenAutoGroups())
@@ -255,10 +254,6 @@ func validateOptionValue(key string, value string) error {
 		return setting.ValidateMaxTokenAutoGroups(value)
 	}
 	switch key {
-	case "SSOClients":
-		if _, err := setting.ParseSSOClients(value); err != nil {
-			return err
-		}
 	case "ChannelBalanceAlertThreshold":
 		threshold, err := strconv.ParseFloat(value, 64)
 		if err != nil || math.IsNaN(threshold) || math.IsInf(threshold, 0) || threshold < 0 {
@@ -536,8 +531,6 @@ func updateOptionMap(key string, value string) (err error) {
 		system_setting.WorkerValidKey = value
 	case "PayAddress":
 		operation_setting.PayAddress = value
-	case "SSOClients":
-		err = setting.UpdateSSOClientsByJsonString(value)
 	case "Chats":
 		err = setting.UpdateChatsByJsonString(value)
 	case "AutoGroups":

@@ -3189,7 +3189,6 @@
     "Incoming path must be unique": "Incoming path must be unique",
     "Incoming path must not include query": "Incoming path must not include query",
     "Incoming path must start with /": "Incoming path must start with /",
-    "Invalid SSO client or redirect URI": "Invalid SSO client or redirect URI",
     "Invalid subscription ID": "Invalid subscription ID",
     "Invalid top-up amount": "Invalid top-up amount",
     "Invalid top-up quota": "Invalid top-up quota",
@@ -7409,20 +7408,6 @@
     "No charge for failed attempts": "No charge for failed attempts",
     "Timed out after reaching the upstream, which may have billed it": "Timed out after reaching the upstream, which may have billed it",
     "Stream interrupted midway; charged for the output delivered": "Stream interrupted midway; charged for the output delivered",
-    "Routing decision details": "Routing decision details",
-    "Application authorization failed": "Application authorization failed",
-    "Signing you in to the application...": "Signing you in to the application...",
-    "Applications": "Applications",
-    "No applications available": "No applications available",
-    "Checking your sign-in link...": "Checking your sign-in link...",
-    "This sign-in link is invalid or has expired": "This sign-in link is invalid or has expired",
-    "Open the app again to get a new link, or sign in directly.": "Open the app again to get a new link, or sign in directly.",
-    "Go to sign in": "Go to sign in",
-    "Confirm sign-in": "Confirm sign-in",
-    "You are about to sign in to the account center as {{name}} (from {{client}}).": "You are about to sign in to the account center as {{name}} (from {{client}}).",
-    "If you did not start this, cancel.": "If you did not start this, cancel.",
-    "App redirect sign-in": "App redirect sign-in",
-    "Names starting with sso: are reserved": "Names starting with sso: are reserved",
-    "Currently signed in as {{current}}; confirming will switch to {{name}}.": "Currently signed in as {{current}}; confirming will switch to {{name}}."
+    "Routing decision details": "Routing decision details"
   }
 }
