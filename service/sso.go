@@ -113,3 +113,25 @@ func IssueSSOGrant(user *model.User, client setting.SSOClient) (*SSOGrantResult,
 		DeletedPATIDs: issued.DeletedPATIDs,
 	}, nil
 }
+
+// IssueSSOGroupKey returns the application's API key for one group of the
+// user, creating an unlimited, non-expiring key named sso:<client>@<group> on
+// first use. Usage is billed to the user at that group's ratio as usual.
+func IssueSSOGroupKey(user *model.User, client setting.SSOClient, group string) (*model.Token, error) {
+	key, err := common.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
+	name := "sso:" + client.ClientID + "@" + group
+	now := common.GetTimestamp()
+	return model.GetOrCreateSSOKey(user.Id, name, operation_setting.GetMaxUserTokens(), &model.Token{
+		UserId:         user.Id,
+		Name:           name,
+		Key:            key,
+		CreatedTime:    now,
+		AccessedTime:   now,
+		ExpiredTime:    -1,
+		UnlimitedQuota: true,
+		Group:          group,
+	})
+}

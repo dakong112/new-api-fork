@@ -29,48 +29,20 @@ func CreateSSOTicket(c *gin.Context) {
 		common.ApiErrorStatus(c, http.StatusBadRequest, errors.New("invalid request"))
 		return
 	}
-	client, ok := setting.FindSSOClient(request.ClientID)
+	client, user, ok := ssoClientTokenAuth(c, "ticket", request.ClientID, request.ClientSecret)
 	if !ok {
-		common.ApiErrorStatus(c, http.StatusUnauthorized, errors.New("invalid client credentials"))
 		return
 	}
-	userID := c.GetInt("id")
 	fail := func(reason string, status int, message string) {
-		recordSSOAudit(c, userID, c.GetInt("role"), "sso.ticket_failed", map[string]any{"client_id": client.ClientID, "reason": reason}, status, false)
+		recordSSOAudit(c, user.Id, user.Role, "sso.ticket_failed", map[string]any{"client_id": client.ClientID, "reason": reason}, status, false)
 		common.ApiErrorStatus(c, status, errors.New(message))
-	}
-	attempt := ssoExchangeFailures.Reserve("sso-ticket-fail:"+client.ClientID+":"+c.ClientIP(), ssoExchangeMaxFailures, ssoExchangeFailureWindow)
-	if attempt == nil {
-		fail("throttled", http.StatusTooManyRequests, "too many failed attempts")
-		return
-	}
-	secretOK := client.SecretMatches(request.ClientSecret)
-	attempt.Complete(!secretOK) // only failures consume the budget
-	if !secretOK {
-		fail("invalid_client", http.StatusUnauthorized, "invalid client credentials")
-		return
-	}
-	// Browser sessions and legacy tokens (id 0) must not mint tickets.
-	tokenID := c.GetInt("access_token_id")
-	if !c.GetBool("use_access_token") || tokenID <= 0 {
-		fail("not_scoped_token", http.StatusForbidden, "token not issued for this client")
-		return
-	}
-	token, err := model.GetUserAccessToken(userID, tokenID)
-	if err != nil || token.Name != "sso:"+client.ClientID || token.Expired(time.Now().Unix()) {
-		fail("token_mismatch", http.StatusForbidden, "token not issued for this client")
-		return
-	}
-	user, err := model.GetUserById(userID, false)
-	if err != nil || user.Status != common.UserStatusEnabled {
-		fail("user_unavailable", http.StatusForbidden, "user unavailable")
-		return
 	}
 	// ponytail: admins keep to the sign-in page; a stolen app PAT must not open an admin console.
 	if user.Role >= common.RoleAdminUser {
 		fail("role_not_allowed", http.StatusForbidden, "role not allowed")
 		return
 	}
+	tokenID := c.GetInt("access_token_id")
 	payload, err := common.Marshal(map[string]any{"auth_version": user.AuthVersion})
 	if err != nil {
 		fail("ticket_failed", http.StatusInternalServerError, "ticket creation failed")

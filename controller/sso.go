@@ -10,6 +10,7 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/gin-gonic/gin"
 )
 
@@ -190,4 +191,122 @@ func recordSSOAudit(c *gin.Context, userID, role int, action string, params map[
 			AuditInfo: &model.AuditRequestInfo{Method: c.Request.Method, Route: c.FullPath(), Path: c.FullPath(), Status: status, Success: success},
 		},
 	})
+}
+
+// ssoClientTokenAuth checks that the caller holds the application secret and
+// the personal access token the SSO grant issued to that application. Browser
+// sessions and unrelated tokens are refused. On failure it audits
+// "sso.<kind>_failed", writes the response and returns ok=false.
+func ssoClientTokenAuth(c *gin.Context, kind, clientID, clientSecret string) (setting.SSOClient, *model.User, bool) {
+	client, ok := setting.FindSSOClient(clientID)
+	if !ok {
+		// No audit row: client_id is attacker-controlled for unknown clients.
+		common.ApiErrorStatus(c, http.StatusUnauthorized, errors.New("invalid client credentials"))
+		return setting.SSOClient{}, nil, false
+	}
+	userID := c.GetInt("id")
+	fail := func(reason string, status int, message string) {
+		recordSSOAudit(c, userID, c.GetInt("role"), "sso."+kind+"_failed", map[string]any{"client_id": client.ClientID, "reason": reason}, status, false)
+		common.ApiErrorStatus(c, status, errors.New(message))
+	}
+	attempt := ssoExchangeFailures.Reserve("sso-"+kind+"-fail:"+client.ClientID+":"+c.ClientIP(), ssoExchangeMaxFailures, ssoExchangeFailureWindow)
+	if attempt == nil {
+		fail("throttled", http.StatusTooManyRequests, "too many failed attempts")
+		return setting.SSOClient{}, nil, false
+	}
+	secretOK := client.SecretMatches(clientSecret)
+	attempt.Complete(!secretOK) // only failures consume the budget
+	if !secretOK {
+		fail("invalid_client", http.StatusUnauthorized, "invalid client credentials")
+		return setting.SSOClient{}, nil, false
+	}
+	// Browser sessions and legacy tokens (id 0) are not application credentials.
+	tokenID := c.GetInt("access_token_id")
+	if !c.GetBool("use_access_token") || tokenID <= 0 {
+		fail("not_scoped_token", http.StatusForbidden, "token not issued for this client")
+		return setting.SSOClient{}, nil, false
+	}
+	token, err := model.GetUserAccessToken(userID, tokenID)
+	if err != nil || token.Name != "sso:"+client.ClientID || token.Expired(time.Now().Unix()) {
+		fail("token_mismatch", http.StatusForbidden, "token not issued for this client")
+		return setting.SSOClient{}, nil, false
+	}
+	user, err := model.GetUserById(userID, false)
+	if err != nil || user.Status != common.UserStatusEnabled {
+		fail("user_unavailable", http.StatusForbidden, "user unavailable")
+		return setting.SSOClient{}, nil, false
+	}
+	return client, user, true
+}
+
+// CreateSSOKey returns the user's API key for one group, creating it on first
+// use, so an application can bill each call at the group the user picked
+// without the user managing keys. The group rule is TokenAuth's: the group
+// must be usable by the user and priced (or "auto"). Admins are allowed: the
+// key only spends their own quota and opens no session.
+func CreateSSOKey(c *gin.Context) {
+	var request struct {
+		ClientID     string `json:"client_id"`
+		ClientSecret string `json:"client_secret"`
+		Group        string `json:"group"`
+	}
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiErrorStatus(c, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+	client, user, ok := ssoClientTokenAuth(c, "key", request.ClientID, request.ClientSecret)
+	if !ok {
+		return
+	}
+	fail := func(reason string, status int, err error) {
+		recordSSOAudit(c, user.Id, user.Role, "sso.key_failed", map[string]any{"client_id": client.ClientID, "reason": reason}, status, false)
+		common.ApiErrorStatus(c, status, err)
+	}
+	group := request.Group
+	if group == "" {
+		group = user.Group
+	}
+	_, usable := service.GetUserUsableGroups(user.Group)[group]
+	if len(group) > 64 || !usable || !ratio_setting.ContainsGroupRatio(group) && group != "auto" {
+		fail("group_unavailable", http.StatusBadRequest, errors.New("group not available"))
+		return
+	}
+	key, err := service.IssueSSOGroupKey(user, client, group)
+	if errors.Is(err, model.ErrSSOCredentialLimit) || errors.Is(err, model.ErrSSOAPIKeyDisabled) {
+		fail("credential_unavailable", http.StatusConflict, err)
+		return
+	}
+	if err != nil {
+		common.SysLog(common.LogText("SSO group key failed for user %d client %s: %v", user.Id, client.ClientID, err))
+		fail("key_failed", http.StatusInternalServerError, errors.New("sso key failed"))
+		return
+	}
+	recordSSOAudit(c, user.Id, user.Role, "sso.key_issue", map[string]any{"client_id": client.ClientID, "group": group, "api_key_id": key.Id}, http.StatusOK, true)
+	common.ApiSuccess(c, gin.H{"key": "sk-" + key.Key})
+}
+
+// GetSSOClient tells an application server its display name and the defaults
+// the administrator chose for it. The application authenticates with HTTP
+// Basic client credentials; failures share the exchange throttle.
+func GetSSOClient(c *gin.Context) {
+	clientID, secret, _ := c.Request.BasicAuth()
+	client, ok := setting.FindSSOClient(clientID)
+	if !ok {
+		common.ApiErrorStatus(c, http.StatusUnauthorized, errors.New("invalid client credentials"))
+		return
+	}
+	attempt := ssoExchangeFailures.Reserve("sso-client-fail:"+client.ClientID+":"+c.ClientIP(), ssoExchangeMaxFailures, ssoExchangeFailureWindow)
+	if attempt == nil {
+		recordSSOAudit(c, 0, 0, "sso.client_failed", map[string]any{"client_id": client.ClientID, "reason": "throttled"}, http.StatusTooManyRequests, false)
+		common.ApiErrorStatus(c, http.StatusTooManyRequests, errors.New("too many failed attempts"))
+		return
+	}
+	secretOK := client.SecretMatches(secret)
+	attempt.Complete(!secretOK)
+	if !secretOK {
+		recordSSOAudit(c, 0, 0, "sso.client_failed", map[string]any{"client_id": client.ClientID, "reason": "invalid_client"}, http.StatusUnauthorized, false)
+		common.ApiErrorStatus(c, http.StatusUnauthorized, errors.New("invalid client credentials"))
+		return
+	}
+	common.ApiSuccess(c, gin.H{"name": client.Name, "defaults": client.Defaults})
 }

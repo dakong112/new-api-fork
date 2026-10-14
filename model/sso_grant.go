@@ -31,29 +31,11 @@ func IssueSSOCredentials(userID int, name string, maxKeys, maxPATs int, newKey *
 			return err
 		}
 
-		var key Token
-		err := tx.Where("user_id = ? AND name = ?", userID, name).First(&key).Error
-		switch {
-		case err == nil:
-			if key.Status != common.TokenStatusEnabled || (key.ExpiredTime != -1 && key.ExpiredTime < common.GetTimestamp()) {
-				return ErrSSOAPIKeyDisabled
-			}
-		case errors.Is(err, gorm.ErrRecordNotFound):
-			var count int64
-			if err := tx.Model(&Token{}).Where("user_id = ?", userID).Count(&count).Error; err != nil {
-				return err
-			}
-			if int(count) >= maxKeys {
-				return ErrSSOCredentialLimit
-			}
-			key = *newKey
-			if err := tx.Create(&key).Error; err != nil {
-				return err
-			}
-		default:
+		key, err := getOrCreateSSOKey(tx, userID, name, maxKeys, newKey)
+		if err != nil {
 			return err
 		}
-		result.APIKey = &key
+		result.APIKey = key
 
 		var old []UserAccessToken
 		if err := tx.Select("id").Where("user_id = ? AND name = ?", userID, name).Find(&old).Error; err != nil {
@@ -84,4 +66,52 @@ func IssueSSOCredentials(userID int, name string, maxKeys, maxPATs int, newKey *
 		return nil, err
 	}
 	return result, nil
+}
+
+// GetOrCreateSSOKey returns the user's API key with this name, creating newKey
+// when there is none. It holds the user's row like IssueSSOCredentials, so
+// concurrent first uses cannot create two keys or exceed maxKeys.
+func GetOrCreateSSOKey(userID int, name string, maxKeys int, newKey *Token) (*Token, error) {
+	var key *Token
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		var user User
+		if err := lockForUpdate(tx).Select("id").First(&user, userID).Error; err != nil {
+			return err
+		}
+		var err error
+		key, err = getOrCreateSSOKey(tx, userID, name, maxKeys, newKey)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
+}
+
+// getOrCreateSSOKey must run inside a transaction holding the user's row.
+// A disabled or expired key is reported, never replaced: the user turned it off.
+func getOrCreateSSOKey(tx *gorm.DB, userID int, name string, maxKeys int, newKey *Token) (*Token, error) {
+	var key Token
+	err := tx.Where("user_id = ? AND name = ?", userID, name).First(&key).Error
+	if err == nil {
+		if key.Status != common.TokenStatusEnabled || (key.ExpiredTime != -1 && key.ExpiredTime < common.GetTimestamp()) {
+			return nil, ErrSSOAPIKeyDisabled
+		}
+		return &key, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+	var count int64
+	if err := tx.Model(&Token{}).Where("user_id = ?", userID).Count(&count).Error; err != nil {
+		return nil, err
+	}
+	if int(count) >= maxKeys {
+		return nil, ErrSSOCredentialLimit
+	}
+	key = *newKey
+	if err := tx.Create(&key).Error; err != nil {
+		return nil, err
+	}
+	return &key, nil
 }

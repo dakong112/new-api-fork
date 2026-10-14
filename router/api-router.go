@@ -82,6 +82,8 @@ func SetApiRouter(router *gin.Engine) {
 		ssoRoute.GET("/apps", middleware.UserAuth(), middleware.DisableCache(), controller.ListSSOApps)
 		ssoRoute.POST("/exchange", middleware.DisableCache(), anonymousRequestBodyLimit, controller.ExchangeSSOCode)
 		ssoRoute.POST("/ticket", middleware.UserAuth(), middleware.UserCriticalRateLimit("sso-ticket"), middleware.DisableCache(), anonymousRequestBodyLimit, controller.CreateSSOTicket)
+		ssoRoute.POST("/key", middleware.UserAuth(), middleware.UserCriticalRateLimit("sso-key"), middleware.DisableCache(), anonymousRequestBodyLimit, controller.CreateSSOKey)
+		ssoRoute.GET("/client", middleware.DisableCache(), controller.GetSSOClient)
 		ssoRoute.POST("/ticket/preview", middleware.SessionCookieOriginGuard(), middleware.SameSiteJSONOnly(), middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, controller.PreviewSSOTicket)
 		ssoRoute.POST("/ticket/redeem", middleware.SessionCookieOriginGuard(), middleware.SameSiteJSONOnly(), middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, controller.RedeemSSOTicket)
 

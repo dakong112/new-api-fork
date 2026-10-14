@@ -15,6 +15,8 @@ import (
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/service/authz"
 	"github.com/QuantumNous/new-api/setting"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -116,6 +118,8 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	api.POST("/sso/ticket", middleware.UserAuth(), CreateSSOTicket)
 	api.POST("/sso/ticket/preview", middleware.SameSiteJSONOnly(), PreviewSSOTicket)
 	api.POST("/sso/ticket/redeem", middleware.SameSiteJSONOnly(), RedeemSSOTicket)
+	api.POST("/sso/key", middleware.UserAuth(), CreateSSOKey)
+	api.GET("/sso/client", GetSSOClient)
 	return router, user, jwt
 }
 
@@ -555,4 +559,123 @@ func TestPreviewSSOTicketRejectsWhatRedeemWouldReject(t *testing.T) {
 	revoked := issueSSOTestTicket(t, router, pat)
 	require.NoError(t, model.DB.Delete(token).Error)
 	assert.Equal(t, http.StatusBadRequest, ssoPost(router, "/api/sso/ticket/preview", "", ssoTicketRequest(revoked)).Code)
+}
+
+func ssoKeyBody(client, secret, group string) string {
+	return `{"client_id":"` + client + `","client_secret":"` + secret + `","group":"` + group + `"}`
+}
+
+// setupSSOKeyGroups pins the group settings TokenAuth checks: legacy is usable
+// but has no ratio, svip is not usable at all.
+func setupSSOKeyGroups(t *testing.T) {
+	t.Helper()
+	previousUsable, previousRatio := setting.UserUsableGroups2JSONString(), ratio_setting.GroupRatio2JSONString()
+	require.NoError(t, setting.UpdateUserUsableGroupsByJSONString(`{"default":"Default group","vip":"VIP group","legacy":"Legacy group"}`))
+	require.NoError(t, ratio_setting.UpdateGroupRatioByJSONString(`{"default":1,"vip":0.65}`))
+	t.Cleanup(func() {
+		require.NoError(t, setting.UpdateUserUsableGroupsByJSONString(previousUsable))
+		require.NoError(t, ratio_setting.UpdateGroupRatioByJSONString(previousRatio))
+	})
+}
+
+func requestSSOTestKey(t *testing.T, router http.Handler, pat, group string) (int, string) {
+	t.Helper()
+	response := ssoPost(router, "/api/sso/key", pat, ssoKeyBody("infinite", ssoTestSecret, group))
+	var body struct {
+		Data struct {
+			Key string `json:"key"`
+		} `json:"data"`
+	}
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body))
+	return response.Code, body.Data.Key
+}
+
+func TestCreateSSOKey(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	setupSSOKeyGroups(t)
+	pat, _ := issueSSOTestPAT(t, user.Id, "sso:infinite")
+
+	status, key := requestSSOTestKey(t, router, pat, "vip")
+	require.Equal(t, http.StatusOK, status)
+	assert.True(t, strings.HasPrefix(key, "sk-"))
+	var stored model.Token
+	require.NoError(t, model.DB.Where("user_id = ? AND name = ?", user.Id, "sso:infinite@vip").First(&stored).Error)
+	assert.Equal(t, "vip", stored.Group)
+	assert.True(t, stored.UnlimitedQuota)
+	assert.Equal(t, int64(-1), stored.ExpiredTime)
+
+	// The same group twice returns the same key; an empty group means the user's own group.
+	_, again := requestSSOTestKey(t, router, pat, "vip")
+	assert.Equal(t, key, again)
+	status, own := requestSSOTestKey(t, router, pat, "")
+	require.Equal(t, http.StatusOK, status)
+	assert.NotEqual(t, key, own)
+	var ownStored model.Token
+	require.NoError(t, model.DB.Where("user_id = ? AND name = ?", user.Id, "sso:infinite@default").First(&ownStored).Error)
+	assert.Equal(t, "default", ownStored.Group)
+	var keys int64
+	require.NoError(t, model.DB.Model(&model.Token{}).Where("user_id = ?", user.Id).Count(&keys).Error)
+	assert.Equal(t, int64(2), keys)
+
+	// Admins may fetch keys: a key only spends their own quota and opens no session.
+	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("role", common.RoleAdminUser).Error)
+	status, adminKey := requestSSOTestKey(t, router, pat, "vip")
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, key, adminKey)
+
+	var audit model.AuditLog
+	require.NoError(t, model.DB.Where("action = ?", "sso.key_issue").First(&audit).Error)
+	assert.Contains(t, audit.Content, "vip")
+	assert.NotContains(t, audit.Content, strings.TrimPrefix(key, "sk-"))
+}
+
+func TestCreateSSOKeyRejections(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+	setupSSOKeyGroups(t)
+	pat, _ := issueSSOTestPAT(t, user.Id, "sso:infinite")
+	otherPAT, _ := issueSSOTestPAT(t, user.Id, "sso:other")
+
+	cases := []struct {
+		name   string
+		bearer string
+		body   string
+		status int
+	}{
+		{"browser session", jwt, ssoKeyBody("infinite", ssoTestSecret, "vip"), http.StatusForbidden},
+		{"pat of another application", otherPAT, ssoKeyBody("infinite", ssoTestSecret, "vip"), http.StatusForbidden},
+		{"wrong secret", pat, ssoKeyBody("infinite", "wrong", "vip"), http.StatusUnauthorized},
+		{"unknown client", pat, ssoKeyBody("nope", ssoTestSecret, "vip"), http.StatusUnauthorized},
+		{"group not usable", pat, ssoKeyBody("infinite", ssoTestSecret, "svip"), http.StatusBadRequest},
+		{"usable group without ratio", pat, ssoKeyBody("infinite", ssoTestSecret, "legacy"), http.StatusBadRequest},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			response := ssoPost(router, "/api/sso/key", tc.bearer, tc.body)
+			assert.Equal(t, tc.status, response.Code, response.Body.String())
+			assert.NotContains(t, response.Body.String(), "sk-")
+		})
+	}
+	var keys int64
+	require.NoError(t, model.DB.Model(&model.Token{}).Where("user_id = ?", user.Id).Count(&keys).Error)
+	assert.Zero(t, keys)
+}
+
+func TestCreateSSOKeyCredentialConflicts(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	setupSSOKeyGroups(t)
+	pat, _ := issueSSOTestPAT(t, user.Id, "sso:infinite")
+	previousMax := operation_setting.GetTokenSetting().MaxUserTokens
+	operation_setting.GetTokenSetting().MaxUserTokens = 1
+	t.Cleanup(func() { operation_setting.GetTokenSetting().MaxUserTokens = previousMax })
+
+	status, _ := requestSSOTestKey(t, router, pat, "vip")
+	require.Equal(t, http.StatusOK, status)
+	status, _ = requestSSOTestKey(t, router, pat, "default")
+	assert.Equal(t, http.StatusConflict, status, "the limit counts every key of the user")
+
+	// A disabled group key is not handed out again and is not replaced.
+	require.NoError(t, model.DB.Model(&model.Token{}).Where("user_id = ? AND name = ?", user.Id, "sso:infinite@vip").Update("status", common.TokenStatusDisabled).Error)
+	status, key := requestSSOTestKey(t, router, pat, "vip")
+	assert.Equal(t, http.StatusConflict, status)
+	assert.Empty(t, key)
 }
