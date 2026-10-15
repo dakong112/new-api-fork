@@ -2,6 +2,7 @@ package authz
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/QuantumNous/new-api/model"
 	"gorm.io/gorm"
@@ -41,14 +42,19 @@ type presetRole struct {
 	Name        string
 	Description string
 	Permissions []Permission
+	// Added lists the Permissions introduced after the preset first shipped.
+	// An existing role receives them only while its grants still equal the
+	// original preset, so operator edits are never overridden.
+	Added []Permission
 }
 
 var presetRoles = []presetRole{
 	{
 		Key:         "operations",
 		Name:        "运营",
-		Description: "管理画布模板",
-		Permissions: []Permission{CanvasTemplateRead, CanvasTemplateWrite, CanvasTemplatePublish},
+		Description: "管理画布模板与学院课程",
+		Permissions: []Permission{CanvasTemplateRead, CanvasTemplateWrite, CanvasTemplatePublish, CanvasAcademyRead, CanvasAcademyWrite},
+		Added:       []Permission{CanvasAcademyRead, CanvasAcademyWrite},
 	},
 	{
 		Key:         "support",
@@ -65,7 +71,8 @@ var presetRoles = []presetRole{
 }
 
 // seedPresetRoles inserts each preset role that does not exist yet, together
-// with its grants. Existing roles keep whatever the operator configured.
+// with its grants. Existing roles keep whatever the operator configured; an
+// unedited one also receives the preset's Added grants.
 // ponytail: a deleted preset comes back on the next start; store a "seeded"
 // marker if operators need to delete presets for good.
 func seedPresetRoles(db *gorm.DB) error {
@@ -75,14 +82,28 @@ func seedPresetRoles(db *gorm.DB) error {
 			if err := tx.Model(&model.AuthzRole{}).Where(map[string]any{"key": preset.Key}).Count(&count).Error; err != nil {
 				return err
 			}
+			grants := preset.Permissions
 			if count > 0 {
-				return nil
-			}
-			if err := tx.Create(&model.AuthzRole{Key: preset.Key, Name: preset.Name, Description: preset.Description, Enabled: true, Sort: 100}).Error; err != nil {
+				var existing []model.CasbinRule
+				if err := tx.Where(map[string]any{"ptype": "p", "v0": RoleSubject(preset.Key)}).Find(&existing).Error; err != nil {
+					return err
+				}
+				current := make([]Permission, 0, len(existing))
+				for _, rule := range existing {
+					if rule.V3 == EffectAllow && rule.V4 == "" && rule.V5 == "" {
+						current = append(current, Permission{Resource: rule.V1, Action: rule.V2})
+					}
+				}
+				original := slices.DeleteFunc(slices.Clone(preset.Permissions), func(p Permission) bool { return slices.Contains(preset.Added, p) })
+				if len(preset.Added) == 0 || len(existing) != len(original) || slices.ContainsFunc(original, func(p Permission) bool { return !slices.Contains(current, p) }) {
+					return nil
+				}
+				grants = preset.Added
+			} else if err := tx.Create(&model.AuthzRole{Key: preset.Key, Name: preset.Name, Description: preset.Description, Enabled: true, Sort: 100}).Error; err != nil {
 				return err
 			}
-			rules := make([]model.CasbinRule, 0, len(preset.Permissions))
-			for _, permission := range preset.Permissions {
+			rules := make([]model.CasbinRule, 0, len(grants))
+			for _, permission := range grants {
 				rules = append(rules, newRule("p", []string{RoleSubject(preset.Key), permission.Resource, permission.Action, EffectAllow}))
 			}
 			return tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&rules).Error

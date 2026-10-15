@@ -7445,6 +7445,9 @@
     "Change canvas application settings.": "キャンバスアプリの設定を変更します。",
     "Create, edit, and delete canvas prompts.": "キャンバスプロンプトを作成、編集、削除します。",
     "Manage shared canvas assets.": "共有キャンバス素材を管理します。",
+    "Academy courses": "アカデミーコース",
+    "View academy courses, including drafts, and their enrollments.": "下書きを含むアカデミーコースと申込状況を表示します。",
+    "Create, edit, and delete academy courses.": "アカデミーコースを作成、編集、削除します。",
     "Team not found": "チームが見つかりません",
     "Team member not found": "チームメンバーが見つかりません",
     "User is already a team member": "このユーザーは既にチームメンバーです",
@@ -7455,6 +7458,7 @@
     "Only the team owner or an admin can do this": "この操作はチームオーナーまたは管理者のみ実行できます",
     "Only the team owner can manage team admins": "チーム管理者を管理できるのはチームオーナーのみです",
     "Team wallet accounts cannot sign in": "チームウォレットアカウントはサインインできません",
+    "You are not allowed to use this application": "このアプリケーションを使用する権限がありません",
     "Transferred {{quota}} to team {{team}}": "チーム {{team}} に {{quota}} を振り替えました",
     "Received {{quota}} transferred from {{username}}": "{{username}} から {{quota}} の振替を受け取りました"
   }

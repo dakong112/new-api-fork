@@ -53,6 +53,10 @@ func CreateSSOCode(c *gin.Context) {
 		common.ApiErrorT(c, "Invalid SSO client or redirect URI")
 		return
 	}
+	if !client.AllowsUser(c.GetInt("id")) {
+		common.ApiErrorT(c, "You are not allowed to use this application")
+		return
+	}
 	target, err := url.Parse(request.RedirectURI)
 	if err != nil || len(request.State) > 256 {
 		common.ApiErrorT(c, "Invalid parameters")
@@ -85,7 +89,7 @@ func ListSSOApps(c *gin.Context) {
 	clients := setting.GetSSOClients()
 	apps := make([]gin.H, 0, len(clients))
 	for _, client := range clients {
-		if client.LaunchURL == "" {
+		if client.LaunchURL == "" || !client.AllowsUser(c.GetInt("id")) {
 			continue
 		}
 		apps = append(apps, gin.H{"client_id": client.ClientID, "name": client.Name, "launch_url": client.LaunchURL})
@@ -146,6 +150,12 @@ func ExchangeSSOCode(c *gin.Context) {
 	if err != nil || user.Status != common.UserStatusEnabled {
 		recordSSOExchangeFailure(c, flow.UserId, client.ClientID, "user_unavailable", http.StatusForbidden)
 		common.ApiErrorStatus(c, http.StatusForbidden, errors.New("user unavailable"))
+		return
+	}
+	// The allow-list may have changed since the code was issued.
+	if !client.AllowsUser(user.Id) {
+		recordSSOExchangeFailure(c, user.Id, client.ClientID, "user_not_allowed", http.StatusForbidden)
+		common.ApiErrorStatus(c, http.StatusForbidden, errors.New("user not allowed"))
 		return
 	}
 	result, err := service.IssueSSOGrant(user, client)
@@ -240,6 +250,11 @@ func ssoClientTokenAuth(c *gin.Context, kind, clientID, clientSecret string) (se
 	user, err := model.GetUserById(userID, false)
 	if err != nil || user.Status != common.UserStatusEnabled {
 		fail("user_unavailable", http.StatusForbidden, "user unavailable")
+		return setting.SSOClient{}, nil, false
+	}
+	// Removing a user from the allow-list also cuts off their issued credentials.
+	if !client.AllowsUser(user.Id) {
+		fail("user_not_allowed", http.StatusForbidden, "user not allowed")
 		return setting.SSOClient{}, nil, false
 	}
 	return client, user, true
@@ -399,10 +414,6 @@ func GetSSOClient(c *gin.Context) {
 	common.ApiSuccess(c, gin.H{"name": client.Name, "defaults": client.Defaults})
 }
 
-// ssoConsumeMaxUSD caps one application charge so a client bug cannot drain a
-// wallet in a single call.
-const ssoConsumeMaxUSD = 10
-
 // ConsumeSSOQuota charges the user a fee the application sets (for example a
 // paid template), once per idempotency key: a retry returns the first result
 // without charging again. Authentication is CreateSSOKey's.
@@ -424,7 +435,8 @@ func ConsumeSSOQuota(c *gin.Context) {
 	}
 	title := strings.TrimSpace(request.Title)
 	titleLen := utf8.RuneCountInString(title)
-	maxQuota := common.QuotaFromFloat(ssoConsumeMaxUSD * common.QuotaPerUnit)
+	// The per-client cap keeps a client bug from draining a wallet in one call.
+	maxQuota := client.ConsumeMaxQuota()
 	if request.IdempotencyKey == "" || len(request.IdempotencyKey) > 64 || request.Quota < 1 || request.Quota > maxQuota ||
 		titleLen < 1 || titleLen > 100 || !utf8.ValidString(title) {
 		recordSSOAudit(c, user.Id, user.Role, "sso.consume_failed", map[string]any{"client_id": client.ClientID, "reason": "invalid_request"}, http.StatusBadRequest, false)

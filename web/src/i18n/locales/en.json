@@ -7444,6 +7444,9 @@
     "Change canvas application settings.": "Change canvas application settings.",
     "Create, edit, and delete canvas prompts.": "Create, edit, and delete canvas prompts.",
     "Manage shared canvas assets.": "Manage shared canvas assets.",
+    "Academy courses": "Academy courses",
+    "View academy courses, including drafts, and their enrollments.": "View academy courses, including drafts, and their enrollments.",
+    "Create, edit, and delete academy courses.": "Create, edit, and delete academy courses.",
     "Team not found": "Team not found",
     "Team member not found": "Team member not found",
     "User is already a team member": "User is already a team member",
@@ -7454,6 +7457,7 @@
     "Only the team owner or an admin can do this": "Only the team owner or an admin can do this",
     "Only the team owner can manage team admins": "Only the team owner can manage team admins",
     "Team wallet accounts cannot sign in": "Team wallet accounts cannot sign in",
+    "You are not allowed to use this application": "You are not allowed to use this application",
     "Transferred {{quota}} to team {{team}}": "Transferred {{quota}} to team {{team}}",
     "Received {{quota}} transferred from {{username}}": "Received {{quota}} transferred from {{username}}"
   }

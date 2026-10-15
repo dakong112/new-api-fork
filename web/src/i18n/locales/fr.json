@@ -7445,6 +7445,9 @@
     "Change canvas application settings.": "Modifier les paramètres de l’application canevas.",
     "Create, edit, and delete canvas prompts.": "Créer, modifier et supprimer des prompts du canevas.",
     "Manage shared canvas assets.": "Gérer les ressources partagées du canevas.",
+    "Academy courses": "Cours de l'académie",
+    "View academy courses, including drafts, and their enrollments.": "Consulter les cours de l'académie, brouillons compris, et leurs inscriptions.",
+    "Create, edit, and delete academy courses.": "Créer, modifier et supprimer des cours de l'académie.",
     "Team not found": "Équipe introuvable",
     "Team member not found": "Membre de l'équipe introuvable",
     "User is already a team member": "Cet utilisateur est déjà membre de l'équipe",
@@ -7455,6 +7458,7 @@
     "Only the team owner or an admin can do this": "Seuls le propriétaire ou un administrateur de l'équipe peuvent effectuer cette action",
     "Only the team owner can manage team admins": "Seul le propriétaire de l'équipe peut gérer les administrateurs",
     "Team wallet accounts cannot sign in": "Les comptes portefeuille d'équipe ne peuvent pas se connecter",
+    "You are not allowed to use this application": "Vous n'êtes pas autorisé à utiliser cette application",
     "Transferred {{quota}} to team {{team}}": "{{quota}} transféré à l'équipe {{team}}",
     "Received {{quota}} transferred from {{username}}": "{{quota}} reçu par transfert de {{username}}"
   }

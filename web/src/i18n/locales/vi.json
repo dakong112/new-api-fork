@@ -7445,6 +7445,9 @@
     "Change canvas application settings.": "Thay đổi cài đặt ứng dụng canvas.",
     "Create, edit, and delete canvas prompts.": "Tạo, chỉnh sửa và xóa prompt canvas.",
     "Manage shared canvas assets.": "Quản lý tài nguyên canvas dùng chung.",
+    "Academy courses": "Khóa học học viện",
+    "View academy courses, including drafts, and their enrollments.": "Xem các khóa học học viện, kể cả bản nháp, và lượt đăng ký.",
+    "Create, edit, and delete academy courses.": "Tạo, chỉnh sửa và xóa khóa học học viện.",
     "Team not found": "Không tìm thấy nhóm",
     "Team member not found": "Không tìm thấy thành viên nhóm",
     "User is already a team member": "Người dùng đã là thành viên của nhóm",
@@ -7455,6 +7458,7 @@
     "Only the team owner or an admin can do this": "Chỉ chủ sở hữu hoặc quản trị viên nhóm mới có thể thực hiện thao tác này",
     "Only the team owner can manage team admins": "Chỉ chủ sở hữu nhóm mới có thể quản lý quản trị viên nhóm",
     "Team wallet accounts cannot sign in": "Tài khoản ví nhóm không thể đăng nhập",
+    "You are not allowed to use this application": "Bạn không được phép sử dụng ứng dụng này",
     "Transferred {{quota}} to team {{team}}": "Đã chuyển {{quota}} cho nhóm {{team}}",
     "Received {{quota}} transferred from {{username}}": "Đã nhận {{quota}} chuyển từ {{username}}"
   }

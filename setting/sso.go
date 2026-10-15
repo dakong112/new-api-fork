@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"regexp"
@@ -37,7 +38,19 @@ type SSOClient struct {
 	// App names the application whose permission codes ("canvas.template.read")
 	// the grant carries. Empty means the application receives none.
 	App string `json:"app,omitempty"`
+	// AllowedUserIDs limits who may sign in to the application; empty admits
+	// every user.
+	AllowedUserIDs []int `json:"allowed_user_ids,omitempty"`
+	// ConsumeMaxUSD caps one /api/sso/consume charge; 0 means
+	// SSODefaultConsumeMaxUSD.
+	ConsumeMaxUSD float64 `json:"consume_max_usd,omitempty"`
 }
+
+const (
+	SSODefaultConsumeMaxUSD = 10
+	ssoConsumeMaxUSDLimit   = 10000
+	ssoAllowedUserIDsLimit  = 1000
+)
 
 var (
 	ssoClients   = make([]SSOClient, 0)
@@ -92,6 +105,12 @@ func ParseSSOClients(value string) ([]SSOClient, error) {
 			if len(value) > 128 {
 				return nil, fmt.Errorf("SSOClients: defaults of %q must be at most 128 characters each", client.ClientID)
 			}
+		}
+		if len(client.AllowedUserIDs) > ssoAllowedUserIDsLimit || slices.ContainsFunc(client.AllowedUserIDs, func(id int) bool { return id <= 0 }) {
+			return nil, fmt.Errorf("SSOClients: allowed_user_ids of %q must be at most %d positive user ids", client.ClientID, ssoAllowedUserIDsLimit)
+		}
+		if math.IsNaN(client.ConsumeMaxUSD) || client.ConsumeMaxUSD < 0 || client.ConsumeMaxUSD > ssoConsumeMaxUSDLimit {
+			return nil, fmt.Errorf("SSOClients: consume_max_usd of %q must be between 0 and %d", client.ClientID, ssoConsumeMaxUSDLimit)
 		}
 	}
 	return clients, nil
@@ -154,6 +173,21 @@ func FindSSOClient(clientID string) (SSOClient, bool) {
 
 func (client SSOClient) AllowsRedirect(redirectURI string) bool {
 	return slices.Contains(client.RedirectURIs, redirectURI)
+}
+
+// AllowsUser reports whether userID may sign in to the application.
+func (client SSOClient) AllowsUser(userID int) bool {
+	return len(client.AllowedUserIDs) == 0 || slices.Contains(client.AllowedUserIDs, userID)
+}
+
+// ConsumeMaxQuota is the largest quota one /api/sso/consume call may charge,
+// kept within the single-request quota bound.
+func (client SSOClient) ConsumeMaxQuota() int {
+	maxUSD := client.ConsumeMaxUSD
+	if maxUSD == 0 {
+		maxUSD = SSODefaultConsumeMaxUSD
+	}
+	return common.QuotaFromFloat(min(maxUSD*common.QuotaPerUnit, common.MaxQuota))
 }
 
 func (client SSOClient) SecretMatches(secret string) bool {

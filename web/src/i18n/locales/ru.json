@@ -7445,6 +7445,9 @@
     "Change canvas application settings.": "Изменение настроек приложения холста.",
     "Create, edit, and delete canvas prompts.": "Создание, изменение и удаление промптов холста.",
     "Manage shared canvas assets.": "Управление общими ресурсами холста.",
+    "Academy courses": "Курсы академии",
+    "View academy courses, including drafts, and their enrollments.": "Просмотр курсов академии, включая черновики, и записей на них.",
+    "Create, edit, and delete academy courses.": "Создание, изменение и удаление курсов академии.",
     "Team not found": "Команда не найдена",
     "Team member not found": "Участник команды не найден",
     "User is already a team member": "Пользователь уже состоит в команде",
@@ -7455,6 +7458,7 @@
     "Only the team owner or an admin can do this": "Это может сделать только владелец или администратор команды",
     "Only the team owner can manage team admins": "Только владелец команды может управлять администраторами",
     "Team wallet accounts cannot sign in": "Кошельки команд не могут входить в систему",
+    "You are not allowed to use this application": "У вас нет доступа к этому приложению",
     "Transferred {{quota}} to team {{team}}": "Переведено {{quota}} в команду {{team}}",
     "Received {{quota}} transferred from {{username}}": "Получено {{quota}} переводом от {{username}}"
   }

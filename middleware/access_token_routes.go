@@ -49,7 +49,7 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"GET /api/rankings":                   accessTokenAnyRule,
 	"POST /api/oauth/state":               accessTokenSessionRule,
 	"POST /api/sso/code":                  accessTokenSessionRule,
-	"GET /api/sso/apps":                   accessTokenSessionRule,
+	"GET /api/sso/apps":                   accessTokenScopeRule("profile:read"),
 	"POST /api/sso/ticket":                accessTokenScopeRule("profile:read"),
 	"POST /api/sso/key":                   accessTokenScopeRule("profile:read"),
 	"POST /api/sso/consume":               accessTokenScopeRule("wallet:write"),

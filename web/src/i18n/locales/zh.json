@@ -7444,6 +7444,9 @@
     "Change canvas application settings.": "修改画布应用设置。",
     "Create, edit, and delete canvas prompts.": "创建、编辑和删除画布提示词。",
     "Manage shared canvas assets.": "管理共享画布素材。",
+    "Academy courses": "学院课程",
+    "View academy courses, including drafts, and their enrollments.": "查看学院课程（含草稿）及报名记录。",
+    "Create, edit, and delete academy courses.": "创建、编辑和删除学院课程。",
     "Team not found": "团队不存在",
     "Team member not found": "团队成员不存在",
     "User is already a team member": "该用户已是团队成员",
@@ -7454,6 +7457,7 @@
     "Only the team owner or an admin can do this": "仅团队所有者或管理员可执行此操作",
     "Only the team owner can manage team admins": "仅团队所有者可管理团队管理员",
     "Team wallet accounts cannot sign in": "团队钱包账户不能登录",
+    "You are not allowed to use this application": "你没有使用此应用的权限",
     "Transferred {{quota}} to team {{team}}": "向团队 {{team}} 划转 {{quota}}",
     "Received {{quota}} transferred from {{username}}": "收到 {{username}} 划转的 {{quota}}"
   }

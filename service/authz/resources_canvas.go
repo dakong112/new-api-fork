@@ -15,6 +15,8 @@ var (
 	CanvasSettingWrite    = Permission{Resource: "canvas.setting", Action: ActionWrite}
 	CanvasPromptWrite     = Permission{Resource: "canvas.prompt", Action: ActionWrite}
 	CanvasAssetWrite      = Permission{Resource: "canvas.asset", Action: ActionWrite}
+	CanvasAcademyRead     = Permission{Resource: "canvas.academy", Action: ActionRead}
+	CanvasAcademyWrite    = Permission{Resource: "canvas.academy", Action: ActionWrite}
 )
 
 func init() {
@@ -39,6 +41,10 @@ func init() {
 		}},
 		{Resource: "canvas.asset", LabelKey: "Canvas assets", Actions: []ActionDefinition{
 			{Action: ActionWrite, LabelKey: "Edit", DescriptionKey: "Manage shared canvas assets.", DefaultRoles: admin},
+		}},
+		{Resource: "canvas.academy", LabelKey: "Academy courses", Actions: []ActionDefinition{
+			{Action: ActionRead, LabelKey: "View", DescriptionKey: "View academy courses, including drafts, and their enrollments.", DefaultRoles: admin},
+			{Action: ActionWrite, LabelKey: "Edit", DescriptionKey: "Create, edit, and delete academy courses.", DefaultRoles: admin},
 		}},
 	} {
 		resource.App = AppCanvas

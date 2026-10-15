@@ -46,6 +46,11 @@ func TestSSOClientsOptionValidation(t *testing.T) {
 		{"default model too long", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"],"defaults":{"image":"` + strings.Repeat("m", 129) + `"}}]`, false},
 		{"app", `[{"client_id":"a","app":"canvas","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"]}]`, true},
 		{"app not lowercase letters", `[{"client_id":"a","app":"Canvas-1","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"]}]`, false},
+		{"allow-list and charge cap", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"],"allowed_user_ids":[1,2],"consume_max_usd":10000}]`, true},
+		{"allow-list with non-positive id", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"],"allowed_user_ids":[1,0]}]`, false},
+		{"allow-list too long", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"],"allowed_user_ids":[` + strings.Repeat("1,", 1000) + `1]}]`, false},
+		{"negative charge cap", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"],"consume_max_usd":-1}]`, false},
+		{"charge cap too high", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"],"consume_max_usd":10000.01}]`, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -127,6 +132,16 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	api.POST("/sso/consume", middleware.UserAuth(), ConsumeSSOQuota)
 	api.POST("/sso/permissions", middleware.UserAuth(), GetSSOPermissions)
 	return router, user, jwt
+}
+
+// updateSSOTestClient changes the "infinite" client registered by setupSSOTest.
+func updateSSOTestClient(t *testing.T, change func(client *setting.SSOClient)) {
+	t.Helper()
+	clients := setting.GetSSOClients()
+	change(&clients[0])
+	data, err := common.Marshal(clients)
+	require.NoError(t, err)
+	require.NoError(t, setting.UpdateSSOClientsByJsonString(string(data)))
 }
 
 func ssoPost(router http.Handler, path, bearer, body string) *httptest.ResponseRecorder {
@@ -279,14 +294,54 @@ func TestExchangeSSOCodeRejections(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, banned.Code)
 }
 
-func TestListSSOApps(t *testing.T) {
-	router, _, jwt := setupSSOTest(t)
+func listSSOTestApps(router http.Handler, bearer string) *httptest.ResponseRecorder {
 	request := httptest.NewRequest(http.MethodGet, "/api/sso/apps", nil)
-	request.Header.Set("Authorization", "Bearer "+jwt)
+	request.Header.Set("Authorization", "Bearer "+bearer)
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, request)
+	return response
+}
+
+func TestListSSOApps(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+	response := listSSOTestApps(router, jwt)
 	assert.Contains(t, response.Body.String(), `"launch_url":"https://www.example.com/api/auth/newapi/start"`)
 	assert.NotContains(t, response.Body.String(), "secret_hash")
+
+	// Application servers list apps with the user's personal access token.
+	profilePAT, _ := createScopedAccessToken(t, user.Id, 0, "profile:read")
+	response = listSSOTestApps(router, profilePAT)
+	assert.Equal(t, http.StatusOK, response.Code)
+	assert.Contains(t, response.Body.String(), `"client_id":"infinite"`)
+	walletPAT, _ := createScopedAccessToken(t, user.Id, 0, "wallet:read")
+	assert.Equal(t, http.StatusForbidden, listSSOTestApps(router, walletPAT).Code)
+}
+
+// An allow-list keeps everyone else out of the application: no codes, no
+// launcher entry, no exchange of a code issued before the list changed, and
+// no use of credentials issued earlier.
+func TestSSOClientAllowedUserIDs(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+	earlierCode := issueSSOTestCode(t, router, jwt)
+	pat := issueSSOWalletPAT(t, user.Id, "sso:infinite")
+	updateSSOTestClient(t, func(client *setting.SSOClient) { client.AllowedUserIDs = []int{user.Id + 1} })
+
+	response := ssoPost(router, "/api/sso/code", jwt, `{"client_id":"infinite","redirect_uri":"`+ssoTestRedirect+`"}`)
+	var body ssoCodeResponse
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body))
+	assert.False(t, body.Success)
+	assert.Equal(t, "You are not allowed to use this application", body.Message)
+	assert.NotContains(t, listSSOTestApps(router, jwt).Body.String(), `"client_id":"infinite"`)
+	exchange := ssoPost(router, "/api/sso/exchange", "", exchangeBody(earlierCode, ssoTestSecret, ssoTestRedirect))
+	assert.Equal(t, http.StatusForbidden, exchange.Code)
+	status, _ := consumeSSOTestQuota(t, router, pat, "job-1", 10)
+	assert.Equal(t, http.StatusForbidden, status)
+
+	updateSSOTestClient(t, func(client *setting.SSOClient) { client.AllowedUserIDs = []int{user.Id + 1, user.Id} })
+	issueSSOTestCode(t, router, jwt)
+	assert.Contains(t, listSSOTestApps(router, jwt).Body.String(), `"client_id":"infinite"`)
+	status, _ = consumeSSOTestQuota(t, router, pat, "job-1", 10)
+	assert.Equal(t, http.StatusOK, status)
 }
 
 func TestSSOCodeRejectsAccessToken(t *testing.T) {
@@ -869,6 +924,22 @@ func TestConsumeSSOQuotaRejections(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status, body.Message)
 }
 
+// A client's consume_max_usd replaces the default 10 USD per-charge cap.
+func TestConsumeSSOQuotaClientCap(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	pat := issueSSOWalletPAT(t, user.Id, "sso:infinite")
+	capQuota := 50 * int(common.QuotaPerUnit)
+	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("quota", 2*capQuota).Error)
+	updateSSOTestClient(t, func(client *setting.SSOClient) { client.ConsumeMaxUSD = 50 })
+
+	status, body := consumeSSOTestQuota(t, router, pat, "over", capQuota+1)
+	assert.Equal(t, http.StatusBadRequest, status, body.Message)
+	status, body = consumeSSOTestQuota(t, router, pat, "above-default", 20*int(common.QuotaPerUnit))
+	assert.Equal(t, http.StatusOK, status, body.Message)
+	status, body = consumeSSOTestQuota(t, router, pat, "cap", capQuota)
+	assert.Equal(t, http.StatusOK, status, body.Message)
+}
+
 func TestSSOClientReturnURL(t *testing.T) {
 	previousClients := setting.SSOClients2JsonString()
 	t.Cleanup(func() { require.NoError(t, setting.UpdateSSOClientsByJsonString(previousClients)) })
@@ -932,7 +1003,8 @@ func TestSSOPermissionCodes(t *testing.T) {
 	require.NoError(t, authz.SetUserRoles(user.Id, nil))
 	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("role", common.RoleAdminUser).Error)
 	_, codes = permissions(grant.Data.AccessToken, "infinite", ssoTestSecret)
-	assert.Len(t, codes, 8)
+	assert.Len(t, codes, 10)
+	assert.Subset(t, codes, []string{authz.CanvasAcademyRead.Code(), authz.CanvasAcademyWrite.Code()})
 
 	// A client naming no application receives none.
 	otherPAT, _ := issueSSOTestPAT(t, user.Id, "sso:other")

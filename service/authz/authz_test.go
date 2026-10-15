@@ -61,6 +61,38 @@ func TestInitSeedsBuiltInRolesAndPoliciesOnce(t *testing.T) {
 	assert.False(t, Can(3, common.RoleCommonUser, ChannelRead))
 }
 
+// A preset role seeded by an earlier release gains the grants added since,
+// unless an operator has changed its grants.
+func TestInitUpgradesUneditedPresetRoles(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		grants []Permission
+		want   []Permission
+	}{
+		{"unedited", []Permission{CanvasTemplateRead, CanvasTemplateWrite, CanvasTemplatePublish}, []Permission{CanvasTemplateRead, CanvasTemplateWrite, CanvasTemplatePublish, CanvasAcademyRead, CanvasAcademyWrite}},
+		{"edited", []Permission{CanvasTemplateRead}, []Permission{CanvasTemplateRead}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db := newAuthzTestDB(t)
+			require.NoError(t, db.Create(&model.AuthzRole{Key: "operations", Name: "运营", Enabled: true, Sort: 100}).Error)
+			for _, permission := range tc.grants {
+				require.NoError(t, db.Create(&model.CasbinRule{Ptype: "p", V0: RoleSubject("operations"), V1: permission.Resource, V2: permission.Action, V3: EffectAllow}).Error)
+			}
+
+			require.NoError(t, Init(db))
+			require.NoError(t, Init(db))
+
+			var rules []model.CasbinRule
+			require.NoError(t, db.Where("ptype = ? AND v0 = ?", "p", RoleSubject("operations")).Find(&rules).Error)
+			got := make([]Permission, 0, len(rules))
+			for _, rule := range rules {
+				got = append(got, Permission{Resource: rule.V1, Action: rule.V2})
+			}
+			assert.ElementsMatch(t, tc.want, got)
+		})
+	}
+}
+
 func TestInitOnSlaveOnlyLoadsPolicies(t *testing.T) {
 	wasMaster := common.IsMasterNode
 	common.IsMasterNode = false
@@ -363,6 +395,7 @@ func TestCustomRoleResolutionMatrix(t *testing.T) {
 	allCanvas := []string{
 		CanvasTemplateRead.Code(), CanvasTemplateWrite.Code(), CanvasTemplatePublish.Code(), CanvasUserRead.Code(),
 		CanvasOrderRead.Code(), CanvasSettingWrite.Code(), CanvasPromptWrite.Code(), CanvasAssetWrite.Code(),
+		CanvasAcademyRead.Code(), CanvasAcademyWrite.Code(),
 	}
 	cases := []struct {
 		name        string
