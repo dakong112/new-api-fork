@@ -299,6 +299,7 @@ func SetApiRouter(router *gin.Engine) {
 			teamRoute.POST("", middleware.UserCriticalRateLimit("team-create"), controller.CreateTeam)
 			teamRoute.GET("/self", controller.GetSelfTeams)
 			teamRoute.GET("/:id", controller.GetTeam)
+			teamRoute.DELETE("/:id", middleware.UserCriticalRateLimit("team-dissolve"), controller.DissolveTeam)
 			teamRoute.POST("/:id/members", controller.AddTeamMember)
 			teamRoute.PUT("/:id/members/:uid", controller.UpdateTeamMember)
 			teamRoute.DELETE("/:id/members/:uid", controller.DeleteTeamMember)

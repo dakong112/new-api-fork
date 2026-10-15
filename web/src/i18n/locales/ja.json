@@ -7505,6 +7505,18 @@
     "Roles": "ロール",
     "Custom roles replace the default administrator permissions and grant access in connected applications.": "カスタムロールは既定の管理者権限を置き換え、連携アプリケーションへのアクセスを付与します。",
     "Select roles": "ロールを選択",
-    "Save roles": "ロールを保存"
+    "Save roles": "ロールを保存",
+    "Permission overrides are ignored for users with custom roles": "カスタムロールを持つユーザーには権限の上書きが適用されません",
+    "Redeemed a code worth {{quota}} to team {{team_id}}": "チーム {{team_id}} に {{quota}} 分の引き換えコードを使用しました",
+    "Dissolved team {{team_id}} and returned {{quota}} to the owner": "チーム {{team_id}} を解散し、{{quota}} をオーナーに返却しました",
+    "Only the team owner can dissolve the team": "チームを解散できるのはチームオーナーのみです",
+    "The team balance changed, please try again": "チームの残高が変わりました。もう一度お試しください",
+    "Received {{quota}} from dissolved team {{team}}": "解散したチーム {{team}} から {{quota}} を受け取りました",
+    "Team dissolved, {{quota}} returned to the owner": "チームを解散し、{{quota}} をオーナーに返却しました",
+    "Dissolve team": "チームを解散",
+    "Verify to dissolve the team": "本人確認をしてチームを解散",
+    "Failed to dissolve the team": "チームの解散に失敗しました",
+    "Team dissolved. {{quota}} returned to your balance.": "チームを解散しました。{{quota}} が残高に戻りました。",
+    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "{{name}} を解散しますか？チームの残高 {{quota}} は個人残高に戻り、このチームのメンバーの API キーはすべて削除されます。この操作は元に戻せません。"
   }
 }

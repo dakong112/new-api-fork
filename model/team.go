@@ -16,7 +16,11 @@ const (
 	TeamRoleAdmin  = "admin"
 	TeamRoleMember = "member"
 
-	// maxOwnedTeams bounds how many wallet accounts one user can create.
+	// TeamStatusDissolved marks a team whose balance went back to the owner.
+	// The row stays so the disabled wallet account is still known as one.
+	TeamStatusDissolved = 2
+
+	// maxOwnedTeams bounds how many active wallet accounts one user can create.
 	maxOwnedTeams = 20
 )
 
@@ -29,6 +33,7 @@ var (
 	ErrTeamOwnedLimit        = common.NewMessage("You own too many teams")
 	ErrTeamMemberLimit       = common.NewMessage("Team member limit reached")
 	ErrTeamInsufficientQuota = common.NewMessage("Insufficient balance")
+	ErrTeamBalanceChanged    = common.NewMessage("The team balance changed, please try again")
 )
 
 // Team is a shared wallet. Its balance lives on a dedicated user account
@@ -98,10 +103,10 @@ func setTeamMemberKeysEnabledTx(tx *gorm.DB, userId int, enabled bool) error {
 
 // removeUserTeamsTx runs inside user deletion: it deletes the user's
 // non-owner memberships and their keys. Owners cannot be deleted while they
-// own a team, so a funded wallet is never orphaned.
+// own an active team, so a funded wallet is never orphaned.
 func removeUserTeamsTx(tx *gorm.DB, userId int) error {
 	var owned int64
-	if err := tx.Model(&Team{}).Where("owner_id = ?", userId).Count(&owned).Error; err != nil {
+	if err := tx.Model(&Team{}).Where("owner_id = ? AND status <> ?", userId, TeamStatusDissolved).Count(&owned).Error; err != nil {
 		return err
 	}
 	if owned > 0 {
@@ -165,7 +170,7 @@ func CreateTeamTx(ownerId int, name string, ownerLimit int) (*Team, error) {
 			return err
 		}
 		var owned int64
-		if err := tx.Model(&Team{}).Where("owner_id = ?", ownerId).Count(&owned).Error; err != nil {
+		if err := tx.Model(&Team{}).Where("owner_id = ? AND status <> ?", ownerId, TeamStatusDissolved).Count(&owned).Error; err != nil {
 			return err
 		}
 		if owned >= maxOwnedTeams {
@@ -382,6 +387,70 @@ func TransferQuotaToTeam(userId, teamId, quota int) error {
 	RecordLog(userId, LogTypeSystem, common.NewMessage("Transferred {{quota}} to team {{team}}", map[string]any{"quota": logger.FormatQuota(quota), "team": team.Name}))
 	RecordLog(team.WalletUserId, LogTypeTopup, common.NewMessage("Received {{quota}} transferred from {{username}}", map[string]any{"quota": logger.FormatQuota(quota), "username": username}))
 	return nil
+}
+
+// DissolveTeam ends a team in one transaction: the wallet balance goes back
+// to the owner, every key of the wallet account and every membership is
+// deleted, the wallet account is disabled (kept for its logs) and the team is
+// marked dissolved. The team and wallet rows are locked, and the wallet is
+// zeroed only if it still holds the balance that was read, so a concurrent
+// debit or credit makes the call fail instead of returning a stale amount.
+// ponytail: like TransferQuotaToTeam, unflushed BATCH_UPDATE relay charges are
+// not seen; they land on the disabled wallet afterwards.
+func DissolveTeam(teamId, ownerId int) (int, error) {
+	var team Team
+	var tokens []Token
+	quota := 0
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		if err := lockForUpdate(tx).First(&team, teamId).Error; err != nil || team.Status == TeamStatusDissolved || team.OwnerId != ownerId {
+			return ErrTeamNotFound
+		}
+		var wallet User
+		if err := lockForUpdate(tx).Select("id", "quota").First(&wallet, team.WalletUserId).Error; err != nil {
+			return err
+		}
+		if wallet.Quota > 0 {
+			quota = wallet.Quota
+			result := tx.Model(&User{}).Where("id = ? AND quota = ?", wallet.Id, quota).Update("quota", 0)
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected == 0 {
+				return ErrTeamBalanceChanged
+			}
+			if err := creditTopUpQuota(tx, ownerId, quota, nil); err != nil {
+				return err
+			}
+		}
+		if err := tx.Model(&User{}).Where("id = ?", wallet.Id).Update("status", common.UserStatusDisabled).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", wallet.Id).Find(&tokens).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", wallet.Id).Delete(&Token{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("team_id = ?", team.Id).Delete(&TeamMember{}).Error; err != nil {
+			return err
+		}
+		return tx.Model(&Team{}).Where("id = ?", team.Id).Update("status", TeamStatusDissolved).Error
+	})
+	if err != nil {
+		return 0, err
+	}
+	if err := invalidateTokensCache(tokens); err != nil {
+		common.SysLog(common.LogText("failed to invalidate team key cache after dissolving team %d: %s", team.Id, err.Error()))
+	}
+	if err := invalidateUserCache(team.WalletUserId); err != nil {
+		common.SysLog(common.LogText("failed to invalidate team wallet cache after dissolving team %d: %s", team.Id, err.Error()))
+	}
+	syncCreditUserQuotaCache(ownerId, quota, common.LogText("team dissolve"))
+	if quota > 0 {
+		RecordLog(ownerId, LogTypeSystem, common.NewMessage("Received {{quota}} from dissolved team {{team}}", map[string]any{"quota": logger.FormatQuota(quota), "team": team.Name}))
+		RecordLog(team.WalletUserId, LogTypeSystem, common.NewMessage("Team dissolved, {{quota}} returned to the owner", map[string]any{"quota": logger.FormatQuota(quota)}))
+	}
+	return quota, nil
 }
 
 // UserTeam is a team as seen by one of its members.

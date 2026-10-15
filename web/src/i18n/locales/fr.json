@@ -7505,6 +7505,18 @@
     "Roles": "Rôles",
     "Custom roles replace the default administrator permissions and grant access in connected applications.": "Les rôles personnalisés remplacent les permissions d'administrateur par défaut et donnent accès aux applications connectées.",
     "Select roles": "Sélectionner des rôles",
-    "Save roles": "Enregistrer les rôles"
+    "Save roles": "Enregistrer les rôles",
+    "Permission overrides are ignored for users with custom roles": "Les remplacements de permissions sont ignorés pour les utilisateurs ayant des rôles personnalisés",
+    "Redeemed a code worth {{quota}} to team {{team_id}}": "Code d'une valeur de {{quota}} utilisé pour l'équipe {{team_id}}",
+    "Dissolved team {{team_id}} and returned {{quota}} to the owner": "Équipe {{team_id}} dissoute, {{quota}} rendu au propriétaire",
+    "Only the team owner can dissolve the team": "Seul le propriétaire de l'équipe peut la dissoudre",
+    "The team balance changed, please try again": "Le solde de l'équipe a changé, veuillez réessayer",
+    "Received {{quota}} from dissolved team {{team}}": "{{quota}} reçu de l'équipe dissoute {{team}}",
+    "Team dissolved, {{quota}} returned to the owner": "Équipe dissoute, {{quota}} rendu au propriétaire",
+    "Dissolve team": "Dissoudre l'équipe",
+    "Verify to dissolve the team": "Vérifiez votre identité pour dissoudre l'équipe",
+    "Failed to dissolve the team": "Échec de la dissolution de l'équipe",
+    "Team dissolved. {{quota}} returned to your balance.": "Équipe dissoute. {{quota}} a été rendu à votre solde.",
+    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "Dissoudre {{name}} ? Le solde restant de l'équipe, {{quota}}, revient sur votre solde personnel, et toutes les clés API des membres de cette équipe sont supprimées. Cette action est irréversible."
   }
 }

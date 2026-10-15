@@ -48,6 +48,7 @@ func setupTeamTest(t *testing.T) (*gin.Engine, teamTestUser, teamTestUser, teamT
 	team.POST("", CreateTeam)
 	team.GET("/self", GetSelfTeams)
 	team.GET("/:id", GetTeam)
+	team.DELETE("/:id", DissolveTeam)
 	team.POST("/:id/members", AddTeamMember)
 	team.PUT("/:id/members/:uid", UpdateTeamMember)
 	team.DELETE("/:id/members/:uid", DeleteTeamMember)
@@ -487,4 +488,56 @@ func TestRequestEpayForTeamRequiresManager(t *testing.T) {
 	require.NoError(t, err)
 	assert.Positive(t, userQuota(t, team.WalletUserId), "the callback credits the order's user, the team wallet")
 	assert.Equal(t, 1000, userQuota(t, alice.user.Id))
+}
+
+func TestDissolveTeamReturnsBalanceToOwner(t *testing.T) {
+	router, alice, bob, carol := setupTeamTest(t)
+	team := createTestTeam(t, router, alice)
+	require.True(t, teamCall(t, router, http.MethodPost, teamPath(team, "/members"), alice.jwt, `{"username":"bob"}`).Success)
+	require.NoError(t, model.TransferQuotaToTeam(alice.user.Id, team.Id, 600))
+	require.NoError(t, model.DecreaseUserQuota(team.WalletUserId, 50, true))
+	keys := []model.Token{teamMemberToken(t, team, alice.user.Id), teamMemberToken(t, team, bob.user.Id)}
+	aliceIdentity, aliceJWT := createAccessTokenTestSession(t, alice.user.Id, "alice-dissolve")
+	proofFor := func(teamId int) string {
+		context, err := common.Marshal(service.TeamContext{TeamID: teamId})
+		require.NoError(t, err)
+		return issueSecurityEnrollmentProof(t, aliceIdentity, service.VerificationOperation{Scope: service.VerificationScopeTeamDissolve, Context: context}, "password")
+	}
+	dissolve := func(jwt, proof string) teamResponse {
+		var parsed teamResponse
+		response := accessTokenRequest(router, http.MethodDelete, teamPath(team, ""), jwt, proof, "")
+		require.NoError(t, common.Unmarshal(response.Body.Bytes(), &parsed), response.Body.String())
+		return parsed
+	}
+
+	assert.Equal(t, "Only the team owner can dissolve the team", dissolve(bob.jwt, "").MessageKey)
+	assert.Equal(t, "Team not found", dissolve(carol.jwt, "").MessageKey)
+	assert.False(t, dissolve(aliceJWT, "").Success, "a security proof is required")
+	assert.False(t, dissolve(aliceJWT, proofFor(team.Id+1)).Success, "the proof is bound to the team")
+	assert.Equal(t, 550, userQuota(t, team.WalletUserId))
+
+	response := dissolve(aliceJWT, proofFor(team.Id))
+	require.True(t, response.Success, response.Message)
+	assert.JSONEq(t, `{"quota":550}`, string(response.Data))
+	assert.Equal(t, 950, userQuota(t, alice.user.Id), "the owner gets back exactly the remaining balance")
+	assert.Zero(t, userQuota(t, team.WalletUserId))
+	var wallet model.User
+	require.NoError(t, model.DB.First(&wallet, team.WalletUserId).Error)
+	assert.Equal(t, common.UserStatusDisabled, wallet.Status, "the wallet account is kept, disabled")
+	require.NoError(t, model.DB.First(&team, team.Id).Error)
+	assert.Equal(t, model.TeamStatusDissolved, team.Status)
+	var memberships int64
+	require.NoError(t, model.DB.Model(&model.TeamMember{}).Where("team_id = ?", team.Id).Count(&memberships).Error)
+	assert.Zero(t, memberships)
+	for _, key := range keys {
+		_, err := model.ValidateUserToken(key.Key)
+		assert.ErrorIs(t, err, model.ErrTokenInvalid, "member keys stop working")
+	}
+	var returned int64
+	require.NoError(t, model.LOG_DB.Model(&model.Log{}).Where("user_id = ? AND content LIKE ?", alice.user.Id, "%dissolved team%").Count(&returned).Error)
+	assert.Equal(t, int64(1), returned)
+	assert.Equal(t, "Team not found", dissolve(aliceJWT, proofFor(team.Id)).MessageKey, "a team is dissolved once")
+
+	_, err := alice.user.Delete()
+	assert.NoError(t, err, "an owner without active teams can be deleted")
 }

@@ -488,6 +488,10 @@ const AUDIT_TEMPLATES: Record<string, string> = {
   'user.topup_complete': 'Completed top-up order for the user',
   'user.reset_passkey': 'Reset the user passkey',
   'user.oauth_unbind': 'Removed an OAuth binding for the user',
+  // Teams
+  'team.redeem': 'Redeemed a code worth {{quota}} to team {{team_id}}',
+  'team.dissolve':
+    'Dissolved team {{team_id}} and returned {{quota}} to the owner',
   // System settings
   'option.update': 'Updated system setting {{key}}',
   'option.passkey_domains':

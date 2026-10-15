@@ -104,3 +104,13 @@ export const redeemToTeam = (id: number, key: string) =>
 
 export const getTeamUsage = (id: number) =>
   unwrap<TeamUsageRow[]>(api.get(`/api/team/${id}/usage`))
+
+// Requires a `team.dissolve` proof bound to this team; the remaining balance
+// goes back to the owner.
+export const dissolveTeam = async (id: number, proofToken: string) =>
+  (
+    await api.delete<ApiResponse<{ quota: number }>>(`/api/team/${id}`, {
+      headers: { 'X-Security-Proof': proofToken },
+      singleUseAuthorization: true,
+    })
+  ).data

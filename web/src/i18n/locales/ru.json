@@ -7505,6 +7505,18 @@
     "Roles": "Роли",
     "Custom roles replace the default administrator permissions and grant access in connected applications.": "Пользовательские роли заменяют стандартные права администратора и дают доступ в подключённых приложениях.",
     "Select roles": "Выберите роли",
-    "Save roles": "Сохранить роли"
+    "Save roles": "Сохранить роли",
+    "Permission overrides are ignored for users with custom roles": "Переопределения разрешений игнорируются для пользователей с пользовательскими ролями",
+    "Redeemed a code worth {{quota}} to team {{team_id}}": "Активирован код на {{quota}} для команды {{team_id}}",
+    "Dissolved team {{team_id}} and returned {{quota}} to the owner": "Команда {{team_id}} распущена, {{quota}} возвращено владельцу",
+    "Only the team owner can dissolve the team": "Распустить команду может только её владелец",
+    "The team balance changed, please try again": "Баланс команды изменился, повторите попытку",
+    "Received {{quota}} from dissolved team {{team}}": "Получено {{quota}} от распущенной команды {{team}}",
+    "Team dissolved, {{quota}} returned to the owner": "Команда распущена, {{quota}} возвращено владельцу",
+    "Dissolve team": "Распустить команду",
+    "Verify to dissolve the team": "Подтвердите личность, чтобы распустить команду",
+    "Failed to dissolve the team": "Не удалось распустить команду",
+    "Team dissolved. {{quota}} returned to your balance.": "Команда распущена. {{quota}} возвращено на ваш баланс.",
+    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "Распустить {{name}}? Оставшийся баланс команды {{quota}} вернётся на ваш личный баланс, а все API-ключи участников этой команды будут удалены. Это действие необратимо."
   }
 }

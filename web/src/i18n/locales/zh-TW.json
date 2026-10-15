@@ -7504,6 +7504,18 @@
     "Roles": "角色",
     "Custom roles replace the default administrator permissions and grant access in connected applications.": "自訂角色會取代預設的管理員權限，並授予已接入應用中的存取權限。",
     "Select roles": "選擇角色",
-    "Save roles": "儲存角色"
+    "Save roles": "儲存角色",
+    "Permission overrides are ignored for users with custom roles": "已設定自訂角色的使用者將忽略權限覆寫",
+    "Redeemed a code worth {{quota}} to team {{team_id}}": "向團隊 {{team_id}} 兌換了價值 {{quota}} 的兌換碼",
+    "Dissolved team {{team_id}} and returned {{quota}} to the owner": "解散團隊 {{team_id}}，並將 {{quota}} 退還給擁有者",
+    "Only the team owner can dissolve the team": "僅團隊擁有者可解散團隊",
+    "The team balance changed, please try again": "團隊餘額已變化，請重試",
+    "Received {{quota}} from dissolved team {{team}}": "收到已解散團隊 {{team}} 退還的 {{quota}}",
+    "Team dissolved, {{quota}} returned to the owner": "團隊已解散，{{quota}} 已退還給擁有者",
+    "Dissolve team": "解散團隊",
+    "Verify to dissolve the team": "驗證身分以解散團隊",
+    "Failed to dissolve the team": "解散團隊失敗",
+    "Team dissolved. {{quota}} returned to your balance.": "團隊已解散，{{quota}} 已退回到您的餘額。",
+    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "確定解散 {{name}} 嗎？團隊剩餘餘額 {{quota}} 將退回到您的個人餘額，該團隊所有成員的 API 金鑰都會被刪除。此操作無法復原。"
   }
 }

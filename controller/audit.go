@@ -44,6 +44,7 @@ var auditContentTemplates = map[string]string{
 	"sso.team_key_issue":        "Issued the team ${team_id} API key to application ${client_id}",
 	"sso.team_key_failed":       "Rejected team ${team_id} API key request from application ${client_id} (${reason})",
 	"team.redeem":               "Redeemed a code worth ${quota} to team ${team_id}",
+	"team.dissolve":             "Dissolved team ${team_id} and returned ${quota} to the owner",
 	"access_token.revoke":       "Revoked an access token",
 	"access_token.rename":       "Renamed an access token",
 	"access_token.update":       "Changed access token permissions",

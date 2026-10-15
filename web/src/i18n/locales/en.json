@@ -7504,6 +7504,18 @@
     "Roles": "Roles",
     "Custom roles replace the default administrator permissions and grant access in connected applications.": "Custom roles replace the default administrator permissions and grant access in connected applications.",
     "Select roles": "Select roles",
-    "Save roles": "Save roles"
+    "Save roles": "Save roles",
+    "Permission overrides are ignored for users with custom roles": "Permission overrides are ignored for users with custom roles",
+    "Redeemed a code worth {{quota}} to team {{team_id}}": "Redeemed a code worth {{quota}} to team {{team_id}}",
+    "Dissolved team {{team_id}} and returned {{quota}} to the owner": "Dissolved team {{team_id}} and returned {{quota}} to the owner",
+    "Only the team owner can dissolve the team": "Only the team owner can dissolve the team",
+    "The team balance changed, please try again": "The team balance changed, please try again",
+    "Received {{quota}} from dissolved team {{team}}": "Received {{quota}} from dissolved team {{team}}",
+    "Team dissolved, {{quota}} returned to the owner": "Team dissolved, {{quota}} returned to the owner",
+    "Dissolve team": "Dissolve team",
+    "Verify to dissolve the team": "Verify to dissolve the team",
+    "Failed to dissolve the team": "Failed to dissolve the team",
+    "Team dissolved. {{quota}} returned to your balance.": "Team dissolved. {{quota}} returned to your balance.",
+    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone."
   }
 }

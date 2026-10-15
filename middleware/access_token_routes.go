@@ -201,6 +201,7 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"POST /api/team":                    accessTokenSessionRule,
 	"GET /api/team/self":                accessTokenScopeRule("wallet:read"),
 	"GET /api/team/:id":                 accessTokenScopeRule("wallet:read"),
+	"DELETE /api/team/:id":              accessTokenSessionRule,
 	"POST /api/team/:id/members":        accessTokenSessionRule,
 	"PUT /api/team/:id/members/:uid":    accessTokenSessionRule,
 	"DELETE /api/team/:id/members/:uid": accessTokenSessionRule,

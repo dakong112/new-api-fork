@@ -9,6 +9,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/gin-gonic/gin"
 )
@@ -245,6 +246,30 @@ func DeleteTeamMember(c *gin.Context) {
 		return
 	}
 	common.ApiSuccess(c, nil)
+}
+
+// DissolveTeam ends the team and returns its balance to the owner. Like
+// account deletion it needs a fresh security proof, bound to this team.
+func DissolveTeam(c *gin.Context) {
+	team, member, ok := loadTeamMembership(c, false)
+	if !ok {
+		return
+	}
+	if member.Role != model.TeamRoleOwner {
+		common.ApiErrorT(c, "Only the team owner can dissolve the team")
+		return
+	}
+	authorization := requireAdminUserProof(c, service.VerificationScopeTeamDissolve, service.TeamContext{TeamID: team.Id})
+	if authorization == nil {
+		return
+	}
+	quota, err := model.DissolveTeam(team.Id, c.GetInt("id"))
+	if err != nil {
+		writeTeamError(c, err)
+		return
+	}
+	recordUserSecurityAudit(c, c.GetInt("id"), "team.dissolve", map[string]any{"team_id": team.Id, "wallet_user_id": team.WalletUserId, "quota": quota, "verification_method": authorization.Method, "success": true})
+	common.ApiSuccess(c, gin.H{"quota": quota})
 }
 
 // TransferToTeam moves quota from the caller's wallet to the team wallet.

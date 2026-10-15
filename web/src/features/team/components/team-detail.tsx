@@ -39,6 +39,7 @@ import {
   type TeamMember,
   type TeamUsageRow,
 } from '../api'
+import { DissolveTeamAction } from './dissolve-team-action'
 import { MemberDialog } from './member-dialog'
 import { TeamRoleBadge } from './team-role-badge'
 import { TeamTransferDialog } from './transfer-dialog'
@@ -122,6 +123,13 @@ export function TeamDetail(props: { teamId: number }) {
               <Wallet />
               {t('Top up team')}
             </Button>
+          )}
+          {callerIsOwner && detail && (
+            <DissolveTeamAction
+              teamId={props.teamId}
+              teamName={detail.team.name}
+              balance={detail.balance}
+            />
           )}
         </SectionPageLayout.Actions>
         <SectionPageLayout.Content>
