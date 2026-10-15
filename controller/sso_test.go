@@ -864,3 +864,29 @@ func TestConsumeSSOQuotaRejections(t *testing.T) {
 	status, body := consumeSSOTestQuota(t, router, pat, "max", maxQuota)
 	assert.Equal(t, http.StatusOK, status, body.Message)
 }
+
+func TestSSOClientReturnURL(t *testing.T) {
+	previousClients := setting.SSOClients2JsonString()
+	t.Cleanup(func() { require.NoError(t, setting.UpdateSSOClientsByJsonString(previousClients)) })
+	require.NoError(t, setting.UpdateSSOClientsByJsonString(`[{"client_id":"infinite","name":"Studio","secret_hash":"`+setting.SSOSecretHash(ssoTestSecret)+`","redirect_uris":["https://studio.example.com/api/auth/newapi/callback"],"launch_url":"https://launch.example.com:8443/start"}]`))
+	const fallback = "https://gateway.example.com/usage-logs"
+
+	for requested, expected := range map[string]string{
+		"https://studio.example.com/wallet?paid=1":           "https://studio.example.com/wallet?paid=1",
+		"https://STUDIO.example.com/wallet":                  "https://STUDIO.example.com/wallet",
+		"https://launch.example.com:8443/wallet":             "https://launch.example.com:8443/wallet",
+		"":                                                   fallback,
+		"https://launch.example.com/wallet":                  fallback,
+		"http://studio.example.com/wallet":                   fallback,
+		"https://studio.example.com.evil.com/x":              fallback,
+		"https://evil.com/?next=https://studio.example.com/": fallback,
+		"https://studio.example.com@evil.com/":               fallback,
+		"//studio.example.com/wallet":                        fallback,
+		"/wallet":                                            fallback,
+		"javascript:alert(1)//studio.example.com":            fallback,
+		"data:text/html,https://studio.example.com":          fallback,
+		"https://studio.example.com/%zz":                     fallback,
+	} {
+		assert.Equal(t, expected, ssoClientReturnURL(requested, fallback), requested)
+	}
+}
