@@ -38,6 +38,7 @@ describe('legacy frontend route migration', () => {
       '/console/log': '/usage-logs',
       '/console/midjourney': '/usage-logs/drawing',
       '/console/task': '/usage-logs/task',
+      '/console/team': '/team',
       '/console/chat/42': '/chat/42',
     }
 

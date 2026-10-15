@@ -32,6 +32,7 @@ const legacyConsoleRoutes: Record<string, string> = {
   '/console/log': '/usage-logs',
   '/console/midjourney': '/usage-logs/drawing',
   '/console/task': '/usage-logs/task',
+  '/console/team': '/team',
 }
 
 const legacySettingsTabs: Record<string, string> = {

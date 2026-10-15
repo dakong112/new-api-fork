@@ -58,7 +58,17 @@ import type {
 
 interface WalletProps {
   initialShowHistory?: boolean
+  /** Tops up this team's wallet: only epay methods, no personal panels. */
+  teamId?: number
 }
+
+// Payment types whose endpoints cannot credit a team wallet.
+const PERSONAL_ONLY_PAYMENT_TYPES = new Set<string>([
+  PAYMENT_TYPES.STRIPE,
+  PAYMENT_TYPES.CREEM,
+  PAYMENT_TYPES.WAFFO,
+  PAYMENT_TYPES.WAFFO_PANCAKE,
+])
 
 export function Wallet(props: WalletProps) {
   const { t } = useTranslation()
@@ -83,7 +93,25 @@ export function Wallet(props: WalletProps) {
 
   const { status } = useStatus()
   const { currency } = useSystemConfig()
-  const { topupInfo, presetAmounts, loading: topupLoading } = useTopupInfo()
+  const {
+    topupInfo: walletTopupInfo,
+    presetAmounts,
+    loading: topupLoading,
+  } = useTopupInfo()
+  const teamId = props.teamId
+  const topupInfo = useMemo(() => {
+    if (!teamId || !walletTopupInfo) return walletTopupInfo
+    return {
+      ...walletTopupInfo,
+      enable_stripe_topup: false,
+      enable_creem_topup: false,
+      enable_waffo_topup: false,
+      enable_waffo_pancake_topup: false,
+      pay_methods: (walletTopupInfo.pay_methods ?? []).filter(
+        (method) => !PERSONAL_ONLY_PAYMENT_TYPES.has(method.type)
+      ),
+    }
+  }, [teamId, walletTopupInfo])
 
   // Calculate effective exchange rate - when display type is USD, use rate of 1
   const effectiveUsdExchangeRate = useMemo(() => {
@@ -97,7 +125,7 @@ export function Wallet(props: WalletProps) {
     processing,
     calculatePaymentAmount,
     processPayment,
-  } = usePayment()
+  } = usePayment(teamId)
   const {
     affiliateLink,
     loading: affiliateLoading,
@@ -289,24 +317,26 @@ export function Wallet(props: WalletProps) {
     <>
       <SectionPageLayout>
         <SectionPageLayout.Title>
-          {t('Top Up & Redeem')}
+          {teamId ? t('Top up team') : t('Top Up & Redeem')}
         </SectionPageLayout.Title>
         <SectionPageLayout.Content>
           <div className='mx-auto flex w-full max-w-7xl flex-col gap-4 sm:gap-5'>
-            <WalletStatsCard user={user} loading={userLoading} />
+            {!teamId && <WalletStatsCard user={user} loading={userLoading} />}
 
-            <RedemptionCard
-              enabled={topupInfo?.enable_redemption !== false}
-              purchaseLink={topupInfo?.topup_link}
-              code={redemptionCode}
-              onCodeChange={setRedemptionCode}
-              onRedeem={handleRedeem}
-              redeeming={redeeming}
-            />
+            {!teamId && (
+              <RedemptionCard
+                enabled={topupInfo?.enable_redemption !== false}
+                purchaseLink={topupInfo?.topup_link}
+                code={redemptionCode}
+                onCodeChange={setRedemptionCode}
+                onRedeem={handleRedeem}
+                redeeming={redeeming}
+              />
+            )}
 
             <div
               className={
-                showSubscriptionPanel
+                showSubscriptionPanel && !teamId
                   ? 'grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] xl:items-start'
                   : 'grid gap-4'
               }
@@ -340,23 +370,27 @@ export function Wallet(props: WalletProps) {
                 />
               </div>
 
-              <SubscriptionPlansCard
-                topupInfo={topupInfo}
-                onAvailabilityChange={handleSubscriptionAvailabilityChange}
-                userQuota={user?.quota}
-                onPurchaseSuccess={fetchUser}
-              />
+              {!teamId && (
+                <SubscriptionPlansCard
+                  topupInfo={topupInfo}
+                  onAvailabilityChange={handleSubscriptionAvailabilityChange}
+                  userQuota={user?.quota}
+                  onPurchaseSuccess={fetchUser}
+                />
+              )}
             </div>
 
-            <AffiliateRewardsCard
-              user={user}
-              affiliateLink={affiliateLink}
-              onTransfer={() => setTransferDialogOpen(true)}
-              complianceConfirmed={
-                topupInfo?.payment_compliance_confirmed !== false
-              }
-              loading={affiliateLoading}
-            />
+            {!teamId && (
+              <AffiliateRewardsCard
+                user={user}
+                affiliateLink={affiliateLink}
+                onTransfer={() => setTransferDialogOpen(true)}
+                complianceConfirmed={
+                  topupInfo?.payment_compliance_confirmed !== false
+                }
+                loading={affiliateLoading}
+              />
+            )}
           </div>
         </SectionPageLayout.Content>
       </SectionPageLayout>

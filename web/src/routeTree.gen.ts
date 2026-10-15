@@ -55,6 +55,8 @@ import { Route as AuthenticatedSubscriptionsIndexRouteImport } from './routes/_a
 import { Route as AuthenticatedSystemInfoIndexRouteImport } from './routes/_authenticated/system-info/index'
 import { Route as AuthenticatedSystemSettingsIndexRouteImport } from './routes/_authenticated/system-settings/index'
 import { Route as AuthenticatedTaskPluginsIndexRouteImport } from './routes/_authenticated/task-plugins/index'
+import { Route as AuthenticatedTeamIndexRouteImport } from './routes/_authenticated/team/index'
+import { Route as AuthenticatedTeamTeamIdRouteImport } from './routes/_authenticated/team/$teamId'
 import { Route as AuthenticatedUsageLogsIndexRouteImport } from './routes/_authenticated/usage-logs/index'
 import { Route as AuthenticatedUsageLogsSectionRouteImport } from './routes/_authenticated/usage-logs/$section'
 import { Route as AuthenticatedUsageLogsAuditRouteImport } from './routes/_authenticated/usage-logs/audit'
@@ -323,6 +325,16 @@ const AuthenticatedTaskPluginsIndexRoute =
     path: '/task-plugins/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedTeamIndexRoute = AuthenticatedTeamIndexRouteImport.update({
+  id: '/team/',
+  path: '/team/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTeamTeamIdRoute = AuthenticatedTeamTeamIdRouteImport.update({
+  id: '/team/$teamId',
+  path: '/team/$teamId',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedUsageLogsIndexRoute =
   AuthenticatedUsageLogsIndexRouteImport.update({
     id: '/usage-logs/',
@@ -485,6 +497,7 @@ export interface FileRoutesByFullPath {
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/models/$section': typeof AuthenticatedModelsSectionRoute
   '/sso/authorize': typeof AuthenticatedSsoAuthorizeRoute
+  '/team/$teamId': typeof AuthenticatedTeamTeamIdRoute
   '/usage-logs/$section': typeof AuthenticatedUsageLogsSectionRoute
   '/usage-logs/audit': typeof AuthenticatedUsageLogsAuditRoute
   '/channel-cost/': typeof AuthenticatedChannelCostIndexRoute
@@ -501,6 +514,7 @@ export interface FileRoutesByFullPath {
   '/system-info/': typeof AuthenticatedSystemInfoIndexRoute
   '/system-settings/': typeof AuthenticatedSystemSettingsIndexRoute
   '/task-plugins/': typeof AuthenticatedTaskPluginsIndexRoute
+  '/team/': typeof AuthenticatedTeamIndexRoute
   '/usage-logs/': typeof AuthenticatedUsageLogsIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
   '/wallet/': typeof AuthenticatedWalletIndexRoute
@@ -552,6 +566,7 @@ export interface FileRoutesByTo {
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/models/$section': typeof AuthenticatedModelsSectionRoute
   '/sso/authorize': typeof AuthenticatedSsoAuthorizeRoute
+  '/team/$teamId': typeof AuthenticatedTeamTeamIdRoute
   '/usage-logs/$section': typeof AuthenticatedUsageLogsSectionRoute
   '/usage-logs/audit': typeof AuthenticatedUsageLogsAuditRoute
   '/channel-cost': typeof AuthenticatedChannelCostIndexRoute
@@ -568,6 +583,7 @@ export interface FileRoutesByTo {
   '/system-info': typeof AuthenticatedSystemInfoIndexRoute
   '/system-settings': typeof AuthenticatedSystemSettingsIndexRoute
   '/task-plugins': typeof AuthenticatedTaskPluginsIndexRoute
+  '/team': typeof AuthenticatedTeamIndexRoute
   '/usage-logs': typeof AuthenticatedUsageLogsIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
   '/wallet': typeof AuthenticatedWalletIndexRoute
@@ -623,6 +639,7 @@ export interface FileRoutesById {
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/models/$section': typeof AuthenticatedModelsSectionRoute
   '/_authenticated/sso/authorize': typeof AuthenticatedSsoAuthorizeRoute
+  '/_authenticated/team/$teamId': typeof AuthenticatedTeamTeamIdRoute
   '/_authenticated/usage-logs/$section': typeof AuthenticatedUsageLogsSectionRoute
   '/_authenticated/usage-logs/audit': typeof AuthenticatedUsageLogsAuditRoute
   '/_authenticated/channel-cost/': typeof AuthenticatedChannelCostIndexRoute
@@ -639,6 +656,7 @@ export interface FileRoutesById {
   '/_authenticated/system-info/': typeof AuthenticatedSystemInfoIndexRoute
   '/_authenticated/system-settings/': typeof AuthenticatedSystemSettingsIndexRoute
   '/_authenticated/task-plugins/': typeof AuthenticatedTaskPluginsIndexRoute
+  '/_authenticated/team/': typeof AuthenticatedTeamIndexRoute
   '/_authenticated/usage-logs/': typeof AuthenticatedUsageLogsIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
   '/_authenticated/wallet/': typeof AuthenticatedWalletIndexRoute
@@ -693,6 +711,7 @@ export interface FileRouteTypes {
     | '/errors/$error'
     | '/models/$section'
     | '/sso/authorize'
+    | '/team/$teamId'
     | '/usage-logs/$section'
     | '/usage-logs/audit'
     | '/channel-cost/'
@@ -709,6 +728,7 @@ export interface FileRouteTypes {
     | '/system-info/'
     | '/system-settings/'
     | '/task-plugins/'
+    | '/team/'
     | '/usage-logs/'
     | '/users/'
     | '/wallet/'
@@ -760,6 +780,7 @@ export interface FileRouteTypes {
     | '/errors/$error'
     | '/models/$section'
     | '/sso/authorize'
+    | '/team/$teamId'
     | '/usage-logs/$section'
     | '/usage-logs/audit'
     | '/channel-cost'
@@ -776,6 +797,7 @@ export interface FileRouteTypes {
     | '/system-info'
     | '/system-settings'
     | '/task-plugins'
+    | '/team'
     | '/usage-logs'
     | '/users'
     | '/wallet'
@@ -830,6 +852,7 @@ export interface FileRouteTypes {
     | '/_authenticated/errors/$error'
     | '/_authenticated/models/$section'
     | '/_authenticated/sso/authorize'
+    | '/_authenticated/team/$teamId'
     | '/_authenticated/usage-logs/$section'
     | '/_authenticated/usage-logs/audit'
     | '/_authenticated/channel-cost/'
@@ -846,6 +869,7 @@ export interface FileRouteTypes {
     | '/_authenticated/system-info/'
     | '/_authenticated/system-settings/'
     | '/_authenticated/task-plugins/'
+    | '/_authenticated/team/'
     | '/_authenticated/usage-logs/'
     | '/_authenticated/users/'
     | '/_authenticated/wallet/'
@@ -1212,6 +1236,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTaskPluginsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/team/': {
+      id: '/_authenticated/team/'
+      path: '/team'
+      fullPath: '/team/'
+      preLoaderRoute: typeof AuthenticatedTeamIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/team/$teamId': {
+      id: '/_authenticated/team/$teamId'
+      path: '/team/$teamId'
+      fullPath: '/team/$teamId'
+      preLoaderRoute: typeof AuthenticatedTeamTeamIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/usage-logs/': {
       id: '/_authenticated/usage-logs/'
       path: '/usage-logs'
@@ -1467,6 +1505,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedModelsSectionRoute: typeof AuthenticatedModelsSectionRoute
   AuthenticatedSsoAuthorizeRoute: typeof AuthenticatedSsoAuthorizeRoute
+  AuthenticatedTeamTeamIdRoute: typeof AuthenticatedTeamTeamIdRoute
   AuthenticatedUsageLogsSectionRoute: typeof AuthenticatedUsageLogsSectionRoute
   AuthenticatedUsageLogsAuditRoute: typeof AuthenticatedUsageLogsAuditRoute
   AuthenticatedChannelCostIndexRoute: typeof AuthenticatedChannelCostIndexRoute
@@ -1482,6 +1521,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSubscriptionsIndexRoute: typeof AuthenticatedSubscriptionsIndexRoute
   AuthenticatedSystemInfoIndexRoute: typeof AuthenticatedSystemInfoIndexRoute
   AuthenticatedTaskPluginsIndexRoute: typeof AuthenticatedTaskPluginsIndexRoute
+  AuthenticatedTeamIndexRoute: typeof AuthenticatedTeamIndexRoute
   AuthenticatedUsageLogsIndexRoute: typeof AuthenticatedUsageLogsIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
   AuthenticatedWalletIndexRoute: typeof AuthenticatedWalletIndexRoute
@@ -1497,6 +1537,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedModelsSectionRoute: AuthenticatedModelsSectionRoute,
   AuthenticatedSsoAuthorizeRoute: AuthenticatedSsoAuthorizeRoute,
+  AuthenticatedTeamTeamIdRoute: AuthenticatedTeamTeamIdRoute,
   AuthenticatedUsageLogsSectionRoute: AuthenticatedUsageLogsSectionRoute,
   AuthenticatedUsageLogsAuditRoute: AuthenticatedUsageLogsAuditRoute,
   AuthenticatedChannelCostIndexRoute: AuthenticatedChannelCostIndexRoute,
@@ -1513,6 +1554,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSubscriptionsIndexRoute: AuthenticatedSubscriptionsIndexRoute,
   AuthenticatedSystemInfoIndexRoute: AuthenticatedSystemInfoIndexRoute,
   AuthenticatedTaskPluginsIndexRoute: AuthenticatedTaskPluginsIndexRoute,
+  AuthenticatedTeamIndexRoute: AuthenticatedTeamIndexRoute,
   AuthenticatedUsageLogsIndexRoute: AuthenticatedUsageLogsIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
   AuthenticatedWalletIndexRoute: AuthenticatedWalletIndexRoute,

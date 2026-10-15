@@ -37,6 +37,7 @@ import {
   User,
   UserCog,
   Users,
+  UsersRound,
   Wallet,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -122,6 +123,11 @@ export function useSidebarData(): SidebarData {
             title: t('Top Up & Redeem'),
             url: '/wallet',
             icon: Wallet,
+          },
+          {
+            title: t('Teams'),
+            url: '/team',
+            icon: UsersRound,
           },
           {
             title: t('Profile'),

@@ -184,6 +184,8 @@ export interface PaymentRequest {
   amount: number
   /** Payment method identifier */
   payment_method: string
+  /** Team whose wallet is topped up; epay only */
+  team_id?: number
 }
 
 /**

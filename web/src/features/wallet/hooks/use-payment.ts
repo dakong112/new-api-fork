@@ -81,7 +81,8 @@ export async function requestPaymentAmount(
   return Number.parseFloat(response.data)
 }
 
-export function usePayment() {
+// teamId tops up that team's wallet; only the epay endpoint accepts it.
+export function usePayment(teamId?: number) {
   const [amount, setAmount] = useState<number>(0)
   const [calculating, setCalculating] = useState(false)
   const [processing, setProcessing] = useState(false)
@@ -124,6 +125,7 @@ export function usePayment() {
           : await requestPayment({
               amount,
               payment_method: paymentType,
+              team_id: teamId,
             })
 
         if (!isApiSuccess(response)) {
@@ -156,7 +158,7 @@ export function usePayment() {
         setProcessing(false)
       }
     },
-    []
+    [teamId]
   )
 
   return {
