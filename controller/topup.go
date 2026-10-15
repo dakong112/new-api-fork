@@ -130,6 +130,8 @@ type EpayRequest struct {
 	PaymentMethod string `json:"payment_method"`
 	// ReturnURL is honored only for registered SSO client origins.
 	ReturnURL string `json:"return_url,omitempty"`
+	// TeamId tops up that team's wallet; the caller must be its owner or an admin.
+	TeamId int `json:"team_id,omitempty"`
 }
 
 type AmountRequest struct {
@@ -293,7 +295,10 @@ func RequestEpay(c *gin.Context) {
 		paymentError(c, common.NewMessage("Top-up amount cannot be less than {{min}}", map[string]any{"min": getMinTopup()}))
 		return
 	}
-	id := c.GetInt("id")
+	id, ok := teamForPayment(c, req.TeamId)
+	if !ok {
+		return
+	}
 	if rejectInvalidTopUpQuota(c, id, req.Amount) {
 		return
 	}

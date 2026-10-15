@@ -44,6 +44,10 @@ func CreateSSOCode(c *gin.Context) {
 		common.ApiErrorT(c, "Invalid parameters")
 		return
 	}
+	if model.IsTeamWalletUser(c.GetInt("id")) {
+		common.ApiErrorT(c, "Team wallet accounts cannot sign in")
+		return
+	}
 	client, ok := setting.FindSSOClient(request.ClientID)
 	if !ok || !client.AllowsRedirect(request.RedirectURI) {
 		common.ApiErrorT(c, "Invalid SSO client or redirect URI")
@@ -304,6 +308,69 @@ func GetSSOPermissions(c *gin.Context) {
 		return
 	}
 	common.ApiSuccess(c, gin.H{"permissions": service.SSOPermissions(user, client)})
+}
+
+// ListSSOTeams lists the user's teams for an application's space switcher.
+// Authentication is CreateSSOKey's.
+func ListSSOTeams(c *gin.Context) {
+	var request struct {
+		ClientID     string `json:"client_id"`
+		ClientSecret string `json:"client_secret"`
+	}
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiErrorStatus(c, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+	_, user, ok := ssoClientTokenAuth(c, "teams", request.ClientID, request.ClientSecret)
+	if !ok {
+		return
+	}
+	teams, err := model.ListUserTeams(user.Id)
+	if err != nil {
+		common.SysLog(common.LogText("SSO team list failed for user %d: %v", user.Id, err))
+		common.ApiErrorStatus(c, http.StatusInternalServerError, errors.New("sso teams failed"))
+		return
+	}
+	common.ApiSuccess(c, teams)
+}
+
+// CreateSSOTeamKey returns the user's member key of a team, so an application
+// bills team-space calls to the team wallet within the member's limit.
+// Authentication is CreateSSOKey's; non-members get 404.
+func CreateSSOTeamKey(c *gin.Context) {
+	var request struct {
+		ClientID     string `json:"client_id"`
+		ClientSecret string `json:"client_secret"`
+		TeamID       int    `json:"team_id"`
+	}
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiErrorStatus(c, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+	client, user, ok := ssoClientTokenAuth(c, "team_key", request.ClientID, request.ClientSecret)
+	if !ok {
+		return
+	}
+	fail := func(reason string, status int, err error) {
+		recordSSOAudit(c, user.Id, user.Role, "sso.team_key_failed", map[string]any{"client_id": client.ClientID, "team_id": request.TeamID, "reason": reason}, status, false)
+		common.ApiErrorStatus(c, status, err)
+	}
+	key, err := model.GetTeamMemberToken(request.TeamID, user.Id)
+	if errors.Is(err, model.ErrTeamNotFound) {
+		fail("not_member", http.StatusNotFound, errors.New("team not found"))
+		return
+	}
+	if err != nil {
+		common.SysLog(common.LogText("SSO team key failed for user %d team %d: %v", user.Id, request.TeamID, err))
+		fail("key_failed", http.StatusInternalServerError, errors.New("sso team key failed"))
+		return
+	}
+	if key.Status != common.TokenStatusEnabled && key.Status != common.TokenStatusExhausted {
+		fail("credential_unavailable", http.StatusConflict, model.ErrSSOAPIKeyDisabled)
+		return
+	}
+	recordSSOAudit(c, user.Id, user.Role, "sso.team_key_issue", map[string]any{"client_id": client.ClientID, "team_id": request.TeamID, "api_key_id": key.Id}, http.StatusOK, true)
+	common.ApiSuccess(c, gin.H{"key": "sk-" + key.Key})
 }
 
 // GetSSOClient tells an application server its display name and the defaults
