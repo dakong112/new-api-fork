@@ -287,6 +287,25 @@ func CreateSSOKey(c *gin.Context) {
 	common.ApiSuccess(c, gin.H{"key": "sk-" + key.Key})
 }
 
+// GetSSOPermissions returns the user's current permission codes for the
+// client's application, so it can refresh them without a new sign-in.
+// Authentication is CreateSSOKey's.
+func GetSSOPermissions(c *gin.Context) {
+	var request struct {
+		ClientID     string `json:"client_id"`
+		ClientSecret string `json:"client_secret"`
+	}
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiErrorStatus(c, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+	client, user, ok := ssoClientTokenAuth(c, "permissions", request.ClientID, request.ClientSecret)
+	if !ok {
+		return
+	}
+	common.ApiSuccess(c, gin.H{"permissions": service.SSOPermissions(user, client)})
+}
+
 // GetSSOClient tells an application server its display name and the defaults
 // the administrator chose for it. The application authenticates with HTTP
 // Basic client credentials; failures share the exchange throttle.

@@ -5,6 +5,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service/authz"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 )
@@ -31,6 +32,17 @@ type SSOGrant struct {
 	AccessToken          string       `json:"access_token"`
 	AccessTokenExpiresAt int64        `json:"access_token_expires_at"`
 	APIKey               string       `json:"api_key"`
+	// Permissions are the user's codes for the client's application.
+	Permissions []string `json:"permissions"`
+}
+
+// SSOPermissions returns the permission codes the user holds in the client's
+// application; none when the client names no application.
+func SSOPermissions(user *model.User, client setting.SSOClient) []string {
+	if client.App == "" {
+		return []string{}
+	}
+	return authz.CodesForApp(user.Id, user.Role, client.App)
 }
 
 // SSOGrantResult carries the grant plus the identifiers needed for auditing.
@@ -106,6 +118,7 @@ func IssueSSOGrant(user *model.User, client setting.SSOClient) (*SSOGrantResult,
 			AccessToken:          raw,
 			AccessTokenExpiresAt: expiresAt,
 			APIKey:               "sk-" + issued.APIKey.Key,
+			Permissions:          SSOPermissions(user, client),
 		},
 		APIKeyID:      issued.APIKey.Id,
 		AccessTokenID: issued.AccessToken.Id,

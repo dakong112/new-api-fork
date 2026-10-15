@@ -44,6 +44,8 @@ func TestSSOClientsOptionValidation(t *testing.T) {
 		{"no redirect", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":[]}]`, false},
 		{"defaults", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"],"defaults":{"group":"vip","image":"gpt-image-1","text":"deepseek-chat"}}]`, true},
 		{"default model too long", `[{"client_id":"a","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"],"defaults":{"image":"` + strings.Repeat("m", 129) + `"}}]`, false},
+		{"app", `[{"client_id":"a","app":"canvas","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"]}]`, true},
+		{"app not lowercase letters", `[{"client_id":"a","app":"Canvas-1","secret_hash":"` + setting.SSOSecretHash("x") + `","redirect_uris":["https://a.com/cb"]}]`, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -100,7 +102,7 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	common.RedisEnabled = false
 	common.IsMasterNode = true
 	require.NoError(t, authz.Init(db))
-	require.NoError(t, setting.UpdateSSOClientsByJsonString(`[{"client_id":"infinite","name":"Studio","secret_hash":"`+setting.SSOSecretHash(ssoTestSecret)+`","redirect_uris":["`+ssoTestRedirect+`"],"launch_url":"https://www.example.com/api/auth/newapi/start"},{"client_id":"other","name":"Other","secret_hash":"`+setting.SSOSecretHash("other-secret")+`","redirect_uris":["https://other.example.com/cb"]}]`))
+	require.NoError(t, setting.UpdateSSOClientsByJsonString(`[{"client_id":"infinite","name":"Studio","app":"canvas","secret_hash":"`+setting.SSOSecretHash(ssoTestSecret)+`","redirect_uris":["`+ssoTestRedirect+`"],"launch_url":"https://www.example.com/api/auth/newapi/start"},{"client_id":"other","name":"Other","secret_hash":"`+setting.SSOSecretHash("other-secret")+`","redirect_uris":["https://other.example.com/cb"]}]`))
 	t.Cleanup(func() {
 		model.DB, model.LOG_DB = previousDB, previousLogDB
 		common.SetDatabaseTypes(previousMain, previousLog)
@@ -123,6 +125,7 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	api.POST("/sso/key", middleware.UserAuth(), CreateSSOKey)
 	api.GET("/sso/client", GetSSOClient)
 	api.POST("/sso/consume", middleware.UserAuth(), ConsumeSSOQuota)
+	api.POST("/sso/permissions", middleware.UserAuth(), GetSSOPermissions)
 	return router, user, jwt
 }
 
@@ -199,9 +202,10 @@ type ssoExchangeResponse struct {
 			Group    string `json:"group"`
 			Quota    int    `json:"quota"`
 		} `json:"user"`
-		AccessToken          string `json:"access_token"`
-		AccessTokenExpiresAt int64  `json:"access_token_expires_at"`
-		APIKey               string `json:"api_key"`
+		AccessToken          string   `json:"access_token"`
+		Permissions          []string `json:"permissions"`
+		AccessTokenExpiresAt int64    `json:"access_token_expires_at"`
+		APIKey               string   `json:"api_key"`
 	} `json:"data"`
 }
 
@@ -889,4 +893,58 @@ func TestSSOClientReturnURL(t *testing.T) {
 	} {
 		assert.Equal(t, expected, ssoClientReturnURL(requested, fallback), requested)
 	}
+}
+
+// The grant and /api/sso/permissions carry the codes of the client's
+// application only, and follow role changes without a new sign-in.
+func TestSSOPermissionCodes(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+
+	response := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), ssoTestSecret, ssoTestRedirect))
+	var grant ssoExchangeResponse
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &grant))
+	require.True(t, grant.Success, grant.Message)
+	require.NotNil(t, grant.Data.Permissions)
+	assert.Empty(t, grant.Data.Permissions, "a common user without roles holds no codes")
+
+	permissions := func(pat, client, secret string) (int, []string) {
+		response := ssoPost(router, "/api/sso/permissions", pat, `{"client_id":"`+client+`","client_secret":"`+secret+`"}`)
+		var body struct {
+			Data struct {
+				Permissions []string `json:"permissions"`
+			} `json:"data"`
+		}
+		require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body))
+		return response.Code, body.Data.Permissions
+	}
+
+	// The preset support role also grants user.read, a gateway code the canvas app never sees.
+	require.NoError(t, authz.SetUserRoles(user.Id, []string{"support"}))
+	status, codes := permissions(grant.Data.AccessToken, "infinite", ssoTestSecret)
+	require.Equal(t, http.StatusOK, status)
+	assert.Equal(t, []string{authz.CanvasUserRead.Code(), authz.CanvasOrderRead.Code()}, codes)
+
+	second := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), ssoTestSecret, ssoTestRedirect))
+	require.NoError(t, common.Unmarshal(second.Body.Bytes(), &grant))
+	assert.Equal(t, []string{authz.CanvasUserRead.Code(), authz.CanvasOrderRead.Code()}, grant.Data.Permissions)
+
+	// An administrator without a custom role holds every canvas code.
+	require.NoError(t, authz.SetUserRoles(user.Id, nil))
+	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("role", common.RoleAdminUser).Error)
+	_, codes = permissions(grant.Data.AccessToken, "infinite", ssoTestSecret)
+	assert.Len(t, codes, 8)
+
+	// A client naming no application receives none.
+	otherPAT, _ := issueSSOTestPAT(t, user.Id, "sso:other")
+	status, codes = permissions(otherPAT, "other", "other-secret")
+	require.Equal(t, http.StatusOK, status)
+	assert.Empty(t, codes)
+
+	// Same authentication as /api/sso/key: client secret plus the PAT issued to that client.
+	status, _ = permissions(grant.Data.AccessToken, "infinite", "wrong-secret")
+	assert.Equal(t, http.StatusUnauthorized, status)
+	status, _ = permissions(otherPAT, "infinite", ssoTestSecret)
+	assert.Equal(t, http.StatusForbidden, status)
+	status, _ = permissions(jwt, "infinite", ssoTestSecret)
+	assert.Equal(t, http.StatusForbidden, status)
 }

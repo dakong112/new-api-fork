@@ -34,6 +34,9 @@ type SSOClient struct {
 	RedirectURIs []string          `json:"redirect_uris"`
 	LaunchURL    string            `json:"launch_url"`
 	Defaults     SSOClientDefaults `json:"defaults"`
+	// App names the application whose permission codes ("canvas.template.read")
+	// the grant carries. Empty means the application receives none.
+	App string `json:"app,omitempty"`
 }
 
 var (
@@ -43,6 +46,7 @@ var (
 
 var ssoClientIDPattern = regexp.MustCompile(`^[a-z0-9_-]{1,46}$`)
 var ssoSecretHashPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+var ssoAppPattern = regexp.MustCompile(`^[a-z]{2,32}$`)
 
 func SSOSecretHash(secret string) string {
 	sum := sha256.Sum256([]byte(secret))
@@ -77,6 +81,9 @@ func ParseSSOClients(value string) ([]SSOClient, error) {
 			if !isAllowedSSORedirect(redirectURI) {
 				return nil, fmt.Errorf("SSOClients: redirect_uri %q of %q must be https (or http://localhost) without fragment", redirectURI, client.ClientID)
 			}
+		}
+		if client.App != "" && !ssoAppPattern.MatchString(client.App) {
+			return nil, fmt.Errorf("SSOClients: app of %q must be 2-32 lowercase letters", client.ClientID)
 		}
 		if client.LaunchURL != "" && !isAllowedSSORedirect(client.LaunchURL) {
 			return nil, fmt.Errorf("SSOClients: launch_url of %q must be https (or http://localhost)", client.ClientID)
