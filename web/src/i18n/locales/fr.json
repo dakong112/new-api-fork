@@ -7460,6 +7460,22 @@
     "Team wallet accounts cannot sign in": "Les comptes portefeuille d'équipe ne peuvent pas se connecter",
     "You are not allowed to use this application": "Vous n'êtes pas autorisé à utiliser cette application",
     "Transferred {{quota}} to team {{team}}": "{{quota}} transféré à l'équipe {{team}}",
-    "Received {{quota}} transferred from {{username}}": "{{quota}} reçu par transfert de {{username}}"
+    "Received {{quota}} transferred from {{username}}": "{{quota}} reçu par transfert de {{username}}",
+    "Roles & Permissions": "Rôles et permissions",
+    "Create role": "Créer un rôle",
+    "View role": "Voir le rôle",
+    "Edit role": "Modifier le rôle",
+    "Delete role": "Supprimer le rôle",
+    "Delete the role {{name}}? Users holding it lose its permissions.": "Supprimer le rôle {{name}} ? Les utilisateurs qui l'ont perdent ses permissions.",
+    "Role saved": "Rôle enregistré",
+    "Lowercase letters, digits and underscores, starting with a letter (2-32 characters).": "Lettres minuscules, chiffres et tirets bas, en commençant par une lettre (2 à 32 caractères).",
+    "API gateway": "Passerelle API",
+    "Infinite canvas": "Canevas infini",
+    "Verify to update user roles": "Vérifiez votre identité pour modifier les rôles de l'utilisateur",
+    "Roles updated": "Rôles mis à jour",
+    "Roles": "Rôles",
+    "Custom roles replace the default administrator permissions and grant access in connected applications.": "Les rôles personnalisés remplacent les permissions d'administrateur par défaut et donnent accès aux applications connectées.",
+    "Select roles": "Sélectionner des rôles",
+    "Save roles": "Enregistrer les rôles"
   }
 }

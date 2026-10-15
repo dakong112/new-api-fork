@@ -7459,6 +7459,22 @@
     "Team wallet accounts cannot sign in": "Team wallet accounts cannot sign in",
     "You are not allowed to use this application": "You are not allowed to use this application",
     "Transferred {{quota}} to team {{team}}": "Transferred {{quota}} to team {{team}}",
-    "Received {{quota}} transferred from {{username}}": "Received {{quota}} transferred from {{username}}"
+    "Received {{quota}} transferred from {{username}}": "Received {{quota}} transferred from {{username}}",
+    "Roles & Permissions": "Roles & Permissions",
+    "Create role": "Create role",
+    "View role": "View role",
+    "Edit role": "Edit role",
+    "Delete role": "Delete role",
+    "Delete the role {{name}}? Users holding it lose its permissions.": "Delete the role {{name}}? Users holding it lose its permissions.",
+    "Role saved": "Role saved",
+    "Lowercase letters, digits and underscores, starting with a letter (2-32 characters).": "Lowercase letters, digits and underscores, starting with a letter (2-32 characters).",
+    "API gateway": "API gateway",
+    "Infinite canvas": "Infinite canvas",
+    "Verify to update user roles": "Verify to update user roles",
+    "Roles updated": "Roles updated",
+    "Roles": "Roles",
+    "Custom roles replace the default administrator permissions and grant access in connected applications.": "Custom roles replace the default administrator permissions and grant access in connected applications.",
+    "Select roles": "Select roles",
+    "Save roles": "Save roles"
   }
 }

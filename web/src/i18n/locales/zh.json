@@ -7459,6 +7459,22 @@
     "Team wallet accounts cannot sign in": "团队钱包账户不能登录",
     "You are not allowed to use this application": "你没有使用此应用的权限",
     "Transferred {{quota}} to team {{team}}": "向团队 {{team}} 划转 {{quota}}",
-    "Received {{quota}} transferred from {{username}}": "收到 {{username}} 划转的 {{quota}}"
+    "Received {{quota}} transferred from {{username}}": "收到 {{username}} 划转的 {{quota}}",
+    "Roles & Permissions": "角色与权限",
+    "Create role": "创建角色",
+    "View role": "查看角色",
+    "Edit role": "编辑角色",
+    "Delete role": "删除角色",
+    "Delete the role {{name}}? Users holding it lose its permissions.": "确定删除角色 {{name}} 吗？持有该角色的用户将失去其权限。",
+    "Role saved": "角色已保存",
+    "Lowercase letters, digits and underscores, starting with a letter (2-32 characters).": "小写字母、数字和下划线，以字母开头（2-32 个字符）。",
+    "API gateway": "API 网关",
+    "Infinite canvas": "无限画布",
+    "Verify to update user roles": "验证身份以修改用户角色",
+    "Roles updated": "角色已更新",
+    "Roles": "角色",
+    "Custom roles replace the default administrator permissions and grant access in connected applications.": "自定义角色会替代默认的管理员权限，并授予已接入应用中的访问权限。",
+    "Select roles": "选择角色",
+    "Save roles": "保存角色"
   }
 }

@@ -7460,6 +7460,22 @@
     "Team wallet accounts cannot sign in": "チームウォレットアカウントはサインインできません",
     "You are not allowed to use this application": "このアプリケーションを使用する権限がありません",
     "Transferred {{quota}} to team {{team}}": "チーム {{team}} に {{quota}} を振り替えました",
-    "Received {{quota}} transferred from {{username}}": "{{username}} から {{quota}} の振替を受け取りました"
+    "Received {{quota}} transferred from {{username}}": "{{username}} から {{quota}} の振替を受け取りました",
+    "Roles & Permissions": "ロールと権限",
+    "Create role": "ロールを作成",
+    "View role": "ロールを表示",
+    "Edit role": "ロールを編集",
+    "Delete role": "ロールを削除",
+    "Delete the role {{name}}? Users holding it lose its permissions.": "ロール {{name}} を削除しますか？このロールを持つユーザーはその権限を失います。",
+    "Role saved": "ロールを保存しました",
+    "Lowercase letters, digits and underscores, starting with a letter (2-32 characters).": "英小文字・数字・アンダースコア、先頭は英字（2〜32 文字）。",
+    "API gateway": "API ゲートウェイ",
+    "Infinite canvas": "無限キャンバス",
+    "Verify to update user roles": "ユーザーのロールを変更するには本人確認が必要です",
+    "Roles updated": "ロールを更新しました",
+    "Roles": "ロール",
+    "Custom roles replace the default administrator permissions and grant access in connected applications.": "カスタムロールは既定の管理者権限を置き換え、連携アプリケーションへのアクセスを付与します。",
+    "Select roles": "ロールを選択",
+    "Save roles": "ロールを保存"
   }
 }

@@ -222,6 +222,33 @@ export async function getPermissionCatalog(): Promise<PermissionCatalog> {
   }
 }
 
+/**
+ * Get the custom authorization roles assigned to a user (root only)
+ */
+export async function getUserAuthzRoles(userId: number): Promise<string[]> {
+  const res = await api.get(`/api/user/${userId}/roles`)
+  requireServerSuccess(res.data)
+  return res.data?.data?.roles ?? []
+}
+
+/**
+ * Replace a user's custom authorization roles (root only); requires an
+ * `admin.user.update` proof
+ */
+export async function setUserAuthzRoles(
+  userId: number,
+  roles: string[],
+  proofToken: string
+): Promise<string[]> {
+  const res = await api.put(
+    `/api/user/${userId}/roles`,
+    { roles },
+    securityProofConfig(proofToken)
+  )
+  requireServerSuccess(res.data)
+  return res.data?.data?.roles ?? []
+}
+
 // ============================================================================
 // Admin Binding Management APIs
 // ============================================================================

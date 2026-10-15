@@ -7460,6 +7460,22 @@
     "Team wallet accounts cannot sign in": "Tài khoản ví nhóm không thể đăng nhập",
     "You are not allowed to use this application": "Bạn không được phép sử dụng ứng dụng này",
     "Transferred {{quota}} to team {{team}}": "Đã chuyển {{quota}} cho nhóm {{team}}",
-    "Received {{quota}} transferred from {{username}}": "Đã nhận {{quota}} chuyển từ {{username}}"
+    "Received {{quota}} transferred from {{username}}": "Đã nhận {{quota}} chuyển từ {{username}}",
+    "Roles & Permissions": "Vai trò & quyền",
+    "Create role": "Tạo vai trò",
+    "View role": "Xem vai trò",
+    "Edit role": "Sửa vai trò",
+    "Delete role": "Xóa vai trò",
+    "Delete the role {{name}}? Users holding it lose its permissions.": "Xóa vai trò {{name}}? Người dùng có vai trò này sẽ mất các quyền của nó.",
+    "Role saved": "Đã lưu vai trò",
+    "Lowercase letters, digits and underscores, starting with a letter (2-32 characters).": "Chữ thường, chữ số và dấu gạch dưới, bắt đầu bằng chữ cái (2-32 ký tự).",
+    "API gateway": "Cổng API",
+    "Infinite canvas": "Canvas vô hạn",
+    "Verify to update user roles": "Xác minh để cập nhật vai trò người dùng",
+    "Roles updated": "Đã cập nhật vai trò",
+    "Roles": "Vai trò",
+    "Custom roles replace the default administrator permissions and grant access in connected applications.": "Vai trò tùy chỉnh thay thế quyền quản trị mặc định và cấp quyền truy cập trong các ứng dụng được kết nối.",
+    "Select roles": "Chọn vai trò",
+    "Save roles": "Lưu vai trò"
   }
 }

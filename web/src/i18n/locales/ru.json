@@ -7460,6 +7460,22 @@
     "Team wallet accounts cannot sign in": "Кошельки команд не могут входить в систему",
     "You are not allowed to use this application": "У вас нет доступа к этому приложению",
     "Transferred {{quota}} to team {{team}}": "Переведено {{quota}} в команду {{team}}",
-    "Received {{quota}} transferred from {{username}}": "Получено {{quota}} переводом от {{username}}"
+    "Received {{quota}} transferred from {{username}}": "Получено {{quota}} переводом от {{username}}",
+    "Roles & Permissions": "Роли и права",
+    "Create role": "Создать роль",
+    "View role": "Просмотр роли",
+    "Edit role": "Изменить роль",
+    "Delete role": "Удалить роль",
+    "Delete the role {{name}}? Users holding it lose its permissions.": "Удалить роль {{name}}? Пользователи с этой ролью потеряют её права.",
+    "Role saved": "Роль сохранена",
+    "Lowercase letters, digits and underscores, starting with a letter (2-32 characters).": "Строчные латинские буквы, цифры и подчёркивания, начиная с буквы (2–32 символа).",
+    "API gateway": "API-шлюз",
+    "Infinite canvas": "Бесконечный холст",
+    "Verify to update user roles": "Подтвердите личность, чтобы изменить роли пользователя",
+    "Roles updated": "Роли обновлены",
+    "Roles": "Роли",
+    "Custom roles replace the default administrator permissions and grant access in connected applications.": "Пользовательские роли заменяют стандартные права администратора и дают доступ в подключённых приложениях.",
+    "Select roles": "Выберите роли",
+    "Save roles": "Сохранить роли"
   }
 }

@@ -7459,6 +7459,22 @@
     "Team wallet accounts cannot sign in": "團隊錢包帳戶不能登入",
     "You are not allowed to use this application": "你沒有使用此應用程式的權限",
     "Transferred {{quota}} to team {{team}}": "向團隊 {{team}} 劃轉 {{quota}}",
-    "Received {{quota}} transferred from {{username}}": "收到 {{username}} 劃轉的 {{quota}}"
+    "Received {{quota}} transferred from {{username}}": "收到 {{username}} 劃轉的 {{quota}}",
+    "Roles & Permissions": "角色與權限",
+    "Create role": "建立角色",
+    "View role": "檢視角色",
+    "Edit role": "編輯角色",
+    "Delete role": "刪除角色",
+    "Delete the role {{name}}? Users holding it lose its permissions.": "確定刪除角色 {{name}} 嗎？持有該角色的使用者將失去其權限。",
+    "Role saved": "角色已儲存",
+    "Lowercase letters, digits and underscores, starting with a letter (2-32 characters).": "小寫字母、數字和底線，以字母開頭（2-32 個字元）。",
+    "API gateway": "API 閘道",
+    "Infinite canvas": "無限畫布",
+    "Verify to update user roles": "驗證身分以修改使用者角色",
+    "Roles updated": "角色已更新",
+    "Roles": "角色",
+    "Custom roles replace the default administrator permissions and grant access in connected applications.": "自訂角色會取代預設的管理員權限，並授予已接入應用中的存取權限。",
+    "Select roles": "選擇角色",
+    "Save roles": "儲存角色"
   }
 }

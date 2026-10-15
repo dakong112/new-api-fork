@@ -97,6 +97,7 @@ import {
 } from '../lib'
 import type { User } from '../types'
 import { UserQuotaDialog } from './user-quota-dialog'
+import { UserRolesSection } from './user-roles-section'
 import { useUsers } from './users-provider'
 
 type UsersMutateDrawerProps = {
@@ -551,6 +552,13 @@ export function UsersMutateDrawer({
                     )}
                   </SideDrawerSection>
                 )}
+
+              {canEditAdminPermissions && currentRow && (
+                <UserRolesSection
+                  user={currentRow}
+                  roles={permissionCatalog.roles}
+                />
+              )}
 
               {/* Binding Information (Read-only) */}
               {isUpdate && (

@@ -35,6 +35,7 @@ import {
   ShieldCheck,
   Ticket,
   User,
+  UserCog,
   Users,
   Wallet,
 } from 'lucide-react'
@@ -142,31 +143,43 @@ export function useSidebarData(): SidebarData {
             title: t('Channels'),
             url: '/channels',
             icon: Radio,
+            requiredPermission: { resource: 'channel', action: 'read' },
           },
           {
             title: t('Supplier Cache Test'),
             url: '/channel-cost',
             icon: FlaskConical,
+            requiredPermission: { resource: 'channel', action: 'read' },
           },
           {
             title: t('Models'),
             url: '/models/metadata',
             icon: Box,
+            requiredPermission: { resource: 'model', action: 'read' },
           },
           {
             title: t('Users'),
             url: '/users',
             icon: Users,
+            requiredPermission: { resource: 'user', action: 'read' },
+          },
+          {
+            title: t('Roles & Permissions'),
+            url: '/roles',
+            icon: UserCog,
+            requiredRole: ROLE.SUPER_ADMIN,
           },
           {
             title: t('Redemption Codes'),
             url: '/redemption-codes',
             icon: Ticket,
+            requiredPermission: { resource: 'redemption', action: 'read' },
           },
           {
             title: t('Subscriptions'),
             url: '/subscriptions',
             icon: CreditCard,
+            requiredPermission: { resource: 'billing', action: 'read' },
           },
           {
             title: t('System Info'),
