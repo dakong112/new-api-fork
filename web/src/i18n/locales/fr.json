@@ -7444,6 +7444,18 @@
     "View canvas orders and template purchases.": "Afficher les commandes du canevas et les achats de modèles.",
     "Change canvas application settings.": "Modifier les paramètres de l’application canevas.",
     "Create, edit, and delete canvas prompts.": "Créer, modifier et supprimer des prompts du canevas.",
-    "Manage shared canvas assets.": "Gérer les ressources partagées du canevas."
+    "Manage shared canvas assets.": "Gérer les ressources partagées du canevas.",
+    "Team not found": "Équipe introuvable",
+    "Team member not found": "Membre de l'équipe introuvable",
+    "User is already a team member": "Cet utilisateur est déjà membre de l'équipe",
+    "This user cannot join a team": "Cet utilisateur ne peut pas rejoindre une équipe",
+    "The team owner cannot be changed or removed": "Le propriétaire de l'équipe ne peut pas être modifié ni retiré",
+    "You own too many teams": "Vous possédez trop d'équipes",
+    "Team member limit reached": "Nombre maximal de membres atteint",
+    "Only the team owner or an admin can do this": "Seuls le propriétaire ou un administrateur de l'équipe peuvent effectuer cette action",
+    "Only the team owner can manage team admins": "Seul le propriétaire de l'équipe peut gérer les administrateurs",
+    "Team wallet accounts cannot sign in": "Les comptes portefeuille d'équipe ne peuvent pas se connecter",
+    "Transferred {{quota}} to team {{team}}": "{{quota}} transféré à l'équipe {{team}}",
+    "Received {{quota}} transferred from {{username}}": "{{quota}} reçu par transfert de {{username}}"
   }
 }

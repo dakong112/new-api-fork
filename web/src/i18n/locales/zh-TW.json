@@ -7443,6 +7443,18 @@
     "View canvas orders and template purchases.": "檢視畫布訂單和範本購買紀錄。",
     "Change canvas application settings.": "修改畫布應用設定。",
     "Create, edit, and delete canvas prompts.": "建立、編輯和刪除畫布提示詞。",
-    "Manage shared canvas assets.": "管理共用畫布素材。"
+    "Manage shared canvas assets.": "管理共用畫布素材。",
+    "Team not found": "團隊不存在",
+    "Team member not found": "團隊成員不存在",
+    "User is already a team member": "該使用者已是團隊成員",
+    "This user cannot join a team": "該使用者無法加入團隊",
+    "The team owner cannot be changed or removed": "團隊擁有者不可修改或移除",
+    "You own too many teams": "您建立的團隊數量已達上限",
+    "Team member limit reached": "團隊成員數量已達上限",
+    "Only the team owner or an admin can do this": "僅團隊擁有者或管理員可執行此操作",
+    "Only the team owner can manage team admins": "僅團隊擁有者可管理團隊管理員",
+    "Team wallet accounts cannot sign in": "團隊錢包帳戶不能登入",
+    "Transferred {{quota}} to team {{team}}": "向團隊 {{team}} 劃轉 {{quota}}",
+    "Received {{quota}} transferred from {{username}}": "收到 {{username}} 劃轉的 {{quota}}"
   }
 }

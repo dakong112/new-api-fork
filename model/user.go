@@ -1198,6 +1198,9 @@ func ResetUserPasswordByEmail(email string, password string) error {
 	if err != nil {
 		return err
 	}
+	if IsTeamWalletUser(user.Id) {
+		return ErrEmailNotFound
+	}
 	hashedPassword, err := common.HashAccountPassword(password)
 	if err != nil {
 		return err

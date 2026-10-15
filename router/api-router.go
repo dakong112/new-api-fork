@@ -291,6 +291,20 @@ func SetApiRouter(router *gin.Engine) {
 			tokenRoute.POST("/batch/keys", middleware.CriticalRateLimit(), middleware.DisableCache(), controller.GetTokenKeysBatch)
 		}
 
+		teamRoute := apiRouter.Group("/team")
+		teamRoute.Use(middleware.UserAuth(), middleware.DisableCache())
+		{
+			teamRoute.POST("", middleware.UserCriticalRateLimit("team-create"), controller.CreateTeam)
+			teamRoute.GET("/self", controller.GetSelfTeams)
+			teamRoute.GET("/:id", controller.GetTeam)
+			teamRoute.POST("/:id/members", controller.AddTeamMember)
+			teamRoute.PUT("/:id/members/:uid", controller.UpdateTeamMember)
+			teamRoute.DELETE("/:id/members/:uid", controller.DeleteTeamMember)
+			teamRoute.POST("/:id/transfer", middleware.UserCriticalRateLimit("team-transfer"), controller.TransferToTeam)
+			teamRoute.POST("/:id/redeem", middleware.UserCriticalRateLimit("wallet-topup"), controller.RedeemToTeam)
+			teamRoute.GET("/:id/usage", controller.GetTeamUsage)
+		}
+
 		usageRoute := apiRouter.Group("/usage")
 		usageRoute.Use(middleware.CORS(), middleware.CriticalRateLimit())
 		{

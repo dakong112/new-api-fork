@@ -7444,6 +7444,18 @@
     "View canvas orders and template purchases.": "キャンバスの注文とテンプレート購入を表示します。",
     "Change canvas application settings.": "キャンバスアプリの設定を変更します。",
     "Create, edit, and delete canvas prompts.": "キャンバスプロンプトを作成、編集、削除します。",
-    "Manage shared canvas assets.": "共有キャンバス素材を管理します。"
+    "Manage shared canvas assets.": "共有キャンバス素材を管理します。",
+    "Team not found": "チームが見つかりません",
+    "Team member not found": "チームメンバーが見つかりません",
+    "User is already a team member": "このユーザーは既にチームメンバーです",
+    "This user cannot join a team": "このユーザーはチームに参加できません",
+    "The team owner cannot be changed or removed": "チームオーナーは変更・削除できません",
+    "You own too many teams": "所有できるチーム数の上限に達しました",
+    "Team member limit reached": "チームメンバー数の上限に達しました",
+    "Only the team owner or an admin can do this": "この操作はチームオーナーまたは管理者のみ実行できます",
+    "Only the team owner can manage team admins": "チーム管理者を管理できるのはチームオーナーのみです",
+    "Team wallet accounts cannot sign in": "チームウォレットアカウントはサインインできません",
+    "Transferred {{quota}} to team {{team}}": "チーム {{team}} に {{quota}} を振り替えました",
+    "Received {{quota}} transferred from {{username}}": "{{username}} から {{quota}} の振替を受け取りました"
   }
 }

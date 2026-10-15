@@ -65,7 +65,9 @@ func createLoginSession(userID int, expectedAuthVersion int64, loginMethod, ip, 
 	if err != nil {
 		return nil, err
 	}
-	if user.Status != common.UserStatusEnabled || user.AuthVersion <= 0 {
+	// Every sign-in path (password, OAuth, passkey, 2FA, SSO ticket) ends here;
+	// a team wallet account is only spent through member keys.
+	if user.Status != common.UserStatusEnabled || user.AuthVersion <= 0 || model.IsTeamWalletUser(userID) {
 		return nil, ErrLoginSessionInvalid
 	}
 	if expectedAuthVersion > 0 && user.AuthVersion != expectedAuthVersion {

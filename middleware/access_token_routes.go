@@ -195,6 +195,17 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"GET /api/user/:id/roles":               accessTokenScopeRule("user:read"),
 	"PUT /api/user/:id/roles":               accessTokenScopeRule("user:write"),
 
+	// router/api-router.go: /api/team; membership changes need a browser session
+	"POST /api/team":                    accessTokenSessionRule,
+	"GET /api/team/self":                accessTokenScopeRule("wallet:read"),
+	"GET /api/team/:id":                 accessTokenScopeRule("wallet:read"),
+	"POST /api/team/:id/members":        accessTokenSessionRule,
+	"PUT /api/team/:id/members/:uid":    accessTokenSessionRule,
+	"DELETE /api/team/:id/members/:uid": accessTokenSessionRule,
+	"POST /api/team/:id/transfer":       accessTokenScopeRule("wallet:write"),
+	"POST /api/team/:id/redeem":         accessTokenScopeRule("wallet:write"),
+	"GET /api/team/:id/usage":           accessTokenScopeRule("wallet:read"),
+
 	// router/api-router.go: /api/token
 	"GET /api/token/":            accessTokenScopeRule("api_key:read"),
 	"GET /api/token/search":      accessTokenScopeRule("api_key:read"),
