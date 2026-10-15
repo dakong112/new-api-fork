@@ -54,6 +54,11 @@ var auditContentTemplates = map[string]string{
 	"user.email_binding_resend": "Email confirmation code resend",
 	"user.passkey_delete":       "Deleted a passkey",
 	"user.reset_passkey":        "Reset the user passkey",
+	"user.roles_update":         "Changed roles of user ${username} (ID: ${id}) to [${roles}]",
+	"authz.role_create":         "Created role ${key}",
+	"authz.role_update":         "Updated role ${key}",
+	"authz.role_delete":         "Deleted role ${key}",
+	"authz.role_permissions":    "Changed permissions of role ${key} to [${permissions}]",
 	"option.update":             "Updated system setting ${key}",
 
 	"option.passkey_domains":           "Updated Passkey domains: removed ${domains}; affected ${known}; unknown ${unknown}",

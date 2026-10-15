@@ -7424,6 +7424,26 @@
     "App redirect sign-in": "アプリからのリダイレクトログイン",
     "Names starting with sso: are reserved": "sso: で始まる名前は予約されています",
     "Currently signed in as {{current}}; confirming will switch to {{name}}.": "現在 {{current}} としてログイン中です。確認すると {{name}} に切り替わります。",
-    "Charged by application {{app}}": "アプリ {{app}} による課金"
+    "Charged by application {{app}}": "アプリ {{app}} による課金",
+    "Role not found": "ロールが見つかりません",
+    "Role already exists": "ロールは既に存在します",
+    "Built-in roles cannot be changed": "組み込みロールは変更できません",
+    "Invalid role key or name": "ロールのキーまたは名前が無効です",
+    "Unknown permission": "不明な権限です",
+    "Canvas templates": "キャンバステンプレート",
+    "Canvas users": "キャンバスユーザー",
+    "Canvas orders": "キャンバス注文",
+    "Canvas settings": "キャンバス設定",
+    "Canvas prompts": "キャンバスプロンプト",
+    "Canvas assets": "キャンバス素材",
+    "Publish": "公開",
+    "View canvas templates, including unpublished ones.": "未公開のものを含むキャンバステンプレートを表示します。",
+    "Create, edit, and delete canvas templates.": "キャンバステンプレートを作成、編集、削除します。",
+    "Publish canvas templates or take them offline.": "キャンバステンプレートを公開または非公開にします。",
+    "View canvas users and their activity.": "キャンバスユーザーとそのアクティビティを表示します。",
+    "View canvas orders and template purchases.": "キャンバスの注文とテンプレート購入を表示します。",
+    "Change canvas application settings.": "キャンバスアプリの設定を変更します。",
+    "Create, edit, and delete canvas prompts.": "キャンバスプロンプトを作成、編集、削除します。",
+    "Manage shared canvas assets.": "共有キャンバス素材を管理します。"
   }
 }

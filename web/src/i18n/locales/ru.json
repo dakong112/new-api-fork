@@ -7424,6 +7424,26 @@
     "App redirect sign-in": "Вход через переход из приложения",
     "Names starting with sso: are reserved": "Имена, начинающиеся с sso:, зарезервированы",
     "Currently signed in as {{current}}; confirming will switch to {{name}}.": "Сейчас выполнен вход как {{current}}; подтверждение переключит на {{name}}.",
-    "Charged by application {{app}}": "Списано приложением {{app}}"
+    "Charged by application {{app}}": "Списано приложением {{app}}",
+    "Role not found": "Роль не найдена",
+    "Role already exists": "Роль уже существует",
+    "Built-in roles cannot be changed": "Встроенные роли нельзя изменить",
+    "Invalid role key or name": "Недопустимый ключ или название роли",
+    "Unknown permission": "Неизвестное разрешение",
+    "Canvas templates": "Шаблоны холста",
+    "Canvas users": "Пользователи холста",
+    "Canvas orders": "Заказы холста",
+    "Canvas settings": "Настройки холста",
+    "Canvas prompts": "Промпты холста",
+    "Canvas assets": "Ресурсы холста",
+    "Publish": "Опубликовать",
+    "View canvas templates, including unpublished ones.": "Просмотр шаблонов холста, включая неопубликованные.",
+    "Create, edit, and delete canvas templates.": "Создание, изменение и удаление шаблонов холста.",
+    "Publish canvas templates or take them offline.": "Публикация шаблонов холста или снятие их с публикации.",
+    "View canvas users and their activity.": "Просмотр пользователей холста и их активности.",
+    "View canvas orders and template purchases.": "Просмотр заказов холста и покупок шаблонов.",
+    "Change canvas application settings.": "Изменение настроек приложения холста.",
+    "Create, edit, and delete canvas prompts.": "Создание, изменение и удаление промптов холста.",
+    "Manage shared canvas assets.": "Управление общими ресурсами холста."
   }
 }

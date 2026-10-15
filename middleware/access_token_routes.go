@@ -183,8 +183,16 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	// router/channel-router.go: the key route is RootAuth, not Casbin-guarded.
 	"POST /api/channel/:id/key": accessTokenScopeRule(service.AccessTokenScopeOf(authz.ChannelSecretView)),
 
-	// router/authz-router.go
-	"GET /api/authz/catalog": accessTokenScopeRule("user:read"),
+	// router/authz-router.go (root only). Role definitions change what other
+	// accounts may do, so they need a browser session.
+	"GET /api/authz/catalog":                accessTokenScopeRule("user:read"),
+	"GET /api/authz/roles":                  accessTokenScopeRule("user:read"),
+	"POST /api/authz/roles":                 accessTokenSessionRule,
+	"PUT /api/authz/roles/:key":             accessTokenSessionRule,
+	"DELETE /api/authz/roles/:key":          accessTokenSessionRule,
+	"PUT /api/authz/roles/:key/permissions": accessTokenSessionRule,
+	"GET /api/user/:id/roles":               accessTokenScopeRule("user:read"),
+	"PUT /api/user/:id/roles":               accessTokenScopeRule("user:write"),
 
 	// router/api-router.go: /api/token
 	"GET /api/token/":            accessTokenScopeRule("api_key:read"),

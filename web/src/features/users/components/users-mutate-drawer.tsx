@@ -129,11 +129,15 @@ export function UsersMutateDrawer({
 
   const groups = groupsData?.data || []
 
-  // Permission catalog is owned by the backend; fetched once and reused.
+  const canEditAdminPermissions = currentUser?.role === ROLE.SUPER_ADMIN
+
+  // Permission catalog is owned by the backend; fetched once and reused. Only
+  // root may read it, and only root edits admin permissions.
   const { data: permissionCatalog = EMPTY_PERMISSION_CATALOG } = useQuery({
     queryKey: ['admin-permission-catalog'],
     queryFn: async () => requireServerSuccess(await getPermissionCatalog()),
     staleTime: 5 * 60 * 1000,
+    enabled: canEditAdminPermissions,
   })
 
   const form = useForm<UserFormValues>({
@@ -167,7 +171,6 @@ export function UsersMutateDrawer({
 
   const currentQuotaRaw = form.watch('quota_dollars') || 0
   const selectedRole = form.watch('role')
-  const canEditAdminPermissions = currentUser?.role === ROLE.SUPER_ADMIN
   const targetIsAdmin = (selectedRole ?? currentRow?.role ?? 0) >= ROLE.ADMIN
 
   const onSubmit = async (data: UserFormValues) => {

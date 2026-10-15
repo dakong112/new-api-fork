@@ -172,6 +172,9 @@ func SetApiRouter(router *gin.Engine) {
 				for _, route := range userAdminPermissionRoutes {
 					handlePermissionRoute(adminRoute, route.method, route.path, route.permission, route.handler)
 				}
+				// Custom authorization roles of a user (root only).
+				adminRoute.GET("/:id/roles", middleware.RootAuth(), controller.GetUserAuthzRoles)
+				adminRoute.PUT("/:id/roles", middleware.RootAuth(), middleware.DisableCache(), controller.SetUserAuthzRoles)
 			}
 		}
 

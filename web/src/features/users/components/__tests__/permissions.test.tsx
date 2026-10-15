@@ -190,8 +190,9 @@ it('root saving an administrator without changing permissions or password does n
   expect(get).not.toHaveBeenCalledWith('/api/verify/methods', expect.anything())
 })
 
-it('admin cannot edit the audit permission even when the catalog is available', async () => {
-  renderPermissions(10)
+it('admin neither loads the root-only catalog nor edits permissions', async () => {
+  const get = renderPermissions(10)
   await screen.findByDisplayValue('Managed admin')
   expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument()
+  expect(get).not.toHaveBeenCalledWith('/api/authz/catalog')
 })

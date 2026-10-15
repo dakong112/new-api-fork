@@ -7424,6 +7424,26 @@
     "App redirect sign-in": "Đăng nhập chuyển hướng từ ứng dụng",
     "Names starting with sso: are reserved": "Tên bắt đầu bằng sso: được dành riêng",
     "Currently signed in as {{current}}; confirming will switch to {{name}}.": "Hiện đang đăng nhập với tư cách {{current}}; xác nhận sẽ chuyển sang {{name}}.",
-    "Charged by application {{app}}": "Bị trừ bởi ứng dụng {{app}}"
+    "Charged by application {{app}}": "Bị trừ bởi ứng dụng {{app}}",
+    "Role not found": "Không tìm thấy vai trò",
+    "Role already exists": "Vai trò đã tồn tại",
+    "Built-in roles cannot be changed": "Không thể thay đổi vai trò tích hợp sẵn",
+    "Invalid role key or name": "Mã hoặc tên vai trò không hợp lệ",
+    "Unknown permission": "Quyền không xác định",
+    "Canvas templates": "Mẫu canvas",
+    "Canvas users": "Người dùng canvas",
+    "Canvas orders": "Đơn hàng canvas",
+    "Canvas settings": "Cài đặt canvas",
+    "Canvas prompts": "Prompt canvas",
+    "Canvas assets": "Tài nguyên canvas",
+    "Publish": "Xuất bản",
+    "View canvas templates, including unpublished ones.": "Xem mẫu canvas, kể cả mẫu chưa xuất bản.",
+    "Create, edit, and delete canvas templates.": "Tạo, chỉnh sửa và xóa mẫu canvas.",
+    "Publish canvas templates or take them offline.": "Xuất bản mẫu canvas hoặc gỡ chúng xuống.",
+    "View canvas users and their activity.": "Xem người dùng canvas và hoạt động của họ.",
+    "View canvas orders and template purchases.": "Xem đơn hàng canvas và giao dịch mua mẫu.",
+    "Change canvas application settings.": "Thay đổi cài đặt ứng dụng canvas.",
+    "Create, edit, and delete canvas prompts.": "Tạo, chỉnh sửa và xóa prompt canvas.",
+    "Manage shared canvas assets.": "Quản lý tài nguyên canvas dùng chung."
   }
 }

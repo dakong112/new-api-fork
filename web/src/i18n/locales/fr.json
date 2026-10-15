@@ -7424,6 +7424,26 @@
     "App redirect sign-in": "Connexion par redirection d'application",
     "Names starting with sso: are reserved": "Les noms commençant par sso: sont réservés",
     "Currently signed in as {{current}}; confirming will switch to {{name}}.": "Actuellement connecté en tant que {{current}} ; la confirmation basculera vers {{name}}.",
-    "Charged by application {{app}}": "Débité par l'application {{app}}"
+    "Charged by application {{app}}": "Débité par l'application {{app}}",
+    "Role not found": "Rôle introuvable",
+    "Role already exists": "Ce rôle existe déjà",
+    "Built-in roles cannot be changed": "Les rôles intégrés ne peuvent pas être modifiés",
+    "Invalid role key or name": "Identifiant ou nom de rôle invalide",
+    "Unknown permission": "Autorisation inconnue",
+    "Canvas templates": "Modèles de canevas",
+    "Canvas users": "Utilisateurs du canevas",
+    "Canvas orders": "Commandes du canevas",
+    "Canvas settings": "Paramètres du canevas",
+    "Canvas prompts": "Prompts du canevas",
+    "Canvas assets": "Ressources du canevas",
+    "Publish": "Publier",
+    "View canvas templates, including unpublished ones.": "Afficher les modèles de canevas, y compris ceux non publiés.",
+    "Create, edit, and delete canvas templates.": "Créer, modifier et supprimer des modèles de canevas.",
+    "Publish canvas templates or take them offline.": "Publier des modèles de canevas ou les retirer.",
+    "View canvas users and their activity.": "Afficher les utilisateurs du canevas et leur activité.",
+    "View canvas orders and template purchases.": "Afficher les commandes du canevas et les achats de modèles.",
+    "Change canvas application settings.": "Modifier les paramètres de l’application canevas.",
+    "Create, edit, and delete canvas prompts.": "Créer, modifier et supprimer des prompts du canevas.",
+    "Manage shared canvas assets.": "Gérer les ressources partagées du canevas."
   }
 }

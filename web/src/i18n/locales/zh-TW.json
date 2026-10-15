@@ -7423,6 +7423,26 @@
     "App redirect sign-in": "應用程式跳轉登入",
     "Names starting with sso: are reserved": "以 sso: 開頭的名稱為系統保留",
     "Currently signed in as {{current}}; confirming will switch to {{name}}.": "目前已登入為 {{current}}，確認後將切換為 {{name}}。",
-    "Charged by application {{app}}": "應用 {{app}} 扣費"
+    "Charged by application {{app}}": "應用 {{app}} 扣費",
+    "Role not found": "角色不存在",
+    "Role already exists": "角色已存在",
+    "Built-in roles cannot be changed": "內建角色不可修改",
+    "Invalid role key or name": "角色識別碼或名稱無效",
+    "Unknown permission": "未知權限",
+    "Canvas templates": "畫布範本",
+    "Canvas users": "畫布使用者",
+    "Canvas orders": "畫布訂單",
+    "Canvas settings": "畫布設定",
+    "Canvas prompts": "畫布提示詞",
+    "Canvas assets": "畫布素材",
+    "Publish": "發布",
+    "View canvas templates, including unpublished ones.": "檢視畫布範本，包括未發布的範本。",
+    "Create, edit, and delete canvas templates.": "建立、編輯和刪除畫布範本。",
+    "Publish canvas templates or take them offline.": "發布畫布範本或將其下架。",
+    "View canvas users and their activity.": "檢視畫布使用者及其活動。",
+    "View canvas orders and template purchases.": "檢視畫布訂單和範本購買紀錄。",
+    "Change canvas application settings.": "修改畫布應用設定。",
+    "Create, edit, and delete canvas prompts.": "建立、編輯和刪除畫布提示詞。",
+    "Manage shared canvas assets.": "管理共用畫布素材。"
   }
 }

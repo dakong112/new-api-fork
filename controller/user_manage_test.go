@@ -227,6 +227,72 @@ func TestManageUserDeleteReturnsImmediatelyAndUnknownActionFails(t *testing.T) {
 	assert.Equal(t, common.UserStatusEnabled, unchanged.Status)
 }
 
+// Role management as root: define a custom role, grant it codes and assign it
+// with a step-up proof. Built-in roles and unknown codes are refused, and the
+// preset seed stays idempotent on the dialect under test.
+func TestAuthzRoleManagementAPIs(t *testing.T) {
+	db := setupManageUserTestDB(t)
+	previousMaster := common.IsMasterNode
+	common.IsMasterNode = true
+	t.Cleanup(func() { common.IsMasterNode = previousMaster })
+	require.NoError(t, authz.Init(db))
+	require.NoError(t, authz.Init(db))
+	var presets int64
+	require.NoError(t, db.Model(&model.AuthzRole{}).Where("built_in = ?", false).Count(&presets).Error)
+	assert.EqualValues(t, 3, presets)
+
+	target := model.User{Username: "role-target", Password: "password", Role: common.RoleAdminUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1, AffCode: "role-target-aff"}
+	require.NoError(t, db.Create(&target).Error)
+	identity, proof := manageUserProof(t, db, service.VerificationOperation{Scope: service.VerificationScopeAdminUserUpdate, Context: []byte(fmt.Sprintf(`{"user_id":%d}`, target.Id))})
+
+	call := func(handler gin.HandlerFunc, method string, params gin.Params, body, proof string) string {
+		recorder := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(recorder)
+		c.Request = httptest.NewRequest(method, "/api/authz", strings.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		if proof != "" {
+			c.Request.Header.Set("X-Security-Proof", proof)
+		}
+		c.Params = params
+		c.Set("id", identity.UserID)
+		c.Set("role", common.RoleRootUser)
+		c.Set("username", "root-operator")
+		c.Set("session_id", identity.SessionID)
+		c.Set("auth_version", identity.UserAuthVersion)
+		c.Set("session_version", identity.SessionVersion)
+		handler(c)
+		return recorder.Body.String()
+	}
+	auditor := gin.Params{{Key: "key", Value: "auditor"}}
+	targetParam := gin.Params{{Key: "id", Value: strconv.Itoa(target.Id)}}
+
+	assert.Contains(t, call(CreateAuthzRole, http.MethodPost, nil, `{"key":"auditor","name":"Auditor"}`, ""), `"success":true`)
+	assert.Contains(t, call(CreateAuthzRole, http.MethodPost, nil, `{"key":"auditor","name":"Again"}`, ""), "Role already exists")
+	assert.Contains(t, call(CreateAuthzRole, http.MethodPost, nil, `{"key":"Bad Key","name":"Bad"}`, ""), "Invalid role key or name")
+	assert.Contains(t, call(SetAuthzRolePermissions, http.MethodPut, auditor, `{"permissions":["log.read","canvas.order.read"]}`, ""), `"success":true`)
+	assert.Contains(t, call(SetAuthzRolePermissions, http.MethodPut, auditor, `{"permissions":["log.delete"]}`, ""), "Unknown permission")
+	assert.Contains(t, call(SetAuthzRolePermissions, http.MethodPut, gin.Params{{Key: "key", Value: authz.BuiltInRoleAdmin}}, `{"permissions":["log.read"]}`, ""), "Built-in roles cannot be changed")
+	assert.Contains(t, call(UpdateAuthzRole, http.MethodPut, gin.Params{{Key: "key", Value: "missing"}}, `{"name":"Missing"}`, ""), "Role not found")
+	assert.Contains(t, call(ListAuthzRoles, http.MethodGet, nil, "", ""), `"key":"auditor"`)
+
+	// Assigning roles changes what the account may do, so it needs a proof.
+	assert.Contains(t, call(SetUserAuthzRoles, http.MethodPut, targetParam, `{"roles":["auditor"]}`, ""), "SECURITY_PROOF_REQUIRED")
+	assert.Empty(t, authz.UserRoles(target.Id))
+	assert.Contains(t, call(SetUserAuthzRoles, http.MethodPut, targetParam, `{"roles":["auditor"]}`, proof), `"success":true`)
+	assert.Equal(t, []string{"auditor"}, authz.UserRoles(target.Id))
+	assert.JSONEq(t, `{"success":true,"message":"","data":{"roles":["auditor"]}}`, call(GetUserAuthzRoles, http.MethodGet, targetParam, "", ""))
+	assert.False(t, authz.Can(target.Id, common.RoleAdminUser, authz.UserRead))
+	assert.True(t, authz.Can(target.Id, common.RoleAdminUser, authz.LogRead))
+	var audit model.AuditLog
+	require.NoError(t, model.LOG_DB.Where("action = ?", "user.roles_update").First(&audit).Error)
+	assert.Contains(t, audit.Content, "[auditor]")
+
+	assert.Contains(t, call(DeleteAuthzRole, http.MethodDelete, gin.Params{{Key: "key", Value: authz.BuiltInRoleRoot}}, "", ""), "Built-in roles cannot be changed")
+	assert.Contains(t, call(DeleteAuthzRole, http.MethodDelete, auditor, "", ""), `"success":true`)
+	assert.Empty(t, authz.UserRoles(target.Id))
+	assert.True(t, authz.Can(target.Id, common.RoleAdminUser, authz.UserRead))
+}
+
 func createQuotaTestOperator(t *testing.T, db *gorm.DB, role int) model.User {
 	t.Helper()
 	if role == 0 {
