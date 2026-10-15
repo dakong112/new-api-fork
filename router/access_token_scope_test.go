@@ -143,8 +143,15 @@ func TestAccessTokenRouteRulesCoverEveryDashboardRoute(t *testing.T) {
 	}
 
 	permissionRoutes := map[string]authz.Permission{}
-	for _, route := range channelPermissionRoutes {
-		permissionRoutes[route.method+" "+joinPaths("/api/channel", route.path)] = route.permission
+	for prefix, routes := range map[string][]permissionRoute{
+		"/api/channel":            channelPermissionRoutes,
+		"/api/user/":              userAdminPermissionRoutes,
+		"/api/subscription/admin": subscriptionAdminPermissionRoutes,
+		"/api/deployments":        deploymentPermissionRoutes,
+	} {
+		for _, route := range routes {
+			permissionRoutes[route.method+" "+joinPaths(prefix, route.path)] = route.permission
+		}
 	}
 	for key, permission := range accessTokenHelperRoutes {
 		permissionRoutes[key] = permission

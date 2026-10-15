@@ -28,7 +28,7 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/status", middleware.SSOClientCORS(), controller.GetStatus)
 		apiRouter.GET("/uptime/status", controller.GetUptimeKumaStatus)
 		apiRouter.GET("/models", middleware.UserAuth(), controller.DashboardListModels)
-		apiRouter.GET("/status/test", middleware.AdminAuth(), controller.TestStatus)
+		handlePermissionRoute(apiRouter.Group("", middleware.AdminAuth()), http.MethodGet, "/status/test", authz.LogRead, controller.TestStatus)
 		apiRouter.GET("/notice", controller.GetNotice)
 		apiRouter.GET("/user-agreement", controller.GetUserAgreement)
 		apiRouter.GET("/privacy-policy", controller.GetPrivacyPolicy)
@@ -169,23 +169,9 @@ func SetApiRouter(router *gin.Engine) {
 			adminRoute := userRoute.Group("/")
 			adminRoute.Use(middleware.AdminAuth())
 			{
-				adminRoute.GET("/", controller.GetAllUsers)
-				adminRoute.GET("/topup", controller.GetAllTopUps)
-				adminRoute.POST("/topup/complete", controller.AdminCompleteTopUp)
-				adminRoute.GET("/search", controller.SearchUsers)
-				adminRoute.GET("/:id/oauth/bindings", controller.GetUserOAuthBindingsByAdmin)
-				adminRoute.DELETE("/:id/oauth/bindings/:provider_id", controller.UnbindCustomOAuthByAdmin)
-				adminRoute.DELETE("/:id/bindings/:binding_type", controller.AdminClearUserBinding)
-				adminRoute.GET("/:id", controller.GetUser)
-				adminRoute.POST("/", controller.CreateUser)
-				adminRoute.POST("/manage", controller.ManageUser)
-				adminRoute.PUT("/", controller.UpdateUser)
-				adminRoute.DELETE("/:id", controller.DeleteUser)
-				adminRoute.DELETE("/:id/reset_passkey", controller.AdminResetPasskey)
-
-				// Admin 2FA routes
-				adminRoute.GET("/2fa/stats", controller.Admin2FAStats)
-				adminRoute.DELETE("/:id/2fa", controller.AdminDisable2FA)
+				for _, route := range userAdminPermissionRoutes {
+					handlePermissionRoute(adminRoute, route.method, route.path, route.permission, route.handler)
+				}
 			}
 		}
 
@@ -205,19 +191,9 @@ func SetApiRouter(router *gin.Engine) {
 		subscriptionAdminRoute := apiRouter.Group("/subscription/admin")
 		subscriptionAdminRoute.Use(middleware.AdminAuth())
 		{
-			subscriptionAdminRoute.GET("/plans", controller.AdminListSubscriptionPlans)
-			subscriptionAdminRoute.POST("/plans", controller.AdminCreateSubscriptionPlan)
-			subscriptionAdminRoute.PUT("/plans/:id", controller.AdminUpdateSubscriptionPlan)
-			subscriptionAdminRoute.PATCH("/plans/:id", controller.AdminUpdateSubscriptionPlanStatus)
-			subscriptionAdminRoute.POST("/bind", controller.AdminBindSubscription)
-			subscriptionAdminRoute.POST("/plans/:id/subscriptions/reset", controller.AdminResetPlanSubscriptions)
-
-			// User subscription management (admin)
-			subscriptionAdminRoute.GET("/users/:id/subscriptions", controller.AdminListUserSubscriptions)
-			subscriptionAdminRoute.POST("/users/:id/subscriptions", controller.AdminCreateUserSubscription)
-			subscriptionAdminRoute.POST("/users/:id/subscriptions/reset", controller.AdminResetUserSubscriptionsByPlan)
-			subscriptionAdminRoute.POST("/user_subscriptions/:id/invalidate", controller.AdminInvalidateUserSubscription)
-			subscriptionAdminRoute.DELETE("/user_subscriptions/:id", controller.AdminDeleteUserSubscription)
+			for _, route := range subscriptionAdminPermissionRoutes {
+				handlePermissionRoute(subscriptionAdminRoute, route.method, route.path, route.permission, route.handler)
+			}
 		}
 
 		// Subscription payment callbacks (no auth)
@@ -324,23 +300,24 @@ func SetApiRouter(router *gin.Engine) {
 		redemptionRoute := apiRouter.Group("/redemption")
 		redemptionRoute.Use(middleware.AdminAuth())
 		{
-			redemptionRoute.GET("/", controller.GetAllRedemptions)
-			redemptionRoute.GET("/search", controller.SearchRedemptions)
-			redemptionRoute.GET("/:id", controller.GetRedemption)
-			redemptionRoute.POST("/", controller.AddRedemption)
-			redemptionRoute.POST("/batch", controller.DeleteRedemptionBatch)
-			redemptionRoute.PUT("/", controller.UpdateRedemption)
-			redemptionRoute.DELETE("/invalid", controller.DeleteInvalidRedemption)
-			redemptionRoute.DELETE("/:id", controller.DeleteRedemption)
+			handlePermissionRoute(redemptionRoute, http.MethodGet, "/", authz.RedemptionRead, controller.GetAllRedemptions)
+			handlePermissionRoute(redemptionRoute, http.MethodGet, "/search", authz.RedemptionRead, controller.SearchRedemptions)
+			handlePermissionRoute(redemptionRoute, http.MethodGet, "/:id", authz.RedemptionRead, controller.GetRedemption)
+			handlePermissionRoute(redemptionRoute, http.MethodPost, "/", authz.RedemptionWrite, controller.AddRedemption)
+			handlePermissionRoute(redemptionRoute, http.MethodPost, "/batch", authz.RedemptionWrite, controller.DeleteRedemptionBatch)
+			handlePermissionRoute(redemptionRoute, http.MethodPut, "/", authz.RedemptionWrite, controller.UpdateRedemption)
+			handlePermissionRoute(redemptionRoute, http.MethodDelete, "/invalid", authz.RedemptionWrite, controller.DeleteInvalidRedemption)
+			handlePermissionRoute(redemptionRoute, http.MethodDelete, "/:id", authz.RedemptionWrite, controller.DeleteRedemption)
 		}
 		handlePermissionRoute(apiRouter.Group("", middleware.DisableCache(), middleware.AdminAuth()), http.MethodGet, "/audit", authz.AuditRead, controller.GetAuditLogs)
 		apiRouter.GET("/audit/self", middleware.DisableCache(), middleware.UserAuth(), controller.GetAuditLogs)
 		logRoute := apiRouter.Group("/log")
-		logRoute.GET("/", middleware.AdminAuth(), controller.GetAllLogs)
-		logRoute.GET("/stat", middleware.AdminAuth(), controller.GetLogsStat)
+		logAdminRoute := logRoute.Group("", middleware.AdminAuth())
+		handlePermissionRoute(logAdminRoute, http.MethodGet, "/", authz.LogRead, controller.GetAllLogs)
+		handlePermissionRoute(logAdminRoute, http.MethodGet, "/stat", authz.LogRead, controller.GetLogsStat)
 		logRoute.GET("/self/stat", middleware.UserAuth(), controller.GetLogsSelfStat)
-		logRoute.GET("/channel_affinity_usage_cache", middleware.AdminAuth(), controller.GetChannelAffinityUsageCacheStats)
-		logRoute.GET("/search", middleware.AdminAuth(), controller.SearchAllLogs)
+		handlePermissionRoute(logAdminRoute, http.MethodGet, "/channel_affinity_usage_cache", authz.LogRead, controller.GetChannelAffinityUsageCacheStats)
+		handlePermissionRoute(logAdminRoute, http.MethodGet, "/search", authz.LogRead, controller.SearchAllLogs)
 		logRoute.GET("/self", middleware.UserAuth(), controller.GetUserLogs)
 		logRoute.GET("/self/search", middleware.UserAuth(), middleware.SearchRateLimit(), controller.SearchUserLogs)
 
@@ -362,10 +339,11 @@ func SetApiRouter(router *gin.Engine) {
 		}
 
 		dataRoute := apiRouter.Group("/data")
-		dataRoute.GET("/", middleware.AdminAuth(), controller.GetAllQuotaDates)
-		dataRoute.GET("/users", middleware.AdminAuth(), controller.GetQuotaDatesByUser)
+		dataAdminRoute := dataRoute.Group("", middleware.AdminAuth())
+		handlePermissionRoute(dataAdminRoute, http.MethodGet, "/", authz.LogRead, controller.GetAllQuotaDates)
+		handlePermissionRoute(dataAdminRoute, http.MethodGet, "/users", authz.LogRead, controller.GetQuotaDatesByUser)
 		dataRoute.GET("/self", middleware.UserAuth(), controller.GetUserQuotaDates)
-		dataRoute.GET("/flow", middleware.AdminAuth(), controller.GetAllFlowQuotaDates)
+		handlePermissionRoute(dataAdminRoute, http.MethodGet, "/flow", authz.LogRead, controller.GetAllFlowQuotaDates)
 		dataRoute.GET("/flow/self", middleware.UserAuth(), controller.GetUserFlowQuotaDates)
 
 		logRoute.Use(middleware.CORS(), middleware.CriticalRateLimit())
@@ -375,9 +353,9 @@ func SetApiRouter(router *gin.Engine) {
 		groupRoute := apiRouter.Group("/group")
 		groupRoute.Use(middleware.AdminAuth())
 		{
-			groupRoute.GET("/", controller.GetGroups)
-			groupRoute.GET("/usage", controller.GetGroupUsage)
-			groupRoute.GET("/ratios", controller.GetGroupRatios)
+			handlePermissionRoute(groupRoute, http.MethodGet, "/", authz.GroupRead, controller.GetGroups)
+			handlePermissionRoute(groupRoute, http.MethodGet, "/usage", authz.GroupRead, controller.GetGroupUsage)
+			handlePermissionRoute(groupRoute, http.MethodGet, "/ratios", authz.GroupRead, controller.GetGroupRatios)
 			// Rewrites system options, so it needs the same access as settings.
 			groupRoute.POST("/rename", middleware.RootAuth(), controller.RenameGroup)
 		}
@@ -385,75 +363,112 @@ func SetApiRouter(router *gin.Engine) {
 		prefillGroupRoute := apiRouter.Group("/prefill_group")
 		prefillGroupRoute.Use(middleware.AdminAuth())
 		{
-			prefillGroupRoute.GET("/", controller.GetPrefillGroups)
-			prefillGroupRoute.POST("/", controller.CreatePrefillGroup)
-			prefillGroupRoute.PUT("/", controller.UpdatePrefillGroup)
-			prefillGroupRoute.DELETE("/:id", controller.DeletePrefillGroup)
+			handlePermissionRoute(prefillGroupRoute, http.MethodGet, "/", authz.GroupRead, controller.GetPrefillGroups)
+			handlePermissionRoute(prefillGroupRoute, http.MethodPost, "/", authz.GroupWrite, controller.CreatePrefillGroup)
+			handlePermissionRoute(prefillGroupRoute, http.MethodPut, "/", authz.GroupWrite, controller.UpdatePrefillGroup)
+			handlePermissionRoute(prefillGroupRoute, http.MethodDelete, "/:id", authz.GroupWrite, controller.DeletePrefillGroup)
 		}
 
 		mjRoute := apiRouter.Group("/mj")
 		mjRoute.GET("/self", middleware.UserAuth(), controller.GetUserMidjourney)
-		mjRoute.GET("/", middleware.AdminAuth(), controller.GetAllMidjourney)
+		handlePermissionRoute(mjRoute.Group("", middleware.AdminAuth()), http.MethodGet, "/", authz.LogRead, controller.GetAllMidjourney)
 
 		taskRoute := apiRouter.Group("/task")
 		{
 			taskRoute.GET("/self", middleware.UserAuth(), controller.GetUserTask)
-			taskRoute.GET("", middleware.AdminAuth(), controller.GetAllTask)
+			handlePermissionRoute(taskRoute.Group("", middleware.AdminAuth()), http.MethodGet, "", authz.LogRead, controller.GetAllTask)
 			taskRoute.GET("/:task_id/artifacts", middleware.UserAuth(), controller.GetDashboardTaskArtifacts)
 		}
 
 		vendorRoute := apiRouter.Group("/vendors")
 		vendorRoute.Use(middleware.AdminAuth())
 		{
-			vendorRoute.POST("/operations/preview", controller.PreviewVendorOperation)
-			vendorRoute.POST("/operations", controller.ApplyVendorOperation)
-			vendorRoute.GET("/", controller.GetAllVendors)
-			vendorRoute.GET("/search", controller.SearchVendors)
-			vendorRoute.GET("/:id", controller.GetVendorMeta)
-			vendorRoute.POST("/", controller.CreateVendorMeta)
-			vendorRoute.PUT("/", controller.UpdateVendorMeta)
-			vendorRoute.DELETE("/:id", controller.DeleteVendorMeta)
+			handlePermissionRoute(vendorRoute, http.MethodPost, "/operations/preview", authz.ModelRead, controller.PreviewVendorOperation)
+			handlePermissionRoute(vendorRoute, http.MethodPost, "/operations", authz.ModelWrite, controller.ApplyVendorOperation)
+			handlePermissionRoute(vendorRoute, http.MethodGet, "/", authz.ModelRead, controller.GetAllVendors)
+			handlePermissionRoute(vendorRoute, http.MethodGet, "/search", authz.ModelRead, controller.SearchVendors)
+			handlePermissionRoute(vendorRoute, http.MethodGet, "/:id", authz.ModelRead, controller.GetVendorMeta)
+			handlePermissionRoute(vendorRoute, http.MethodPost, "/", authz.ModelWrite, controller.CreateVendorMeta)
+			handlePermissionRoute(vendorRoute, http.MethodPut, "/", authz.ModelWrite, controller.UpdateVendorMeta)
+			handlePermissionRoute(vendorRoute, http.MethodDelete, "/:id", authz.ModelWrite, controller.DeleteVendorMeta)
 		}
 
 		modelsRoute := apiRouter.Group("/models")
 		modelsRoute.Use(middleware.AdminAuth())
 		{
-			modelsRoute.GET("/sync_upstream/preview", controller.SyncUpstreamPreview)
-			modelsRoute.POST("/sync_upstream", controller.SyncUpstreamModels)
-			modelsRoute.POST("/delete", controller.BatchDeleteModelMeta)
-			modelsRoute.GET("/missing", controller.GetMissingModels)
-			modelsRoute.GET("/", controller.GetAllModelsMeta)
-			modelsRoute.GET("/search", controller.SearchModelsMeta)
-			modelsRoute.GET("/:id", controller.GetModelMeta)
-			modelsRoute.POST("/", controller.CreateModelMeta)
-			modelsRoute.PUT("/", controller.UpdateModelMeta)
-			modelsRoute.DELETE("/:id", controller.DeleteModelMeta)
+			handlePermissionRoute(modelsRoute, http.MethodGet, "/sync_upstream/preview", authz.ModelRead, controller.SyncUpstreamPreview)
+			handlePermissionRoute(modelsRoute, http.MethodPost, "/sync_upstream", authz.ModelWrite, controller.SyncUpstreamModels)
+			handlePermissionRoute(modelsRoute, http.MethodPost, "/delete", authz.ModelWrite, controller.BatchDeleteModelMeta)
+			handlePermissionRoute(modelsRoute, http.MethodGet, "/missing", authz.ModelRead, controller.GetMissingModels)
+			handlePermissionRoute(modelsRoute, http.MethodGet, "/", authz.ModelRead, controller.GetAllModelsMeta)
+			handlePermissionRoute(modelsRoute, http.MethodGet, "/search", authz.ModelRead, controller.SearchModelsMeta)
+			handlePermissionRoute(modelsRoute, http.MethodGet, "/:id", authz.ModelRead, controller.GetModelMeta)
+			handlePermissionRoute(modelsRoute, http.MethodPost, "/", authz.ModelWrite, controller.CreateModelMeta)
+			handlePermissionRoute(modelsRoute, http.MethodPut, "/", authz.ModelWrite, controller.UpdateModelMeta)
+			handlePermissionRoute(modelsRoute, http.MethodDelete, "/:id", authz.ModelWrite, controller.DeleteModelMeta)
 		}
 
 		// Deployments (model deployment management)
 		deploymentsRoute := apiRouter.Group("/deployments")
 		deploymentsRoute.Use(middleware.AdminAuth())
 		{
-			deploymentsRoute.GET("/settings", controller.GetModelDeploymentSettings)
-			deploymentsRoute.POST("/settings/test-connection", controller.TestIoNetConnection)
-			deploymentsRoute.GET("/", controller.GetAllDeployments)
-			deploymentsRoute.GET("/search", controller.SearchDeployments)
-			deploymentsRoute.POST("/test-connection", controller.TestIoNetConnection)
-			deploymentsRoute.GET("/hardware-types", controller.GetHardwareTypes)
-			deploymentsRoute.GET("/locations", controller.GetLocations)
-			deploymentsRoute.GET("/available-replicas", controller.GetAvailableReplicas)
-			deploymentsRoute.POST("/price-estimation", controller.GetPriceEstimation)
-			deploymentsRoute.GET("/check-name", controller.CheckClusterNameAvailability)
-			deploymentsRoute.POST("/", controller.CreateDeployment)
-
-			deploymentsRoute.GET("/:id", controller.GetDeployment)
-			deploymentsRoute.GET("/:id/logs", controller.GetDeploymentLogs)
-			deploymentsRoute.GET("/:id/containers", controller.ListDeploymentContainers)
-			deploymentsRoute.GET("/:id/containers/:container_id", controller.GetContainerDetails)
-			deploymentsRoute.PUT("/:id", controller.UpdateDeployment)
-			deploymentsRoute.PUT("/:id/name", controller.UpdateDeploymentName)
-			deploymentsRoute.POST("/:id/extend", controller.ExtendDeployment)
-			deploymentsRoute.DELETE("/:id", controller.DeleteDeployment)
+			for _, route := range deploymentPermissionRoutes {
+				handlePermissionRoute(deploymentsRoute, route.method, route.path, route.permission, route.handler)
+			}
 		}
 	}
+}
+
+var userAdminPermissionRoutes = []permissionRoute{
+	{method: http.MethodGet, path: "/", permission: authz.UserRead, handler: controller.GetAllUsers},
+	{method: http.MethodGet, path: "/topup", permission: authz.BillingRead, handler: controller.GetAllTopUps},
+	{method: http.MethodPost, path: "/topup/complete", permission: authz.BillingWrite, handler: controller.AdminCompleteTopUp},
+	{method: http.MethodGet, path: "/search", permission: authz.UserRead, handler: controller.SearchUsers},
+	{method: http.MethodGet, path: "/:id/oauth/bindings", permission: authz.UserRead, handler: controller.GetUserOAuthBindingsByAdmin},
+	{method: http.MethodDelete, path: "/:id/oauth/bindings/:provider_id", permission: authz.UserWrite, handler: controller.UnbindCustomOAuthByAdmin},
+	{method: http.MethodDelete, path: "/:id/bindings/:binding_type", permission: authz.UserWrite, handler: controller.AdminClearUserBinding},
+	{method: http.MethodGet, path: "/:id", permission: authz.UserRead, handler: controller.GetUser},
+	{method: http.MethodPost, path: "/", permission: authz.UserWrite, handler: controller.CreateUser},
+	{method: http.MethodPost, path: "/manage", permission: authz.UserWrite, handler: controller.ManageUser},
+	{method: http.MethodPut, path: "/", permission: authz.UserWrite, handler: controller.UpdateUser},
+	{method: http.MethodDelete, path: "/:id", permission: authz.UserWrite, handler: controller.DeleteUser},
+	{method: http.MethodDelete, path: "/:id/reset_passkey", permission: authz.UserWrite, handler: controller.AdminResetPasskey},
+	{method: http.MethodGet, path: "/2fa/stats", permission: authz.UserRead, handler: controller.Admin2FAStats},
+	{method: http.MethodDelete, path: "/:id/2fa", permission: authz.UserWrite, handler: controller.AdminDisable2FA},
+}
+
+var subscriptionAdminPermissionRoutes = []permissionRoute{
+	{method: http.MethodGet, path: "/plans", permission: authz.BillingRead, handler: controller.AdminListSubscriptionPlans},
+	{method: http.MethodPost, path: "/plans", permission: authz.BillingWrite, handler: controller.AdminCreateSubscriptionPlan},
+	{method: http.MethodPut, path: "/plans/:id", permission: authz.BillingWrite, handler: controller.AdminUpdateSubscriptionPlan},
+	{method: http.MethodPatch, path: "/plans/:id", permission: authz.BillingWrite, handler: controller.AdminUpdateSubscriptionPlanStatus},
+	{method: http.MethodPost, path: "/bind", permission: authz.BillingWrite, handler: controller.AdminBindSubscription},
+	{method: http.MethodPost, path: "/plans/:id/subscriptions/reset", permission: authz.BillingWrite, handler: controller.AdminResetPlanSubscriptions},
+	{method: http.MethodGet, path: "/users/:id/subscriptions", permission: authz.BillingRead, handler: controller.AdminListUserSubscriptions},
+	{method: http.MethodPost, path: "/users/:id/subscriptions", permission: authz.BillingWrite, handler: controller.AdminCreateUserSubscription},
+	{method: http.MethodPost, path: "/users/:id/subscriptions/reset", permission: authz.BillingWrite, handler: controller.AdminResetUserSubscriptionsByPlan},
+	{method: http.MethodPost, path: "/user_subscriptions/:id/invalidate", permission: authz.BillingWrite, handler: controller.AdminInvalidateUserSubscription},
+	{method: http.MethodDelete, path: "/user_subscriptions/:id", permission: authz.BillingWrite, handler: controller.AdminDeleteUserSubscription},
+}
+
+var deploymentPermissionRoutes = []permissionRoute{
+	{method: http.MethodGet, path: "/settings", permission: authz.DeploymentRead, handler: controller.GetModelDeploymentSettings},
+	{method: http.MethodPost, path: "/settings/test-connection", permission: authz.DeploymentWrite, handler: controller.TestIoNetConnection},
+	{method: http.MethodGet, path: "/", permission: authz.DeploymentRead, handler: controller.GetAllDeployments},
+	{method: http.MethodGet, path: "/search", permission: authz.DeploymentRead, handler: controller.SearchDeployments},
+	{method: http.MethodPost, path: "/test-connection", permission: authz.DeploymentWrite, handler: controller.TestIoNetConnection},
+	{method: http.MethodGet, path: "/hardware-types", permission: authz.DeploymentRead, handler: controller.GetHardwareTypes},
+	{method: http.MethodGet, path: "/locations", permission: authz.DeploymentRead, handler: controller.GetLocations},
+	{method: http.MethodGet, path: "/available-replicas", permission: authz.DeploymentRead, handler: controller.GetAvailableReplicas},
+	{method: http.MethodPost, path: "/price-estimation", permission: authz.DeploymentRead, handler: controller.GetPriceEstimation},
+	{method: http.MethodGet, path: "/check-name", permission: authz.DeploymentRead, handler: controller.CheckClusterNameAvailability},
+	{method: http.MethodPost, path: "/", permission: authz.DeploymentWrite, handler: controller.CreateDeployment},
+	{method: http.MethodGet, path: "/:id", permission: authz.DeploymentRead, handler: controller.GetDeployment},
+	{method: http.MethodGet, path: "/:id/logs", permission: authz.DeploymentRead, handler: controller.GetDeploymentLogs},
+	{method: http.MethodGet, path: "/:id/containers", permission: authz.DeploymentRead, handler: controller.ListDeploymentContainers},
+	{method: http.MethodGet, path: "/:id/containers/:container_id", permission: authz.DeploymentRead, handler: controller.GetContainerDetails},
+	{method: http.MethodPut, path: "/:id", permission: authz.DeploymentWrite, handler: controller.UpdateDeployment},
+	{method: http.MethodPut, path: "/:id/name", permission: authz.DeploymentWrite, handler: controller.UpdateDeploymentName},
+	{method: http.MethodPost, path: "/:id/extend", permission: authz.DeploymentWrite, handler: controller.ExtendDeployment},
+	{method: http.MethodDelete, path: "/:id", permission: authz.DeploymentWrite, handler: controller.DeleteDeployment},
 }
