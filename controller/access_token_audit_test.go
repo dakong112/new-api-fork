@@ -92,7 +92,9 @@ func newAccessTokenTestRouter() *gin.Engine {
 	tokenRoute.DELETE("/:id", DeleteAccessToken)
 	tokenRoute.DELETE("/legacy", RevokeLegacyAccessToken)
 	adminRoute := userRoute.Group("/", middleware.AdminAuth())
-	adminRoute.DELETE("/:id", DeleteUser)
+	// The real router declares this token rule when it guards the route.
+	middleware.DeclareAccessTokenPermissionRoute(http.MethodDelete, "/api/user/:id", authz.UserWrite)
+	adminRoute.DELETE("/:id", middleware.RequirePermission(authz.UserWrite), DeleteUser)
 	return router
 }
 
