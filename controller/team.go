@@ -290,12 +290,13 @@ func RedeemToTeam(c *gin.Context) {
 		common.ApiErrorT(c, "Invalid parameters")
 		return
 	}
-	quota, err := model.Redeem(request.Key, team.WalletUserId)
+	quota, err := model.RedeemToTeam(request.Key, team.WalletUserId, c.GetInt("id"))
 	if err != nil {
 		common.ApiErrorT(c, "Redemption failed, please try again later")
 		logger.LogError(c, common.LogText("failed to redeem a code for team %d by user %d: %s", team.Id, c.GetInt("id"), err.Error()))
 		return
 	}
+	recordUserSecurityAudit(c, c.GetInt("id"), "team.redeem", map[string]any{"team_id": team.Id, "wallet_user_id": team.WalletUserId, "quota": quota, "success": true})
 	common.ApiSuccess(c, quota)
 }
 

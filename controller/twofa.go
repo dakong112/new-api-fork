@@ -193,7 +193,7 @@ func AdminDisable2FA(c *gin.Context) {
 	}
 
 	myRole := c.GetInt("role")
-	if !canManageTargetRole(myRole, targetUser.Role) {
+	if !canManageTargetUser(myRole, targetUser.Id, targetUser.Role) {
 		common.ApiErrorT(c, "No permission to change the 2FA settings of users at the same or higher level")
 		return
 	}

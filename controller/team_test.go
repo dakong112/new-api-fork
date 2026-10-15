@@ -298,6 +298,59 @@ func TestRedeemToTeamCreditsWallet(t *testing.T) {
 	assert.Equal(t, 500, userQuota(t, bob.user.Id))
 	require.NoError(t, model.DB.First(code, code.Id).Error)
 	assert.Equal(t, team.WalletUserId, code.UsedUserId)
+	var audit model.AuditLog
+	require.NoError(t, model.LOG_DB.Where("action = ?", "team.redeem").First(&audit).Error)
+	assert.Equal(t, bob.user.Id, audit.UserId, "the audit names the member who redeemed")
+
+	// Test codes are once per user; crediting one to a team wallet would let
+	// every team hand its members another full test credit.
+	testCode := &model.Redemption{Key: strings.Repeat("t", 32), Status: common.RedemptionCodeStatusEnabled, Name: "trial", Quota: 300, IsTest: true}
+	require.NoError(t, model.DB.Create(testCode).Error)
+	assert.False(t, teamCall(t, router, http.MethodPost, teamPath(team, "/redeem"), bob.jwt, `{"key":"`+testCode.Key+`"}`).Success)
+	assert.Equal(t, 400, userQuota(t, team.WalletUserId))
+	require.NoError(t, model.DB.First(testCode, testCode.Id).Error)
+	assert.Equal(t, common.RedemptionCodeStatusEnabled, testCode.Status, "the refused code stays usable")
+	quota, err := model.Redeem(testCode.Key, bob.user.Id)
+	require.NoError(t, err)
+	assert.Equal(t, 300, quota, "the member still gets the full test credit personally")
+}
+
+// Relay only checks the wallet account, so a member's own account status must
+// reach their team key.
+func TestTeamMemberKeyFollowsMemberAccount(t *testing.T) {
+	router, alice, bob, _ := setupTeamTest(t)
+	team := createTestTeam(t, router, alice)
+	require.True(t, teamCall(t, router, http.MethodPost, teamPath(team, "/members"), alice.jwt, `{"username":"bob"}`).Success)
+	key := teamMemberToken(t, team, bob.user.Id)
+
+	for _, step := range []struct{ userStatus, keyStatus int }{
+		{common.UserStatusDisabled, common.TokenStatusDisabled},
+		{common.UserStatusEnabled, common.TokenStatusEnabled},
+	} {
+		bob.user.Status = step.userStatus
+		require.NoError(t, bob.user.Update(false))
+		assert.Equal(t, step.keyStatus, teamMemberToken(t, team, bob.user.Id).Status, step.userStatus)
+	}
+	require.NoError(t, model.DB.Model(&model.Token{}).Where("id = ?", key.Id).Update("status", common.TokenStatusExhausted).Error)
+	bob.user.Status = common.UserStatusDisabled
+	require.NoError(t, bob.user.Update(false))
+	bob.user.Status = common.UserStatusEnabled
+	require.NoError(t, bob.user.Update(false))
+	assert.Equal(t, common.TokenStatusExhausted, teamMemberToken(t, team, bob.user.Id).Status, "an exhausted key is not revived")
+
+	_, err := bob.user.Delete()
+	require.NoError(t, err)
+	var memberships int64
+	require.NoError(t, model.DB.Model(&model.TeamMember{}).Where("user_id = ?", bob.user.Id).Count(&memberships).Error)
+	assert.Zero(t, memberships)
+	var deleted model.Token
+	require.NoError(t, model.DB.Unscoped().First(&deleted, key.Id).Error)
+	assert.True(t, deleted.DeletedAt.Valid)
+
+	_, err = alice.user.Delete()
+	assert.ErrorIs(t, err, model.ErrTeamOwnerImmutable, "a team owner cannot be deleted")
+	_, err = model.GetUserById(alice.user.Id, false)
+	assert.NoError(t, err)
 }
 
 func TestTeamUsageByMemberKey(t *testing.T) {
@@ -356,6 +409,16 @@ func TestTeamWalletAccountCannotSignIn(t *testing.T) {
 
 	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", team.WalletUserId).Update("email", "wallet@example.com").Error)
 	assert.Error(t, model.ResetUserPasswordByEmail("wallet@example.com", "new-password-123"))
+
+	// The wallet lookup fails closed: without it nobody signs in.
+	_, aliceJWT := createAccessTokenTestSession(t, alice.user.Id, "alice-before-outage")
+	require.NoError(t, model.DB.Migrator().DropTable(&model.Team{}))
+	t.Cleanup(func() { _ = model.DB.AutoMigrate(&model.Team{}) })
+	_, err = service.CreateLoginSession(alice.user.Id, "password", "192.0.2.8", "test")
+	assert.ErrorIs(t, err, service.ErrLoginSessionInvalid)
+	response = ssoPost(router, "/api/sso/code", aliceJWT, `{"client_id":"infinite","redirect_uri":"`+ssoTestRedirect+`"}`)
+	assert.Contains(t, response.Body.String(), "Team wallet accounts cannot sign in")
+	assert.ErrorIs(t, model.ResetUserPasswordByEmail(alice.user.Email, "new-password-123"), model.ErrEmailNotFound)
 }
 
 func TestSSOTeamKeyOnlyForMembers(t *testing.T) {

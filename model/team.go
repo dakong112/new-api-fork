@@ -35,14 +35,18 @@ var (
 // (WalletUserId) so relay billing, top-up and redemption work unchanged; each
 // member spends through their own API key under that account, and the key's
 // remain_quota is the member's spending cap.
+//
+// Everything keyed by user id is shared by the team: async tasks (task ids
+// from /v1/video, Midjourney, ...) are stored under the wallet account, so
+// any member's key can query the task of another member of the same team.
 type Team struct {
 	Id           int    `json:"id"`
 	Name         string `json:"name" gorm:"type:varchar(64)"`
 	OwnerId      int    `json:"owner_id" gorm:"index"`
 	WalletUserId int    `json:"wallet_user_id" gorm:"uniqueIndex"`
 	Status       int    `json:"status" gorm:"type:int;default:1"`
-	CreatedAt    int64  `json:"created_at" gorm:"bigint"`
-	UpdatedAt    int64  `json:"updated_at" gorm:"bigint"`
+	CreatedAt    int64  `json:"created_at"`
+	UpdatedAt    int64  `json:"updated_at"`
 }
 
 // TeamMember links a user to a team. TokenId is the member's API key under
@@ -54,21 +58,73 @@ type TeamMember struct {
 	Role       string `json:"role" gorm:"type:varchar(16)"`
 	TokenId    int    `json:"token_id"`
 	LimitQuota int    `json:"limit_quota" gorm:"type:bigint;default:0"`
-	CreatedAt  int64  `json:"created_at" gorm:"bigint"`
+	CreatedAt  int64  `json:"created_at"`
 }
 
 // IsTeamWalletUser reports whether userId is a team wallet account, which
-// must never sign in.
-// ponytail: a lookup error reads as "not a wallet" (logged); the guard is
-// defense in depth, since a wallet account has a random unknown password, no
-// email and no bindings, so no primary authentication can succeed for it.
-func IsTeamWalletUser(userId int) bool {
+// must never sign in. Callers treat an error as "refuse".
+func IsTeamWalletUser(userId int) (bool, error) {
 	var count int64
-	if err := DB.Model(&Team{}).Where("wallet_user_id = ?", userId).Count(&count).Error; err != nil {
-		common.SysError(common.LogText("failed to check team wallet user %d: %s", userId, err.Error()))
-		return false
+	err := DB.Model(&Team{}).Where("wallet_user_id = ?", userId).Count(&count).Error
+	return count > 0, err
+}
+
+// setTeamMemberKeysEnabledTx disables (or re-enables) the user's team member
+// keys when the user account is disabled (or re-enabled), since relay only
+// checks the wallet account. Only enabled <-> disabled flips; exhausted keys
+// stay exhausted. The cached keys are fenced and dropped first.
+func setTeamMemberKeysEnabledTx(tx *gorm.DB, userId int, enabled bool) error {
+	from, to := common.TokenStatusEnabled, common.TokenStatusDisabled
+	if enabled {
+		from, to = to, from
 	}
-	return count > 0
+	var tokens []Token
+	if err := tx.Where("id IN (?) AND status = ?", tx.Model(&TeamMember{}).Select("token_id").Where("user_id = ?", userId), from).
+		Find(&tokens).Error; err != nil {
+		return err
+	}
+	if len(tokens) == 0 {
+		return nil
+	}
+	if err := invalidateTokensCache(tokens); err != nil {
+		common.SysLog(common.LogText("failed to invalidate team member key cache for user %d: %s", userId, err.Error()))
+	}
+	ids := make([]int, 0, len(tokens))
+	for _, t := range tokens {
+		ids = append(ids, t.Id)
+	}
+	return tx.Model(&Token{}).Where("id IN ?", ids).Update("status", to).Error
+}
+
+// removeUserTeamsTx runs inside user deletion: it deletes the user's
+// non-owner memberships and their keys. Owners cannot be deleted while they
+// own a team, so a funded wallet is never orphaned.
+func removeUserTeamsTx(tx *gorm.DB, userId int) error {
+	var owned int64
+	if err := tx.Model(&Team{}).Where("owner_id = ?", userId).Count(&owned).Error; err != nil {
+		return err
+	}
+	if owned > 0 {
+		return ErrTeamOwnerImmutable
+	}
+	var tokens []Token
+	if err := tx.Where("id IN (?)", tx.Model(&TeamMember{}).Select("token_id").Where("user_id = ?", userId)).
+		Find(&tokens).Error; err != nil {
+		return err
+	}
+	if err := invalidateTokensCache(tokens); err != nil {
+		common.SysLog(common.LogText("failed to invalidate team member key cache for user %d: %s", userId, err.Error()))
+	}
+	if len(tokens) > 0 {
+		ids := make([]int, 0, len(tokens))
+		for _, t := range tokens {
+			ids = append(ids, t.Id)
+		}
+		if err := tx.Where("id IN ?", ids).Delete(&Token{}).Error; err != nil {
+			return err
+		}
+	}
+	return tx.Where("user_id = ?", userId).Delete(&TeamMember{}).Error
 }
 
 func teamMemberToken(teamId, walletUserId, userId, limit int) (*Token, error) {

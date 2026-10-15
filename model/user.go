@@ -837,6 +837,11 @@ func (user *User) UpdateWithTx(tx *gorm.DB, updatePassword bool) error {
 			return err
 		}
 	}
+	if newUser.Status != 0 && current.Status != newUser.Status {
+		if err = setTeamMemberKeysEnabledTx(tx, user.Id, newUser.Status == common.UserStatusEnabled); err != nil {
+			return err
+		}
+	}
 	if err = tx.Model(&current).Omit(
 		"access_token",
 		"quota",
@@ -985,6 +990,12 @@ func (user *User) delete(identity *AuthSessionIdentity) (int64, error) {
 		if err != nil {
 			return err
 		}
+		if err := removeUserTeamsTx(tx, user.Id); err != nil {
+			return err
+		}
+		if err := DeleteUserRoleAssignmentsTx(tx, user.Id); err != nil {
+			return err
+		}
 		return tx.Delete(user).Error
 	}); err != nil {
 		return 0, err
@@ -1019,6 +1030,12 @@ func (user *User) HardDelete() (int64, error) {
 			if err := tx.Unscoped().Select("id", commonKeyCol).Where("user_id = ?", user.Id).Find(&tokens).Error; err != nil {
 				return err
 			}
+		}
+		if err := removeUserTeamsTx(tx, user.Id); err != nil {
+			return err
+		}
+		if err := DeleteUserRoleAssignmentsTx(tx, user.Id); err != nil {
+			return err
 		}
 		if err := deleteUserAuthenticationData(tx, user.Id); err != nil {
 			return err
@@ -1198,7 +1215,7 @@ func ResetUserPasswordByEmail(email string, password string) error {
 	if err != nil {
 		return err
 	}
-	if IsTeamWalletUser(user.Id) {
+	if isWallet, err := IsTeamWalletUser(user.Id); err != nil || isWallet {
 		return ErrEmailNotFound
 	}
 	hashedPassword, err := common.HashAccountPassword(password)

@@ -44,7 +44,7 @@ func CreateSSOCode(c *gin.Context) {
 		common.ApiErrorT(c, "Invalid parameters")
 		return
 	}
-	if model.IsTeamWalletUser(c.GetInt("id")) {
+	if isWallet, err := model.IsTeamWalletUser(c.GetInt("id")); err != nil || isWallet {
 		common.ApiErrorT(c, "Team wallet accounts cannot sign in")
 		return
 	}

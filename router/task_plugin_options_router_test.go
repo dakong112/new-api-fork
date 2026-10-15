@@ -77,7 +77,7 @@ func TestCustomRolesThroughAdminRoutes(t *testing.T) {
 	sqlDB, err := db.DB()
 	require.NoError(t, err)
 	sqlDB.SetMaxOpenConns(1)
-	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.AuditLog{}, &model.UserAccessToken{}, &model.Option{}, &model.CasbinRule{}, &model.AuthzRole{}))
+	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.Team{}, &model.TeamMember{}, &model.AuditLog{}, &model.UserAccessToken{}, &model.Option{}, &model.CasbinRule{}, &model.AuthzRole{}))
 	model.DB, model.LOG_DB = db, db
 	common.RedisEnabled, common.SessionSecret, common.IsMasterNode = false, "router-authz-test-secret", true
 	require.NoError(t, model.EnsureLegacyAccessTokenRetireAt(time.Now().Unix()))

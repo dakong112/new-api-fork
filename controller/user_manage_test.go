@@ -68,7 +68,7 @@ func setupManageUserTestDB(t *testing.T) *gorm.DB {
 			}
 		}
 	})
-	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.CasbinRule{}, &model.AuthzRole{}, &model.AuthFlow{}, &model.TwoFA{}, &model.PasskeyCredential{}, &model.UserAccessToken{}))
+	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.Team{}, &model.TeamMember{}, &model.Token{}, &model.CasbinRule{}, &model.AuthzRole{}, &model.AuthFlow{}, &model.TwoFA{}, &model.PasskeyCredential{}, &model.UserAccessToken{}))
 	require.NoError(t, logDB.AutoMigrate(&model.Log{}, &model.AuditLog{}))
 	versionQuery := "SELECT version()"
 	if dialect == "sqlite" {
@@ -174,6 +174,9 @@ func TestManageUserDemoteAdvancesAuthVersionAndRevokesSessionsOnce(t *testing.T)
 		}).Error)
 	}
 
+	// A custom role must not outlive the admin status.
+	require.NoError(t, db.Create(&model.CasbinRule{Ptype: "g", V0: authz.UserSubject(user.Id), V1: authz.RoleSubject("auditor")}).Error)
+
 	sessionUpdateCount := 0
 	require.NoError(t, db.Callback().Update().Before("gorm:update").Register("test:count_demote_session_updates", func(tx *gorm.DB) {
 		if tx.Statement != nil && tx.Statement.Table == "user_sessions" {
@@ -198,6 +201,10 @@ func TestManageUserDemoteAdvancesAuthVersionAndRevokesSessionsOnce(t *testing.T)
 		assert.Equal(t, "admin_demote", session.RevokedReason)
 	}
 	assert.Equal(t, 1, sessionUpdateCount)
+	var assignments int64
+	require.NoError(t, db.Model(&model.CasbinRule{}).Where("ptype = ? AND v0 = ?", "g", authz.UserSubject(user.Id)).Count(&assignments).Error)
+	assert.Zero(t, assignments)
+	assert.Empty(t, authz.UserRoles(user.Id))
 }
 
 func TestManageUserDeleteReturnsImmediatelyAndUnknownActionFails(t *testing.T) {
@@ -207,6 +214,7 @@ func TestManageUserDeleteReturnsImmediatelyAndUnknownActionFails(t *testing.T) {
 		Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1, AffCode: "delete-aff",
 	}
 	require.NoError(t, db.Create(&deleted).Error)
+	require.NoError(t, db.Create(&model.CasbinRule{Ptype: "g", V0: authz.UserSubject(deleted.Id), V1: authz.RoleSubject("auditor")}).Error)
 
 	identity, proof := manageUserProof(t, db, service.VerificationOperation{Scope: service.VerificationScopeAdminUserDelete, Context: []byte(fmt.Sprintf(`{"user_id":%d}`, deleted.Id))})
 	recorder := performVerifiedManageUserRequest(t, fmt.Sprintf(`{"id":%d,"action":"delete"}`, deleted.Id), identity, proof)
@@ -214,6 +222,9 @@ func TestManageUserDeleteReturnsImmediatelyAndUnknownActionFails(t *testing.T) {
 	var deletedCount int64
 	require.NoError(t, db.Unscoped().Model(&model.User{}).Where("id = ? AND deleted_at IS NOT NULL", deleted.Id).Count(&deletedCount).Error)
 	assert.EqualValues(t, 1, deletedCount)
+	var assignments int64
+	require.NoError(t, db.Model(&model.CasbinRule{}).Where("ptype = ? AND v0 = ?", "g", authz.UserSubject(deleted.Id)).Count(&assignments).Error)
+	assert.Zero(t, assignments, "deletion drops the user's role assignments")
 
 	unchanged := model.User{
 		Username: "managed-unknown-user", Password: "password", Role: common.RoleCommonUser,

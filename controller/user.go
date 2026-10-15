@@ -383,6 +383,16 @@ func canManageTargetRole(myRole int, targetRole int) bool {
 	return myRole == common.RoleRootUser || myRole > targetRole
 }
 
+// canManageTargetUser gates changes to another account. A user holding custom
+// roles may carry admin permissions whatever their system role, so only root
+// may change one.
+func canManageTargetUser(myRole int, targetId int, targetRole int) bool {
+	if myRole == common.RoleRootUser {
+		return true
+	}
+	return myRole > targetRole && len(authz.UserRoles(targetId)) == 0
+}
+
 func GetUser(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -675,7 +685,7 @@ func UpdateUser(c *gin.Context) {
 	}
 	updatedUser.Role = originUser.Role
 	myRole := c.GetInt("role")
-	if !canManageTargetRole(myRole, originUser.Role) {
+	if !canManageTargetUser(myRole, originUser.Id, originUser.Role) {
 		common.ApiErrorT(c, "No permission to update users of same or higher permission level")
 		return
 	}
@@ -694,6 +704,14 @@ func UpdateUser(c *gin.Context) {
 		auditParams["verification_method"] = authorization.Method
 		auditParams["password_reset"] = updatePassword
 		auditParams["admin_permissions_updated"] = updatedUser.AdminPermissions != nil
+	}
+	// A user holding custom roles gets permissions from those roles; saving the
+	// drawer's matrix would persist it as deny overrides against the admin
+	// baseline, so it is dropped.
+	overridesIgnored := updatedUser.AdminPermissions != nil && len(authz.UserRoles(updatedUser.Id)) > 0
+	if overridesIgnored {
+		updatedUser.AdminPermissions = nil
+		auditParams["admin_permissions_updated"] = false
 	}
 	authzTouched := false
 	if err := model.DB.Transaction(func(tx *gorm.DB) error {
@@ -724,6 +742,10 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 	recordManageAuditFor(c, updatedUser.Id, "user.update", auditParams)
+	if overridesIgnored {
+		common.ApiSuccessT(c, "Permission overrides are ignored for users with custom roles", nil)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -751,7 +773,7 @@ func AdminClearUserBinding(c *gin.Context) {
 	}
 
 	myRole := c.GetInt("role")
-	if !canManageTargetRole(myRole, user.Role) {
+	if !canManageTargetUser(myRole, user.Id, user.Role) {
 		common.ApiErrorT(c, "No permission to access users of same or higher level")
 		return
 	}
@@ -936,7 +958,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 	myRole := c.GetInt("role")
-	if myRole <= originUser.Role {
+	if myRole <= originUser.Role || !canManageTargetUser(myRole, originUser.Id, originUser.Role) {
 		common.ApiErrorT(c, "No permission to update users of same or higher permission level")
 		return
 	}
@@ -1110,7 +1132,7 @@ func ManageUser(c *gin.Context) {
 		return
 	}
 	myRole := c.GetInt("role")
-	if !canManageTargetRole(myRole, user.Role) {
+	if !canManageTargetUser(myRole, user.Id, user.Role) {
 		common.ApiErrorT(c, "No permission to update users of same or higher permission level")
 		return
 	}
@@ -1186,6 +1208,9 @@ func ManageUser(c *gin.Context) {
 	if req.Action == "demote" {
 		if err := model.DB.Transaction(func(tx *gorm.DB) error {
 			if err := user.UpdateWithTx(tx, false); err != nil {
+				return err
+			}
+			if err := model.DeleteUserRoleAssignmentsTx(tx, user.Id); err != nil {
 				return err
 			}
 			return authz.ClearUserAuthorizationInTx(tx, user.Id)

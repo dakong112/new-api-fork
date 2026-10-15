@@ -163,6 +163,17 @@ func GetRedemptionById(id int) (*Redemption, error) {
 }
 
 func Redeem(key string, userId int) (quota int, err error) {
+	return redeem(key, userId, userId)
+}
+
+// RedeemToTeam credits a code to a team wallet on behalf of callerId. Test
+// codes are refused: their once-per-user rule would count the wallet, not
+// the caller, so every team would hand its members another full test credit.
+func RedeemToTeam(key string, walletUserId int, callerId int) (int, error) {
+	return redeem(key, walletUserId, callerId)
+}
+
+func redeem(key string, userId int, callerId int) (quota int, err error) {
 	if key == "" {
 		return 0, errors.New("redemption code not provided")
 	}
@@ -187,6 +198,9 @@ func Redeem(key string, userId int) (quota int, err error) {
 		}
 		if redemption.ExpiredTime != 0 && redemption.ExpiredTime < common.GetTimestamp() {
 			return errors.New("redemption code expired")
+		}
+		if redemption.IsTest && callerId != userId {
+			return errors.New("test redemption code redeemed for another account")
 		}
 		// Compare-and-swap on status: only the transaction that flips
 		// enabled -> used may credit quota, so a concurrent redeem of the
