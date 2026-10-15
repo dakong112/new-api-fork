@@ -14,6 +14,7 @@ import (
 var (
 	enforcerMu sync.RWMutex
 	enforcer   *casbin.SyncedEnforcer
+	authzDB    *gorm.DB
 )
 
 const modelText = `
@@ -23,11 +24,14 @@ r = sub, obj, act
 [policy_definition]
 p = sub, obj, act, eft
 
+[role_definition]
+g = _, _
+
 [policy_effect]
 e = some(where (p.eft == allow))
 
 [matchers]
-m = r.sub == p.sub && r.obj == p.obj && r.act == p.act && p.eft == "allow"
+m = (r.sub == p.sub || g(r.sub, p.sub)) && r.obj == p.obj && r.act == p.act && p.eft == "allow"
 `
 
 func Init(db *gorm.DB) error {
@@ -36,6 +40,9 @@ func Init(db *gorm.DB) error {
 			return err
 		}
 		if err := resetBuiltInRolePolicies(db); err != nil {
+			return err
+		}
+		if err := seedPresetRoles(db); err != nil {
 			return err
 		}
 	}
@@ -52,6 +59,7 @@ func Init(db *gorm.DB) error {
 
 	enforcerMu.Lock()
 	enforcer = e
+	authzDB = db
 	enforcerMu.Unlock()
 
 	if !common.IsMasterNode {
@@ -64,6 +72,12 @@ func currentEnforcer() *casbin.SyncedEnforcer {
 	enforcerMu.RLock()
 	defer enforcerMu.RUnlock()
 	return enforcer
+}
+
+func currentDB() *gorm.DB {
+	enforcerMu.RLock()
+	defer enforcerMu.RUnlock()
+	return authzDB
 }
 
 func ReloadPolicy() error {

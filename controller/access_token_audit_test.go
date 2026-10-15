@@ -320,8 +320,12 @@ func TestAccessTokenScopeDictionaryIgnoresTheViewersGrants(t *testing.T) {
 	assert.Equal(t, "API keys / Reveal full keys", labels["api_key:reveal"])
 	assert.Equal(t, "Users / Edit", labels["user:write"])
 	assert.Equal(t, "System settings / Edit", labels["option:write"])
-	for _, permission := range authz.AllPermissions() {
-		assert.Contains(t, labels, service.AccessTokenScopeOf(permission))
+	for _, resource := range authz.Catalog() {
+		for _, action := range resource.Actions {
+			// Codes of other applications are never token scopes.
+			_, listed := labels[service.AccessTokenScopeOf(authz.Permission{Resource: resource.Resource, Action: action.Action})]
+			assert.Equal(t, resource.App == "", listed, resource.Resource)
+		}
 	}
 
 	response = accessTokenRequest(router, "GET", "/api/user/access_tokens/catalog", browser, "", "")

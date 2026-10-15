@@ -25,8 +25,19 @@ func (a *gormAdapter) LoadPolicy(m casbinmodel.Model) error {
 		return err
 	}
 	for _, rule := range rules {
+		if rule.Ptype == "g" {
+			// Role assignments: "g, user:<id>, role:<key>". Rows with extra
+			// fields (domains) are not part of this model and are skipped.
+			if rule.V0 == "" || rule.V1 == "" || rule.V2 != "" || rule.V3 != "" || rule.V4 != "" || rule.V5 != "" {
+				common.SysLog(common.LogText("authorization role assignment %d is malformed; skipped", rule.Id))
+				continue
+			}
+			if err := persist.LoadPolicyArray([]string{rule.Ptype, rule.V0, rule.V1}, m); err != nil {
+				return err
+			}
+			continue
+		}
 		if rule.Ptype != "p" {
-			// This model has no role-inheritance or other policy sections.
 			continue
 		}
 		if rule.V0 == "" || rule.V1 == "" || rule.V2 == "" {

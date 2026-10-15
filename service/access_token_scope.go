@@ -50,8 +50,9 @@ func accessTokenEdit(description string) authz.ActionDefinition {
 }
 
 // accessTokenStaticResources covers dashboard routes that are not guarded by a
-// Casbin permission. Casbin resources come from authz.Catalog() at runtime and
-// must never be duplicated here.
+// Casbin permission. Casbin resources of this gateway (App "") come from
+// authz.Catalog() at runtime and must never be duplicated here; resources of
+// other applications are not token scopes.
 var accessTokenStaticResources = []AccessTokenResource{
 	{Resource: "profile", LabelKey: "Profile", group: AccessTokenGroupPersonal, minRole: common.RoleCommonUser, Actions: []authz.ActionDefinition{
 		accessTokenView("View your profile, groups, and available models."),
@@ -72,33 +73,6 @@ var accessTokenStaticResources = []AccessTokenResource{
 	{Resource: "account_security", LabelKey: "Account security", group: AccessTokenGroupPersonal, minRole: common.RoleCommonUser, Actions: []authz.ActionDefinition{
 		accessTokenView("View Passkey, two-factor, and sign-in binding status."),
 		accessTokenEdit("Includes changes that require security verification, such as password, two-factor settings, and account deletion."),
-	}},
-	{Resource: "user", LabelKey: "Users", group: AccessTokenGroupAdmin, minRole: common.RoleAdminUser, Actions: []authz.ActionDefinition{
-		accessTokenView("View users, their sign-in bindings, and permission settings."),
-		accessTokenEdit("Create, edit, disable, and delete users, and reset their security settings."),
-	}},
-	{Resource: "billing", LabelKey: "Billing management", group: AccessTokenGroupAdmin, minRole: common.RoleAdminUser, Actions: []authz.ActionDefinition{
-		accessTokenView("View all top-up records, subscription plans, and user subscriptions."),
-		accessTokenEdit("Complete top-up orders and manage subscription plans and user subscriptions."),
-	}},
-	{Resource: "model", LabelKey: "Models", group: AccessTokenGroupAdmin, minRole: common.RoleAdminUser, Actions: []authz.ActionDefinition{
-		accessTokenView("View models and vendors, and preview upstream sync."),
-		accessTokenEdit("Edit models and vendors, and sync them from upstream."),
-	}},
-	{Resource: "deployment", LabelKey: "Deployments", group: AccessTokenGroupAdmin, minRole: common.RoleAdminUser, Actions: []authz.ActionDefinition{
-		accessTokenView("View deployments and price estimates."),
-		accessTokenEdit("Create, edit, and delete deployments, and test connections."),
-	}},
-	{Resource: "log", LabelKey: "Logs", group: AccessTokenGroupAdmin, minRole: common.RoleAdminUser, Actions: []authz.ActionDefinition{
-		accessTokenView("View all users' usage logs, statistics, and tasks."),
-	}},
-	{Resource: "redemption", LabelKey: "Redemption codes", group: AccessTokenGroupAdmin, minRole: common.RoleAdminUser, Actions: []authz.ActionDefinition{
-		accessTokenView("View redemption codes."),
-		accessTokenEdit("Create, edit, and delete redemption codes."),
-	}},
-	{Resource: "group", LabelKey: "Groups", group: AccessTokenGroupAdmin, minRole: common.RoleAdminUser, Actions: []authz.ActionDefinition{
-		accessTokenView("View groups and prefill groups."),
-		accessTokenEdit("Create, edit, and delete prefill groups."),
 	}},
 	{Resource: "option", LabelKey: "System settings", group: AccessTokenGroupSystem, minRole: common.RoleRootUser, Actions: []authz.ActionDefinition{
 		accessTokenView("View system settings, custom OAuth providers, and price sync sources."),
@@ -133,6 +107,9 @@ func AccessTokenCatalog(userID, role int) []AccessTokenCatalogGroup {
 	}
 	if role >= common.RoleAdminUser {
 		for _, definition := range authz.Catalog() {
+			if definition.App != "" {
+				continue
+			}
 			resource := AccessTokenResource{Resource: definition.Resource, LabelKey: definition.LabelKey}
 			for _, action := range definition.Actions {
 				if authz.Can(userID, role, authz.Permission{Resource: definition.Resource, Action: action.Action}) {
@@ -164,6 +141,9 @@ func AccessTokenScopeDictionary() []AccessTokenResource {
 		resources = append(resources, resource)
 	}
 	for _, definition := range definitions {
+		if definition.App != "" {
+			continue
+		}
 		resources = append(resources, AccessTokenResource{Resource: definition.Resource, LabelKey: definition.LabelKey, Actions: definition.Actions})
 	}
 	return resources

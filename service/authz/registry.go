@@ -11,9 +11,11 @@ type ActionDefinition struct {
 	DefaultRoles   []string `json:"-"`
 }
 
-// ResourceDefinition describes a resource and the actions it exposes.
+// ResourceDefinition describes a resource and the actions it exposes. App names
+// the application that enforces it; empty means this gateway (new-api).
 type ResourceDefinition struct {
 	Resource string             `json:"resource"`
+	App      string             `json:"app"`
 	LabelKey string             `json:"label_key"`
 	Actions  []ActionDefinition `json:"actions"`
 }
@@ -31,6 +33,7 @@ func Catalog() []ResourceDefinition {
 	for _, resource := range registry {
 		result = append(result, ResourceDefinition{
 			Resource: resource.Resource,
+			App:      resource.App,
 			LabelKey: resource.LabelKey,
 			Actions:  append([]ActionDefinition(nil), resource.Actions...),
 		})
@@ -50,6 +53,24 @@ func AllPermissions() []Permission {
 		}
 	}
 	return permissions
+}
+
+// CodesForApp returns the "resource.action" codes of one application that the
+// user may perform. An empty app means this gateway.
+func CodesForApp(userID int, systemRole int, app string) []string {
+	codes := make([]string, 0)
+	for _, resource := range registry {
+		if resource.App != app {
+			continue
+		}
+		for _, action := range resource.Actions {
+			permission := Permission{Resource: resource.Resource, Action: action.Action}
+			if Can(userID, systemRole, permission) {
+				codes = append(codes, permission.Code())
+			}
+		}
+	}
+	return codes
 }
 
 // PermissionsForRole returns the permissions whose DefaultRoles include roleKey.
