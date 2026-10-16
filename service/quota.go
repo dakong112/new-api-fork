@@ -420,10 +420,14 @@ func PreConsumeTokenQuota(relayInfo *relaycommon.RelayInfo, quota int) error {
 		if token, tokenErr := model.GetTokenByKey(relayInfo.TokenKey, false); tokenErr == nil && token != nil {
 			remainQuota = token.RemainQuota
 		}
-		return fmt.Errorf("token quota is not enough, token remain quota: %s, need quota: %s", logger.FormatQuota(remainQuota), logger.FormatQuota(quota))
+		return fmt.Errorf("%w, token remain quota: %s, need quota: %s", ErrTokenQuotaExhausted, logger.FormatQuota(remainQuota), logger.FormatQuota(quota))
 	}
 	return nil
 }
+
+// ErrTokenQuotaExhausted means the key's remaining quota cannot cover the
+// reservation; relay errors report it as types.ErrorCodeTokenQuotaExhausted.
+var ErrTokenQuotaExhausted = errors.New("token quota is not enough")
 
 type postConsumeQuotaResult struct {
 	FundingApplied bool

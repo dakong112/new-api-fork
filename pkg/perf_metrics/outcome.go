@@ -91,7 +91,7 @@ func classifyFailure(local bool, code, errorType string, status int) Outcome {
 		switch types.ErrorCode(code) {
 		case types.ErrorCodeInvalidRequest, types.ErrorCodeSensitiveWordsDetected, types.ErrorCodeReadRequestBodyFailed,
 			types.ErrorCodeConvertRequestFailed, types.ErrorCodeAccessDenied, types.ErrorCodeBadRequestBody,
-			types.ErrorCodeInsufficientUserQuota, types.ErrorCodePreConsumeTokenQuotaFailed, types.ErrorCodePromptBlocked:
+			types.ErrorCodeInsufficientUserQuota, types.ErrorCodeTokenQuotaExhausted, types.ErrorCodePreConsumeTokenQuotaFailed, types.ErrorCodePromptBlocked:
 			return OutcomeIgnored
 		}
 		return OutcomeFailure
@@ -104,7 +104,7 @@ func classifyFailure(local bool, code, errorType string, status int) Outcome {
 			"authentication_error", "unauthenticated", "permission_denied", "permission_error", "access_denied",
 			"insufficient_quota", "quota_exceeded", "resource_exhausted", "rate_limit_exceeded", "rate_limit_error",
 			"overloaded_error", "server_error", "internal_error", "service_unavailable", "model_not_found",
-			"insufficient_user_quota", "pre_consume_token_quota_failed":
+			"insufficient_user_quota", "token_quota_exhausted", "pre_consume_token_quota_failed":
 			return OutcomeFailure
 		case "context_length_exceeded", "invalid_request", "invalid_request_error", "invalid_argument",
 			"sensitive_words_detected", "prompt_blocked", "content_filter", "content_policy_violation", "safety":

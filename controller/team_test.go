@@ -12,6 +12,9 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
+	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	"github.com/QuantumNous/new-api/relaykit/dto"
+	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/gin-gonic/gin"
@@ -577,4 +580,43 @@ func TestEpayOrderPaidAfterDissolveCreditsOwner(t *testing.T) {
 	var order model.TopUp
 	require.NoError(t, model.DB.First(&order, orders[0].Id).Error)
 	assert.Equal(t, team.WalletUserId, order.UserId, "the order history keeps the wallet as payer")
+}
+
+// A member key over its spending limit reports token_quota_exhausted, so
+// clients can tell it from a short team wallet (insufficient_user_quota).
+func TestTeamMemberKeyOverLimitErrorCode(t *testing.T) {
+	router, alice, bob, _ := setupTeamTest(t)
+	team := createTestTeam(t, router, alice)
+	require.True(t, teamCall(t, router, http.MethodPost, teamPath(team, "/members"), alice.jwt, `{"username":"bob","limit_quota":100}`).Success)
+	require.NoError(t, model.TransferQuotaToTeam(alice.user.Id, team.Id, 500))
+	key := teamMemberToken(t, team, bob.user.Id)
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	info := &relaycommon.RelayInfo{UserId: team.WalletUserId, TokenId: key.Id, TokenKey: key.Key, UserSetting: dto.UserSetting{BillingPreference: "wallet_only"}}
+
+	_, apiErr := service.NewBillingSession(c, info, 150)
+	require.NotNil(t, apiErr)
+	assert.Equal(t, types.ErrorCodeTokenQuotaExhausted, apiErr.GetErrorCode())
+	assert.Equal(t, http.StatusForbidden, apiErr.StatusCode)
+	assert.Equal(t, 500, userQuota(t, team.WalletUserId), "nothing is reserved")
+
+	_, apiErr = service.NewBillingSession(c, info, 600)
+	require.NotNil(t, apiErr)
+	assert.Equal(t, types.ErrorCodeInsufficientUserQuota, apiErr.GetErrorCode(), "a short team wallet keeps its own code")
+
+	require.NoError(t, model.DB.Model(&model.Token{}).Where("id = ?", key.Id).Update("remain_quota", 0).Error)
+	relay := gin.New()
+	relay.POST("/v1/chat/completions", middleware.TokenAuth(), func(c *gin.Context) { c.Status(http.StatusOK) })
+	request := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	request.Header.Set("Authorization", "Bearer sk-"+key.Key)
+	response := httptest.NewRecorder()
+	relay.ServeHTTP(response, request)
+	assert.Equal(t, http.StatusUnauthorized, response.Code, "an exhausted key keeps its status")
+	var body struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body), response.Body.String())
+	assert.Equal(t, string(types.ErrorCodeTokenQuotaExhausted), body.Error.Code)
 }

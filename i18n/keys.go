@@ -10,6 +10,7 @@ const (
 	MsgAuthUserBanned         = "auth.user_banned"
 	MsgTokenGetInfoFailed     = "token.get_info_failed"
 	MsgTokenInvalid           = "token.invalid"
+	MsgTokenQuotaExhausted    = "token.quota_exhausted"
 	MsgTokenNotProvided       = "token.not_provided"
 	MsgTokenStatusUnavailable = "token.status_unavailable"
 

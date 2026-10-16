@@ -1,6 +1,9 @@
 package model
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Common errors
 var (
@@ -20,6 +23,8 @@ var (
 var (
 	ErrTokenNotProvided = errors.New("token not provided")
 	ErrTokenInvalid     = errors.New("token invalid")
+	// ErrTokenExhausted is an ErrTokenInvalid whose remaining quota is used up.
+	ErrTokenExhausted = fmt.Errorf("%w: quota exhausted", ErrTokenInvalid)
 )
 
 // Redemption errors

@@ -567,6 +567,9 @@ func TokenAuth() func(c *gin.Context) {
 				common.SysLog(common.LogText("TokenAuth ValidateUserToken database error: %s", err.Error()))
 				abortWithOpenAiMessage(c, http.StatusInternalServerError,
 					common.TranslateMessage(c, i18n.MsgDatabaseError))
+			} else if errors.Is(err, model.ErrTokenExhausted) {
+				abortWithOpenAiMessage(c, http.StatusUnauthorized,
+					common.TranslateMessage(c, i18n.MsgTokenQuotaExhausted), types.ErrorCodeTokenQuotaExhausted)
 			} else {
 				abortWithOpenAiMessage(c, http.StatusUnauthorized,
 					common.TranslateMessage(c, i18n.MsgTokenInvalid))

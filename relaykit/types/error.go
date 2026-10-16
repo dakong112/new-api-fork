@@ -82,8 +82,18 @@ const (
 	ErrorCodeQueryDataError  ErrorCode = "query_data_error"
 	ErrorCodeUpdateDataError ErrorCode = "update_data_error"
 
-	// quota error
+	// Quota errors are a stable contract for clients (error.code in the
+	// OpenAI-format body), the HTTP status is unchanged:
+	//   - insufficient_user_quota (403): the wallet behind the key cannot cover
+	//     the request; for a team member key that is the team wallet.
+	//   - token_quota_exhausted: the key's own remaining quota (for a team member
+	//     key, its spending limit) is used up. 401 when the key is already
+	//     exhausted at authentication, 403 when its remainder cannot cover the
+	//     request's pre-consume.
+	//   - pre_consume_token_quota_failed (403): reserving the key's quota failed
+	//     for another reason, such as a database error.
 	ErrorCodeInsufficientUserQuota      ErrorCode = "insufficient_user_quota"
+	ErrorCodeTokenQuotaExhausted        ErrorCode = "token_quota_exhausted"
 	ErrorCodePreConsumeTokenQuotaFailed ErrorCode = "pre_consume_token_quota_failed"
 )
 
