@@ -325,6 +325,25 @@ func GetSSOPermissions(c *gin.Context) {
 	common.ApiSuccess(c, gin.H{"permissions": service.SSOPermissions(user, client)})
 }
 
+// GetSSOCatalog returns the /api/pricing payload as the user sees it, so an
+// application's model catalog keeps working when the pricing page is switched
+// off in the header navigation. Authentication is CreateSSOKey's.
+func GetSSOCatalog(c *gin.Context) {
+	var request struct {
+		ClientID     string `json:"client_id"`
+		ClientSecret string `json:"client_secret"`
+	}
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiErrorStatus(c, http.StatusBadRequest, errors.New("invalid request"))
+		return
+	}
+	_, user, ok := ssoClientTokenAuth(c, "catalog", request.ClientID, request.ClientSecret)
+	if !ok {
+		return
+	}
+	c.JSON(http.StatusOK, pricingCatalog(user.Group))
+}
+
 // ListSSOTeams lists the user's teams for an application's space switcher.
 // Authentication is CreateSSOKey's.
 func ListSSOTeams(c *gin.Context) {

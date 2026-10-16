@@ -1020,3 +1020,78 @@ func TestSSOPermissionCodes(t *testing.T) {
 	status, _ = permissions(jwt, "infinite", ssoTestSecret)
 	assert.Equal(t, http.StatusForbidden, status)
 }
+
+// /api/sso/catalog serves the /api/pricing payload to the application even
+// when the pricing page is switched off, limited to the user's usable groups.
+func TestSSOCatalogIgnoresPricingPageSwitch(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+	require.NoError(t, model.DB.AutoMigrate(&model.Channel{}, &model.Ability{}, &model.Model{}, &model.Vendor{}))
+	require.NoError(t, model.DB.Create(&[]model.Ability{
+		{Group: "default", Model: "catalog-public", ChannelId: 1, Enabled: true},
+		{Group: "secret", Model: "catalog-secret", ChannelId: 1, Enabled: true},
+	}).Error)
+	previousGroups, previousRatios := setting.UserUsableGroups2JSONString(), ratio_setting.GroupRatio2JSONString()
+	require.NoError(t, setting.UpdateUserUsableGroupsByJSONString(`{"default":"Default"}`))
+	require.NoError(t, ratio_setting.UpdateGroupRatioByJSONString(`{"default":1,"secret":2}`))
+	common.OptionMapRWMutex.Lock()
+	if common.OptionMap == nil {
+		common.OptionMap = map[string]string{}
+	}
+	previousNav, hadNav := common.OptionMap["HeaderNavModules"]
+	common.OptionMap["HeaderNavModules"] = `{"pricing":{"enabled":false,"requireAuth":false}}`
+	common.OptionMapRWMutex.Unlock()
+	model.InvalidatePricingCache()
+	t.Cleanup(func() {
+		require.NoError(t, setting.UpdateUserUsableGroupsByJSONString(previousGroups))
+		require.NoError(t, ratio_setting.UpdateGroupRatioByJSONString(previousRatios))
+		common.OptionMapRWMutex.Lock()
+		if hadNav {
+			common.OptionMap["HeaderNavModules"] = previousNav
+		} else {
+			delete(common.OptionMap, "HeaderNavModules")
+		}
+		common.OptionMapRWMutex.Unlock()
+		model.InvalidatePricingCache()
+	})
+	router.GET("/api/pricing", middleware.HeaderNavModuleAuth("pricing"), GetPricing)
+	router.POST("/api/sso/catalog", middleware.UserAuth(), GetSSOCatalog)
+	pat, _ := issueSSOTestPAT(t, user.Id, "sso:infinite")
+
+	pricingRequest := httptest.NewRequest(http.MethodGet, "/api/pricing", nil)
+	pricingRequest.Header.Set("Authorization", "Bearer "+pat)
+	pricingResponse := httptest.NewRecorder()
+	router.ServeHTTP(pricingResponse, pricingRequest)
+	require.Equal(t, http.StatusForbidden, pricingResponse.Code)
+
+	response := ssoPost(router, "/api/sso/catalog", pat, `{"client_id":"infinite","client_secret":"`+ssoTestSecret+`"}`)
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	var body struct {
+		Success     bool               `json:"success"`
+		Data        []model.Pricing    `json:"data"`
+		GroupRatio  map[string]float64 `json:"group_ratio"`
+		UsableGroup map[string]string  `json:"usable_group"`
+	}
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body))
+	require.True(t, body.Success)
+	names := make([]string, 0, len(body.Data))
+	for _, item := range body.Data {
+		names = append(names, item.ModelName)
+	}
+	assert.Equal(t, []string{"catalog-public"}, names)
+	assert.Equal(t, map[string]float64{"default": 1}, body.GroupRatio)
+	assert.Equal(t, map[string]string{"default": "Default"}, body.UsableGroup)
+
+	// Same authentication as /api/sso/key: client secret plus the PAT issued to that client.
+	otherPAT, _ := issueSSOTestPAT(t, user.Id, "sso:other")
+	for _, tc := range []struct {
+		bearer, secret string
+		status         int
+	}{
+		{pat, "wrong-secret", http.StatusUnauthorized},
+		{otherPAT, ssoTestSecret, http.StatusForbidden},
+		{jwt, ssoTestSecret, http.StatusForbidden},
+	} {
+		response := ssoPost(router, "/api/sso/catalog", tc.bearer, `{"client_id":"infinite","client_secret":"`+tc.secret+`"}`)
+		assert.Equal(t, tc.status, response.Code, response.Body.String())
+	}
+}

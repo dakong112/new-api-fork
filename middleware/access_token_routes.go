@@ -55,6 +55,7 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"POST /api/sso/consume":               accessTokenScopeRule("wallet:write"),
 	"POST /api/sso/permissions":           accessTokenScopeRule("profile:read"),
 	"POST /api/sso/teams":                 accessTokenScopeRule("profile:read"),
+	"POST /api/sso/catalog":               accessTokenScopeRule("profile:read"),
 	"POST /api/sso/team-key":              accessTokenScopeRule("profile:read"),
 	"POST /api/oauth/email/bind/start":    accessTokenScopeRule("account_security:write"),
 	"POST /api/oauth/email/bind/resend":   accessTokenScopeRule("account_security:write"),

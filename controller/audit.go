@@ -41,6 +41,7 @@ var auditContentTemplates = map[string]string{
 	"sso.permissions_failed":    "Rejected permission lookup from application ${client_id} (${reason})",
 	"sso.consume_failed":        "Rejected charge from application ${client_id} (${reason})",
 	"sso.teams_failed":          "Rejected team list request from application ${client_id} (${reason})",
+	"sso.catalog_failed":        "Rejected model catalog request from application ${client_id} (${reason})",
 	"sso.team_key_issue":        "Issued the team ${team_id} API key to application ${client_id}",
 	"sso.team_key_failed":       "Rejected team ${team_id} API key request from application ${client_id} (${reason})",
 	"team.redeem":               "Redeemed a code worth ${quota} to team ${team_id}",

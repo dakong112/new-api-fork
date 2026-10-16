@@ -36,44 +36,43 @@ func filterPricingByUsableGroups(pricing []model.Pricing, usableGroup map[string
 }
 
 func GetPricing(c *gin.Context) {
-	pricing := model.GetPricing()
-	userId, exists := c.Get("id")
-	usableGroup := map[string]string{}
+	var group string
+	if userId, exists := c.Get("id"); exists {
+		if user, err := model.GetUserCache(userId.(int)); err == nil {
+			group = user.Group
+		}
+	}
+	c.JSON(200, pricingCatalog(group))
+}
+
+// pricingCatalog is the model catalog a user of group sees (group is empty for
+// anonymous visitors): the models of their usable groups with prices, vendors
+// and the group ratios that apply to them. /api/pricing and /api/sso/catalog
+// both serve it.
+func pricingCatalog(group string) gin.H {
 	groupRatio := map[string]float64{}
 	maps.Copy(groupRatio, ratio_setting.GetGroupRatioCopy())
-	var group string
-	if exists {
-		user, err := model.GetUserCache(userId.(int))
-		if err == nil {
-			group = user.Group
-			for g := range groupRatio {
-				ratio, ok := ratio_setting.GetGroupGroupRatio(group, g)
-				if ok {
-					groupRatio[g] = ratio
-				}
-			}
+	for g := range groupRatio {
+		if ratio, ok := ratio_setting.GetGroupGroupRatio(group, g); ok {
+			groupRatio[g] = ratio
 		}
 	}
-
-	usableGroup = service.GetUserUsableGroups(group)
-	pricing = filterPricingByUsableGroups(pricing, usableGroup)
-	// check groupRatio contains usableGroup
-	for group := range ratio_setting.GetGroupRatioCopy() {
-		if _, ok := usableGroup[group]; !ok {
-			delete(groupRatio, group)
+	usableGroup := service.GetUserUsableGroups(group)
+	for g := range groupRatio {
+		if _, ok := usableGroup[g]; !ok {
+			delete(groupRatio, g)
 		}
 	}
-
-	c.JSON(200, gin.H{
+	return gin.H{
 		"success":            true,
-		"data":               pricing,
+		"data":               filterPricingByUsableGroups(model.GetPricing(), usableGroup),
 		"vendors":            model.GetVendors(),
 		"group_ratio":        groupRatio,
 		"usable_group":       usableGroup,
 		"supported_endpoint": model.GetSupportedEndpointMap(),
 		"auto_groups":        service.GetUserAutoGroup(group),
 		"pricing_version":    "a42d372ccf0b5dd13ecf71203521f9d2",
-	})
+	}
 }
 
 func ResetModelRatio(c *gin.Context) {
