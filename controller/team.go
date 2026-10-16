@@ -362,7 +362,7 @@ func teamForPayment(c *gin.Context, teamId int) (int, bool) {
 		return c.GetInt("id"), true
 	}
 	team, member, err := model.GetTeamMembership(teamId, c.GetInt("id"))
-	if err != nil {
+	if err != nil || team.Status == model.TeamStatusDissolved {
 		paymentError(c, model.ErrTeamNotFound)
 		return 0, false
 	}

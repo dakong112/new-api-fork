@@ -541,3 +541,40 @@ func TestDissolveTeamReturnsBalanceToOwner(t *testing.T) {
 	_, err := alice.user.Delete()
 	assert.NoError(t, err, "an owner without active teams can be deleted")
 }
+
+func TestEpayOrderPaidAfterDissolveCreditsOwner(t *testing.T) {
+	router, alice, _, _ := setupTeamTest(t)
+	previousAddress, previousID, previousKey := operation_setting.PayAddress, operation_setting.EpayId, operation_setting.EpayKey
+	operation_setting.PayAddress, operation_setting.EpayId, operation_setting.EpayKey = "https://pay.example.com", "1001", "epay-key"
+	t.Cleanup(func() {
+		operation_setting.PayAddress, operation_setting.EpayId, operation_setting.EpayKey = previousAddress, previousID, previousKey
+	})
+	team := createTestTeam(t, router, alice)
+	body := `{"amount":10,"payment_method":"alipay","team_id":` + strconv.Itoa(team.Id) + `}`
+	for range 2 {
+		response := teamCall(t, router, http.MethodPost, "/api/user/pay", alice.jwt, body)
+		require.Equal(t, "success", response.Message)
+	}
+	var orders []model.TopUp
+	require.NoError(t, model.DB.Order("id").Find(&orders).Error)
+	require.Len(t, orders, 2)
+	_, err := model.DissolveTeam(team.Id, alice.user.Id)
+	require.NoError(t, err)
+
+	assert.Equal(t, "Team not found", teamCall(t, router, http.MethodPost, "/api/user/pay", alice.jwt, body).MessageKey, "no new orders for a dissolved team")
+	alreadyDone, err := model.RechargeEpay(orders[0].TradeNo, "alipay", "192.0.2.8")
+	require.NoError(t, err)
+	assert.False(t, alreadyDone)
+	orderQuota := int(10 * common.QuotaPerUnit)
+	assert.Equal(t, 1000+orderQuota, userQuota(t, alice.user.Id), "the late payment goes to the owner, amount unchanged")
+	assert.Zero(t, userQuota(t, team.WalletUserId))
+	alreadyDone, err = model.RechargeEpay(orders[0].TradeNo, "alipay", "192.0.2.8")
+	require.NoError(t, err)
+	assert.True(t, alreadyDone, "a repeated callback credits nothing")
+	require.NoError(t, model.ManualCompleteTopUp(orders[1].TradeNo, "192.0.2.8"))
+	assert.Equal(t, 1000+2*orderQuota, userQuota(t, alice.user.Id), "an admin-completed order follows the same rule")
+	assert.Zero(t, userQuota(t, team.WalletUserId))
+	var order model.TopUp
+	require.NoError(t, model.DB.First(&order, orders[0].Id).Error)
+	assert.Equal(t, team.WalletUserId, order.UserId, "the order history keeps the wallet as payer")
+}

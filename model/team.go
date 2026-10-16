@@ -453,6 +453,24 @@ func DissolveTeam(teamId, ownerId int) (int, error) {
 	return quota, nil
 }
 
+// topUpRecipientTx returns the user a paid top-up order of userId credits:
+// the team owner when userId is the wallet of a dissolved team (an order
+// created before DissolveTeam and paid after), otherwise userId itself. The
+// team row is locked like DissolveTeam does, so a payment racing a dissolve
+// either lands on the wallet before its balance is returned or goes to the
+// owner, never onto the disabled wallet.
+func topUpRecipientTx(tx *gorm.DB, userId int) (int, error) {
+	var teams []Team
+	if err := lockForUpdate(tx).Select("id", "owner_id", "status").Where("wallet_user_id = ?", userId).Limit(1).Find(&teams).Error; err != nil {
+		return 0, err
+	}
+	if len(teams) == 0 || teams[0].Status != TeamStatusDissolved {
+		return userId, nil
+	}
+	common.SysLog(common.LogText("top-up for wallet %d of dissolved team %d credited to owner %d", userId, teams[0].Id, teams[0].OwnerId))
+	return teams[0].OwnerId, nil
+}
+
 // UserTeam is a team as seen by one of its members.
 type UserTeam struct {
 	Team
