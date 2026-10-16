@@ -70,10 +70,13 @@ export function RoleDialog(props: RoleDialogProps) {
     if (!props.open) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setKey(props.role?.key ?? '')
-    setName(props.role?.name ?? '')
-    setDescription(props.role?.description ?? '')
+    // Built-in roles are read-only and carry English source text from the
+    // server, so show their translation.
+    const translate = props.role?.built_in ? t : (text: string) => text
+    setName(translate(props.role?.name ?? ''))
+    setDescription(translate(props.role?.description ?? ''))
     setGrants(props.role?.grants ?? {})
-  }, [props.open, props.role])
+  }, [props.open, props.role, t])
 
   const groups = useMemo<PermissionMatrixGroup[]>(
     () =>
@@ -148,7 +151,7 @@ export function RoleDialog(props: RoleDialogProps) {
           />
         </div>
         <div className='space-y-2'>
-          <Label htmlFor='role-key'>{t('Key')}</Label>
+          <Label htmlFor='role-key'>{t('Role key')}</Label>
           <Input
             id='role-key'
             value={key}

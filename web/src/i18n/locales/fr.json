@@ -7517,6 +7517,9 @@
     "Verify to dissolve the team": "Vérifiez votre identité pour dissoudre l'équipe",
     "Failed to dissolve the team": "Échec de la dissolution de l'équipe",
     "Team dissolved. {{quota}} returned to your balance.": "Équipe dissoute. {{quota}} a été rendu à votre solde.",
-    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "Dissoudre {{name}} ? Le solde restant de l'équipe, {{quota}}, revient sur votre solde personnel, et toutes les clés API des membres de cette équipe sont supprimées. Cette action est irréversible."
+    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "Dissoudre {{name}} ? Le solde restant de l'équipe, {{quota}}, revient sur votre solde personnel, et toutes les clés API des membres de cette équipe sont supprimées. Cette action est irréversible.",
+    "Role key": "Identifiant",
+    "Built-in root authorization role": "Rôle racine intégré, dispose de toutes les autorisations",
+    "Built-in admin authorization role": "Rôle administrateur intégré"
   }
 }

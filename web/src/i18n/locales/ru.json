@@ -7517,6 +7517,9 @@
     "Verify to dissolve the team": "Подтвердите личность, чтобы распустить команду",
     "Failed to dissolve the team": "Не удалось распустить команду",
     "Team dissolved. {{quota}} returned to your balance.": "Команда распущена. {{quota}} возвращено на ваш баланс.",
-    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "Распустить {{name}}? Оставшийся баланс команды {{quota}} вернётся на ваш личный баланс, а все API-ключи участников этой команды будут удалены. Это действие необратимо."
+    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "Распустить {{name}}? Оставшийся баланс команды {{quota}} вернётся на ваш личный баланс, а все API-ключи участников этой команды будут удалены. Это действие необратимо.",
+    "Role key": "Идентификатор",
+    "Built-in root authorization role": "Встроенная роль root со всеми разрешениями",
+    "Built-in admin authorization role": "Встроенная роль администратора"
   }
 }

@@ -896,4 +896,7 @@ export const STATIC_I18N_KEYS = [
   'Verification method',
   'Admin permissions updated',
   'Provider ID',
+  // Built-in authorization role descriptions sent by service/authz.
+  'Built-in root authorization role',
+  'Built-in admin authorization role',
 ] as const

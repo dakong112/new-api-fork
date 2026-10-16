@@ -80,10 +80,12 @@ export function Roles() {
                 header: t('Name'),
                 cell: (role) => (
                   <div className='min-w-0'>
-                    <div className='font-medium'>{role.name}</div>
+                    <div className='font-medium'>
+                      {role.built_in ? t(role.name) : role.name}
+                    </div>
                     {role.description && (
                       <div className='text-muted-foreground truncate text-xs'>
-                        {role.description}
+                        {role.built_in ? t(role.description) : role.description}
                       </div>
                     )}
                   </div>
@@ -91,7 +93,7 @@ export function Roles() {
               },
               {
                 id: 'key',
-                header: t('Key'),
+                header: t('Role key'),
                 cell: (role) => <code className='text-xs'>{role.key}</code>,
               },
               {

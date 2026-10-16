@@ -7516,6 +7516,9 @@
     "Verify to dissolve the team": "Verify to dissolve the team",
     "Failed to dissolve the team": "Failed to dissolve the team",
     "Team dissolved. {{quota}} returned to your balance.": "Team dissolved. {{quota}} returned to your balance.",
-    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone."
+    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.",
+    "Role key": "Role key",
+    "Built-in root authorization role": "Built-in root authorization role",
+    "Built-in admin authorization role": "Built-in admin authorization role"
   }
 }

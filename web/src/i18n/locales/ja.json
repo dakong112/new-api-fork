@@ -7517,6 +7517,9 @@
     "Verify to dissolve the team": "本人確認をしてチームを解散",
     "Failed to dissolve the team": "チームの解散に失敗しました",
     "Team dissolved. {{quota}} returned to your balance.": "チームを解散しました。{{quota}} が残高に戻りました。",
-    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "{{name}} を解散しますか？チームの残高 {{quota}} は個人残高に戻り、このチームのメンバーの API キーはすべて削除されます。この操作は元に戻せません。"
+    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "{{name}} を解散しますか？チームの残高 {{quota}} は個人残高に戻り、このチームのメンバーの API キーはすべて削除されます。この操作は元に戻せません。",
+    "Role key": "識別子",
+    "Built-in root authorization role": "組み込みのルートロール（すべての権限を持つ）",
+    "Built-in admin authorization role": "組み込みの管理者ロール"
   }
 }

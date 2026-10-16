@@ -7466,7 +7466,7 @@
     "Create a team to share a wallet with members, each with their own spending limit.": "建立團隊，與成員共用一個錢包，每位成員有各自的消費上限。",
     "My role": "我的角色",
     "Team balance": "團隊餘額",
-    "My limit": "我的上限",
+    "My limit": "我的額度上限",
     "My remaining limit": "我的剩餘額度",
     "Team name": "團隊名稱",
     "Edit member": "編輯成員",
@@ -7475,7 +7475,7 @@
     "Member": "成員",
     "Owner": "擁有者",
     "Spending limit": "消費上限",
-    "0 means unlimited; the member can spend up to the team balance.": "0 表示不限，成員最多可用到團隊餘額。",
+    "0 means unlimited; the member can spend up to the team balance.": "0 表示不限額，成員最多可使用全部團隊餘額。",
     "Back to teams": "返回團隊列表",
     "Team": "團隊",
     "Transfer to team": "劃轉到團隊",
@@ -7507,7 +7507,7 @@
     "Save roles": "儲存角色",
     "Permission overrides are ignored for users with custom roles": "已設定自訂角色的使用者將忽略權限覆寫",
     "Redeemed a code worth {{quota}} to team {{team_id}}": "向團隊 {{team_id}} 兌換了價值 {{quota}} 的兌換碼",
-    "Dissolved team {{team_id}} and returned {{quota}} to the owner": "解散團隊 {{team_id}}，並將 {{quota}} 退還給擁有者",
+    "Dissolved team {{team_id}} and returned {{quota}} to the owner": "解散了團隊 {{team_id}}，並將 {{quota}} 退還給擁有者",
     "Only the team owner can dissolve the team": "僅團隊擁有者可解散團隊",
     "The team balance changed, please try again": "團隊餘額已變化，請重試",
     "Received {{quota}} from dissolved team {{team}}": "收到已解散團隊 {{team}} 退還的 {{quota}}",
@@ -7516,6 +7516,9 @@
     "Verify to dissolve the team": "驗證身分以解散團隊",
     "Failed to dissolve the team": "解散團隊失敗",
     "Team dissolved. {{quota}} returned to your balance.": "團隊已解散，{{quota}} 已退回到您的餘額。",
-    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "確定解散 {{name}} 嗎？團隊剩餘餘額 {{quota}} 將退回到您的個人餘額，該團隊所有成員的 API 金鑰都會被刪除。此操作無法復原。"
+    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "確定解散 {{name}} 嗎？團隊剩餘餘額 {{quota}} 將退回到您的個人餘額，該團隊所有成員的 API 金鑰都會被刪除。此操作無法復原。",
+    "Role key": "標識",
+    "Built-in root authorization role": "內建超級管理員角色，擁有全部權限",
+    "Built-in admin authorization role": "內建管理員角色"
   }
 }

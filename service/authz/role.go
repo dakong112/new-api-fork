@@ -37,6 +37,8 @@ type RoleSpec struct {
 	Sort        int
 }
 
+// Built-in role names and descriptions are English source text; the web
+// console translates them, so keep them in sync with its locale files.
 var builtInRoles = []RoleSpec{
 	{
 		Key:         BuiltInRoleRoot,

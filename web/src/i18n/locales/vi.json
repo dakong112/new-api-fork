@@ -7517,6 +7517,9 @@
     "Verify to dissolve the team": "Xác minh để giải tán nhóm",
     "Failed to dissolve the team": "Giải tán nhóm thất bại",
     "Team dissolved. {{quota}} returned to your balance.": "Đã giải tán nhóm. {{quota}} đã được hoàn vào số dư của bạn.",
-    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "Giải tán {{name}}? Số dư còn lại của nhóm là {{quota}} sẽ được hoàn vào số dư cá nhân của bạn và mọi khóa API thành viên của nhóm này sẽ bị xóa. Hành động này không thể hoàn tác."
+    "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "Giải tán {{name}}? Số dư còn lại của nhóm là {{quota}} sẽ được hoàn vào số dư cá nhân của bạn và mọi khóa API thành viên của nhóm này sẽ bị xóa. Hành động này không thể hoàn tác.",
+    "Role key": "Mã định danh",
+    "Built-in root authorization role": "Vai trò root tích hợp sẵn, có toàn bộ quyền",
+    "Built-in admin authorization role": "Vai trò quản trị viên tích hợp sẵn"
   }
 }
