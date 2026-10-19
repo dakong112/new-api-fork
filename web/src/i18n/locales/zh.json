@@ -7408,6 +7408,9 @@
     "No charge for failed attempts": "失败不扣费",
     "Timed out after reaching the upstream, which may have billed it": "超时类失败，上游可能已经计费",
     "Stream interrupted midway; charged for the output delivered": "流式输出中途中断，按已输出内容扣费",
-    "Routing decision details": "路由决策明细"
+    "Routing decision details": "路由决策明细",
+    "API Keys page notice": "API 密钥页提示",
+    "Contact support to get free credit": "联系客服好评免费送额度",
+    "Shown in the API Keys page toolbar. Supports Markdown and inline HTML, e.g. <span style=\"color:red;font-size:18px\">red text</span>. Leave empty to hide.": "显示在 API 密钥页的工具栏中。支持 Markdown 和内联 HTML，例如 <span style=\"color:red;font-size:18px\">红色文字</span>。留空则不显示。"
   }
 }

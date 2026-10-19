@@ -30,6 +30,7 @@ import {
   useDebouncedColumnFilter,
   useDataTable,
 } from '@/components/data-table'
+import { RichContent } from '@/components/rich-content'
 import { StatusBadge } from '@/components/status-badge'
 import {
   Empty,
@@ -40,6 +41,8 @@ import {
 } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
+import { useStatus } from '@/hooks/use-status'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
 import { createServerError } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
@@ -217,6 +220,9 @@ function ApiKeysMobileList({
 
 export function ApiKeysTable() {
   const { t } = useTranslation()
+  const { status } = useStatus()
+  const notice = (status?.api_keys_notice as string | undefined)?.trim()
+  const { copyToClipboard } = useCopyToClipboard()
   const { refreshTrigger } = useApiKeys()
   const [now, setNow] = useState(() => Date.now())
   const columns = useApiKeysColumns(now)
@@ -370,6 +376,22 @@ export function ApiKeysTable() {
             singleSelect: true,
           },
         ],
+        // The admin notice is sanitized HTML with no scripts, so inline
+        // code (e.g. the API address) is made click-to-copy here.
+        inlineContent: notice ? (
+          <div
+            onClick={(event) => {
+              const code = (event.target as HTMLElement).closest('code')
+              const text = code?.textContent?.trim()
+              if (text) void copyToClipboard(text)
+            }}
+          >
+            <RichContent
+              content={notice}
+              className='[&_code]:cursor-pointer [&_ol]:my-0 [&_p]:my-0 [&_ul]:my-0'
+            />
+          </div>
+        ) : undefined,
       }}
       mobile={
         <ApiKeysMobileList table={table} isLoading={isLoading} now={now} />

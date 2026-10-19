@@ -7409,6 +7409,9 @@
     "No charge for failed attempts": "Aucun frais pour les échecs",
     "Timed out after reaching the upstream, which may have billed it": "Délai dépassé après avoir atteint l'amont, qui a peut-être facturé",
     "Stream interrupted midway; charged for the output delivered": "Flux interrompu en cours de route ; facturé pour la sortie déjà livrée",
-    "Routing decision details": "Détails des décisions de routage"
+    "Routing decision details": "Détails des décisions de routage",
+    "API Keys page notice": "Avis de la page des clés API",
+    "Contact support to get free credit": "Contactez le support pour obtenir du crédit gratuit",
+    "Shown in the API Keys page toolbar. Supports Markdown and inline HTML, e.g. <span style=\"color:red;font-size:18px\">red text</span>. Leave empty to hide.": "Affiché dans la barre d’outils de la page des clés API. Prend en charge Markdown et le HTML en ligne, par ex. <span style=\"color:red;font-size:18px\">texte rouge</span>. Laissez vide pour masquer."
   }
 }

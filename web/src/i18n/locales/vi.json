@@ -7409,6 +7409,9 @@
     "No charge for failed attempts": "Lần thất bại không tính phí",
     "Timed out after reaching the upstream, which may have billed it": "Hết thời gian sau khi đến máy chủ nguồn, có thể đã bị tính phí",
     "Stream interrupted midway; charged for the output delivered": "Luồng bị gián đoạn giữa chừng; tính phí phần nội dung đã trả về",
-    "Routing decision details": "Chi tiết quyết định định tuyến"
+    "Routing decision details": "Chi tiết quyết định định tuyến",
+    "API Keys page notice": "Thông báo trang khóa API",
+    "Contact support to get free credit": "Liên hệ hỗ trợ để nhận hạn mức miễn phí",
+    "Shown in the API Keys page toolbar. Supports Markdown and inline HTML, e.g. <span style=\"color:red;font-size:18px\">red text</span>. Leave empty to hide.": "Hiển thị trên thanh công cụ của trang khóa API. Hỗ trợ Markdown và HTML nội tuyến, ví dụ <span style=\"color:red;font-size:18px\">chữ đỏ</span>. Để trống để ẩn."
   }
 }

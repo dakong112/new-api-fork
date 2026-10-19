@@ -137,6 +137,11 @@ export type DataTableToolbarProps<TData> = {
    */
   leftActions?: ReactNode
   /**
+   * Content (e.g. a notice) filling the free space between the filters
+   * and the action cluster. Wraps to its own line when space runs out.
+   */
+  inlineContent?: ReactNode
+  /**
    * Outer wrapper className override.
    */
   className?: string
@@ -347,6 +352,13 @@ export function DataTableToolbar<TData>(props: DataTableToolbarProps<TData>) {
 
   const hasLeftActions = props.leftActions != null
 
+  const inlineContentNode =
+    props.inlineContent != null ? (
+      <div className='min-w-0 basis-full sm:flex-1 sm:basis-60'>
+        {props.inlineContent}
+      </div>
+    ) : null
+
   if (isMobile && props.collapsibleOnMobile) {
     return (
       <DataTableMobileFilterPanel
@@ -369,6 +381,7 @@ export function DataTableToolbar<TData>(props: DataTableToolbarProps<TData>) {
           {filterChips}
           {expanded && hasExpandable && props.expandable}
           {expandToggle}
+          {inlineContentNode}
         </div>
       </DataTableMobileFilterPanel>
     )
@@ -381,6 +394,7 @@ export function DataTableToolbar<TData>(props: DataTableToolbarProps<TData>) {
           {props.customSearch !== undefined ? props.customSearch : searchInput}
           {props.additionalSearch}
           {filterChips}
+          {inlineContentNode}
           <div className='ms-auto flex shrink-0 items-center gap-1.5 sm:gap-2'>
             {expandToggle}
           </div>
@@ -417,6 +431,7 @@ export function DataTableToolbar<TData>(props: DataTableToolbarProps<TData>) {
       {props.additionalSearch}
       {filterChips}
       {expanded && hasExpandable && props.expandable}
+      {inlineContentNode}
 
       <div className='ms-auto flex shrink-0 items-center gap-1.5 sm:gap-2'>
         {props.preActions}

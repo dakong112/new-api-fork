@@ -7409,6 +7409,9 @@
     "No charge for failed attempts": "За неудачные попытки не списывается",
     "Timed out after reaching the upstream, which may have billed it": "Тайм-аут после обращения к вышестоящему серверу; он мог выставить счёт",
     "Stream interrupted midway; charged for the output delivered": "Поток прерван на середине; списано за уже выданный ответ",
-    "Routing decision details": "Подробности решений маршрутизации"
+    "Routing decision details": "Подробности решений маршрутизации",
+    "API Keys page notice": "Уведомление на странице API-ключей",
+    "Contact support to get free credit": "Свяжитесь с поддержкой, чтобы получить бесплатный баланс",
+    "Shown in the API Keys page toolbar. Supports Markdown and inline HTML, e.g. <span style=\"color:red;font-size:18px\">red text</span>. Leave empty to hide.": "Отображается на панели инструментов страницы API-ключей. Поддерживает Markdown и встроенный HTML, например <span style=\"color:red;font-size:18px\">красный текст</span>. Оставьте пустым, чтобы скрыть."
   }
 }

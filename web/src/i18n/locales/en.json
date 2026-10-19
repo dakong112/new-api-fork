@@ -7408,6 +7408,9 @@
     "No charge for failed attempts": "No charge for failed attempts",
     "Timed out after reaching the upstream, which may have billed it": "Timed out after reaching the upstream, which may have billed it",
     "Stream interrupted midway; charged for the output delivered": "Stream interrupted midway; charged for the output delivered",
-    "Routing decision details": "Routing decision details"
+    "Routing decision details": "Routing decision details",
+    "API Keys page notice": "API Keys page notice",
+    "Contact support to get free credit": "Contact support to get free credit",
+    "Shown in the API Keys page toolbar. Supports Markdown and inline HTML, e.g. <span style=\"color:red;font-size:18px\">red text</span>. Leave empty to hide.": "Shown in the API Keys page toolbar. Supports Markdown and inline HTML, e.g. <span style=\"color:red;font-size:18px\">red text</span>. Leave empty to hide."
   }
 }

@@ -7409,6 +7409,9 @@
     "No charge for failed attempts": "失敗分は請求なし",
     "Timed out after reaching the upstream, which may have billed it": "上流到達後のタイムアウトのため、上流で課金された可能性があります",
     "Stream interrupted midway; charged for the output delivered": "ストリームが途中で中断されました。出力済みの分が請求されます",
-    "Routing decision details": "ルーティング判断の詳細"
+    "Routing decision details": "ルーティング判断の詳細",
+    "API Keys page notice": "API キーページのお知らせ",
+    "Contact support to get free credit": "サポートに連絡して無料クレジットを獲得",
+    "Shown in the API Keys page toolbar. Supports Markdown and inline HTML, e.g. <span style=\"color:red;font-size:18px\">red text</span>. Leave empty to hide.": "API キーページのツールバーに表示されます。Markdown とインライン HTML に対応しています（例：<span style=\"color:red;font-size:18px\">赤い文字</span>）。空欄にすると非表示になります。"
   }
 }
