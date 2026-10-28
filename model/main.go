@@ -377,6 +377,7 @@ func migrateDB() error {
 		&AuthzRole{},
 		&UserAccessToken{},
 		&SSOConsumeRecord{},
+		&SSOSessionLink{},
 		&Team{},
 		&TeamMember{},
 	)

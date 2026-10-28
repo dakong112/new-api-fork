@@ -5,6 +5,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var (
@@ -114,4 +115,46 @@ func getOrCreateSSOKey(tx *gorm.DB, userID int, name string, maxKeys int, newKey
 		return nil, err
 	}
 	return &key, nil
+}
+
+// SSOSessionLink records that a browser login session signed its user in to an
+// application, so that application may ask about or end that session and no
+// other one.
+type SSOSessionLink struct {
+	Id        int    `json:"id"`
+	ClientId  string `json:"client_id" gorm:"type:varchar(64);not null;uniqueIndex:idx_sso_session_link,priority:1"`
+	SID       string `json:"sid" gorm:"column:sid;type:varchar(64);not null;uniqueIndex:idx_sso_session_link,priority:2"`
+	ExpiresAt int64  `json:"expires_at" gorm:"type:bigint;not null;index"`
+}
+
+func (SSOSessionLink) TableName() string {
+	return "sso_session_links"
+}
+
+// LinkSSOSession records the link once; repeated sign-ins from the same
+// session keep the first row.
+func LinkSSOSession(clientID, sid string, expiresAt int64) error {
+	link := SSOSessionLink{ClientId: clientID, SID: sid, ExpiresAt: expiresAt}
+	return DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&link).Error
+}
+
+// LinkedSSOSessionIDs returns which of sids are linked to the application.
+func LinkedSSOSessionIDs(clientID string, sids []string) (map[string]bool, error) {
+	linked := make(map[string]bool, len(sids))
+	if len(sids) == 0 {
+		return linked, nil
+	}
+	var found []string
+	if err := DB.Model(&SSOSessionLink{}).Where("client_id = ? AND sid IN ?", clientID, sids).Pluck("sid", &found).Error; err != nil {
+		return nil, err
+	}
+	for _, sid := range found {
+		linked[sid] = true
+	}
+	return linked, nil
+}
+
+// DeleteExpiredSSOSessionLinks drops links whose login session has expired.
+func DeleteExpiredSSOSessionLinks(now int64) error {
+	return DB.Where("expires_at < ?", now).Delete(&SSOSessionLink{}).Error
 }

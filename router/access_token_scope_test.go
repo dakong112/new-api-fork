@@ -31,6 +31,9 @@ var accessTokenExemptRoutes = []string{
 	"POST /api/sso/ticket/preview",
 	"POST /api/sso/ticket/redeem",
 	"GET /api/sso/client",
+	"GET /api/sso/authorize",
+	"POST /api/sso/session/status",
+	"POST /api/sso/session/logout",
 	"OPTIONS /api/status",
 	"OPTIONS /api/verification",
 	"OPTIONS /api/sso/code",
@@ -68,6 +71,7 @@ var accessTokenExemptRoutes = []string{
 	// Browser session cookie endpoints.
 	"POST /api/user/auth/refresh",
 	"POST /api/user/auth/logout",
+	"GET /api/user/auth/sso/authorize",
 
 	// Payment callbacks.
 	"POST /api/stripe/webhook",

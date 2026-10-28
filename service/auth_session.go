@@ -1,6 +1,7 @@
 package service
 
 import (
+	"crypto/hmac"
 	"errors"
 	"fmt"
 	"net/http"
@@ -308,6 +309,44 @@ func RevokeByRefreshToken(rawRefreshToken, expectedSID, reason string) error {
 	}
 	_, err := model.RevokeUserSessionByRefreshHash(sid, hashRefreshSecret(secret), reason)
 	return err
+}
+
+// LoginSessionActive reports whether a browser login session can still be
+// used: not revoked or expired, and its user enabled at the auth version the
+// session was issued for (a password change or "sign out everywhere" ends it).
+func LoginSessionActive(sid string) bool {
+	session, err := model.GetUserSessionCached(sid)
+	return err == nil && loginSessionUsable(session)
+}
+
+func loginSessionUsable(session *model.UserSession) bool {
+	if session.Status != model.UserSessionStatusActive || session.RevokedAt != 0 || session.ExpiresAt <= time.Now().Unix() {
+		return false
+	}
+	user, err := model.GetUserCache(session.UserID)
+	return err == nil && user.Status == common.UserStatusEnabled && user.AuthVersion == session.UserAuthVersion
+}
+
+// RefreshCookieSession returns the usable login session a Refresh Cookie
+// belongs to, without rotating it. Like cookie logout, it accepts the current
+// digest, or the previous one only inside the refresh race window.
+func RefreshCookieSession(rawRefreshToken string) (*model.UserSession, bool) {
+	sid, secret, ok := splitRefreshToken(rawRefreshToken)
+	if !ok {
+		return nil, false
+	}
+	session, err := model.GetUserSessionBySID(sid)
+	if err != nil {
+		return nil, false
+	}
+	presented := []byte(hashRefreshSecret(secret))
+	current := hmac.Equal([]byte(session.RefreshHash), presented)
+	previous := session.PreviousRefreshHash != "" && time.Now().Unix() <= session.PreviousValidUntil &&
+		hmac.Equal([]byte(session.PreviousRefreshHash), presented)
+	if !current && !previous || !loginSessionUsable(session) {
+		return nil, false
+	}
+	return session, true
 }
 
 func RefreshTokenSID(rawRefreshToken string) (string, bool) {

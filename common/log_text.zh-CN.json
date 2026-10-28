@@ -486,6 +486,7 @@
   "failed to decrease user quota: %s": "扣减用户额度失败: %s",
   "failed to delete expired access tokens: %s": "清理过期的访问令牌失败: %s",
   "failed to delete expired authentication flows: %s": "清理过期的登录验证流程失败: %s",
+  "failed to delete expired SSO session links: %s": "清理过期的 SSO 会话关联失败: %s",
   "failed to delete expired user sessions: %s": "清理过期的登录会话失败: %s",
   "failed to delete old revoked user sessions: %s": "清理超过保留期的已吊销会话失败: %s",
   "failed to download file from %s, status code: %d": "从 %s 下载文件失败，状态码: %d",

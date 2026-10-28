@@ -89,6 +89,9 @@ func SetApiRouter(router *gin.Engine) {
 		ssoRoute.POST("/catalog", middleware.UserAuth(), middleware.DisableCache(), anonymousRequestBodyLimit, controller.GetSSOCatalog)
 		ssoRoute.POST("/team-key", middleware.UserAuth(), middleware.UserCriticalRateLimit("sso-key"), middleware.DisableCache(), anonymousRequestBodyLimit, controller.CreateSSOTeamKey)
 		ssoRoute.GET("/client", middleware.DisableCache(), controller.GetSSOClient)
+		ssoRoute.GET("/authorize", middleware.DisableCache(), controller.SSOAuthorize)
+		ssoRoute.POST("/session/status", middleware.DisableCache(), anonymousRequestBodyLimit, controller.GetSSOSessionStatus)
+		ssoRoute.POST("/session/logout", middleware.DisableCache(), anonymousRequestBodyLimit, controller.LogoutSSOSession)
 		ssoRoute.POST("/ticket/preview", middleware.SessionCookieOriginGuard(), middleware.SameSiteJSONOnly(), middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, controller.PreviewSSOTicket)
 		ssoRoute.POST("/ticket/redeem", middleware.SessionCookieOriginGuard(), middleware.SameSiteJSONOnly(), middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, controller.RedeemSSOTicket)
 
@@ -96,6 +99,8 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			userRoute.POST("/auth/refresh", middleware.SessionCookieOriginGuard(), middleware.CriticalRateLimit(), middleware.DisableCache(), controller.RefreshAuth)
 			userRoute.POST("/auth/logout", middleware.SessionCookieOriginGuard(), middleware.CriticalRateLimit(), middleware.DisableCache(), controller.AuthLogout)
+			// Same handler as /api/sso/authorize, under the Refresh Cookie's Path.
+			userRoute.GET("/auth/sso/authorize", middleware.DisableCache(), controller.SSOAuthorize)
 			userRoute.POST("/register", middleware.SSOClientCORS(), middleware.CriticalRateLimit(), anonymousRequestBodyLimit, middleware.TurnstileCheck(), controller.Register)
 			userRoute.GET("/login/encryption-key", middleware.SSOClientCORS(), middleware.DisableCache(), controller.GetPasswordEncryptionKey)
 			userRoute.POST("/login", middleware.SSOClientCORS(), middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, middleware.TurnstileCheck(), controller.Login)

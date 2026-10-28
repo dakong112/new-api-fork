@@ -101,7 +101,7 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	require.NoError(t, err)
 	require.NoError(t, i18n.Init())
 	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.Team{}, &model.TeamMember{}, &model.Log{}, &model.AuditLog{}, &model.CasbinRule{}, &model.AuthzRole{},
-		&model.UserAccessToken{}, &model.Option{}, &model.AuthFlow{}, &model.Token{}, &model.TwoFA{}, &model.TwoFABackupCode{}, &model.PasskeyCredential{}, &model.UserOAuthBinding{}, &model.SSOConsumeRecord{}))
+		&model.UserAccessToken{}, &model.Option{}, &model.AuthFlow{}, &model.Token{}, &model.TwoFA{}, &model.TwoFABackupCode{}, &model.PasskeyCredential{}, &model.UserOAuthBinding{}, &model.SSOConsumeRecord{}, &model.SSOSessionLink{}))
 	model.DB, model.LOG_DB = db, db
 	common.SetDatabaseTypes(common.DatabaseTypeSQLite, common.DatabaseTypeSQLite)
 	common.RedisEnabled = false
@@ -131,6 +131,11 @@ func setupSSOTest(t *testing.T) (*gin.Engine, *model.User, string) {
 	api.GET("/sso/client", GetSSOClient)
 	api.POST("/sso/consume", middleware.UserAuth(), ConsumeSSOQuota)
 	api.POST("/sso/permissions", middleware.UserAuth(), GetSSOPermissions)
+	api.GET("/sso/authorize", SSOAuthorize)
+	api.GET("/user/auth/sso/authorize", SSOAuthorize)
+	api.POST("/sso/session/status", GetSSOSessionStatus)
+	api.POST("/sso/session/logout", LogoutSSOSession)
+	api.POST("/user/auth/logout", AuthLogout)
 	return router, user, jwt
 }
 
@@ -221,6 +226,7 @@ type ssoExchangeResponse struct {
 		Permissions          []string `json:"permissions"`
 		AccessTokenExpiresAt int64    `json:"access_token_expires_at"`
 		APIKey               string   `json:"api_key"`
+		SessionID            string   `json:"session_id"`
 	} `json:"data"`
 }
 
@@ -1094,4 +1100,217 @@ func TestSSOCatalogIgnoresPricingPageSwitch(t *testing.T) {
 		response := ssoPost(router, "/api/sso/catalog", tc.bearer, `{"client_id":"infinite","client_secret":"`+tc.secret+`"}`)
 		assert.Equal(t, tc.status, response.Code, response.Body.String())
 	}
+}
+
+// ssoAuthorizeQuery is the query an application sends to /api/sso/authorize.
+func ssoAuthorizeQuery(clientID, redirectURI, state, prompt string) string {
+	values := url.Values{"client_id": {clientID}, "redirect_uri": {redirectURI}, "state": {state}}
+	if prompt != "" {
+		values.Set("prompt", prompt)
+	}
+	return values.Encode()
+}
+
+// ssoAuthorize sends a browser navigation to path, with the Refresh Cookie
+// when one is given.
+func ssoAuthorize(router http.Handler, path, query, refreshCookie string) *httptest.ResponseRecorder {
+	request := httptest.NewRequest(http.MethodGet, path+"?"+query, nil)
+	if refreshCookie != "" {
+		request.AddCookie(&http.Cookie{Name: service.RefreshCookieName, Value: refreshCookie})
+	}
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	return response
+}
+
+func ssoLocation(t *testing.T, response *httptest.ResponseRecorder) *url.URL {
+	t.Helper()
+	require.Equal(t, http.StatusFound, response.Code, response.Body.String())
+	location, err := url.Parse(response.Header().Get("Location"))
+	require.NoError(t, err)
+	return location
+}
+
+func TestSSOAuthorize(t *testing.T) {
+	router, user, _ := setupSSOTest(t)
+	bundle, err := service.CreateLoginSession(user.Id, "password", "192.0.2.8", "test")
+	require.NoError(t, err)
+	sid := bundle.Session.SID
+	query := ssoAuthorizeQuery("infinite", ssoTestRedirect, "st-9", "")
+
+	// The public entry hops under the Refresh Cookie's Path with the same query.
+	hop := ssoLocation(t, ssoAuthorize(router, "/api/sso/authorize", query, ""))
+	assert.Equal(t, ssoAuthorizeCookiePath+"?"+query, hop.String())
+
+	// A usable session issues a code bound to it and returns state unchanged.
+	callback := ssoLocation(t, ssoAuthorize(router, ssoAuthorizeCookiePath, query, bundle.RefreshToken))
+	assert.Equal(t, "www.example.com", callback.Host)
+	assert.Equal(t, "st-9", callback.Query().Get("state"))
+	code := callback.Query().Get("code")
+	require.NotEmpty(t, code)
+	exchange := ssoPost(router, "/api/sso/exchange", "", exchangeBody(code, ssoTestSecret, ssoTestRedirect))
+	var body ssoExchangeResponse
+	require.NoError(t, common.Unmarshal(exchange.Body.Bytes(), &body))
+	require.True(t, body.Success, body.Message)
+	assert.Equal(t, sid, body.Data.SessionID)
+	replay := ssoPost(router, "/api/sso/exchange", "", exchangeBody(code, ssoTestSecret, ssoTestRedirect))
+	assert.Equal(t, http.StatusBadRequest, replay.Code)
+
+	// Without a usable session: login_required for prompt=none, else the web
+	// authorize page. A forged secret for a real sid counts as no session.
+	for _, cookie := range []string{"", sid + ".not-the-secret", "garbage"} {
+		silent := ssoLocation(t, ssoAuthorize(router, ssoAuthorizeCookiePath, ssoAuthorizeQuery("infinite", ssoTestRedirect, "st-9", "none"), cookie))
+		assert.Equal(t, "www.example.com", silent.Host, cookie)
+		assert.Equal(t, "login_required", silent.Query().Get("error"), cookie)
+		assert.Equal(t, "st-9", silent.Query().Get("state"), cookie)
+		assert.Empty(t, silent.Query().Get("code"), cookie)
+	}
+	page := ssoLocation(t, ssoAuthorize(router, ssoAuthorizeCookiePath, query, ""))
+	assert.Equal(t, "/sso/authorize", page.Path)
+	assert.Empty(t, page.Host, "the sign-in page is on this site")
+	assert.Equal(t, ssoTestRedirect, page.Query().Get("redirect_uri"))
+	assert.Equal(t, "st-9", page.Query().Get("state"))
+
+	// Bad requests are answered here and never redirected, on both paths.
+	for _, bad := range []string{
+		ssoAuthorizeQuery("infinite", "https://evil.com/sso/callback", "st-9", ""),
+		ssoAuthorizeQuery("infinite", ssoTestRedirect+"/", "st-9", "none"),
+		ssoAuthorizeQuery("unknown", ssoTestRedirect, "st-9", ""),
+		ssoAuthorizeQuery("infinite", ssoTestRedirect, "", ""),
+		ssoAuthorizeQuery("infinite", ssoTestRedirect, strings.Repeat("s", 257), ""),
+	} {
+		for _, path := range []string{"/api/sso/authorize", ssoAuthorizeCookiePath} {
+			response := ssoAuthorize(router, path, bad, bundle.RefreshToken)
+			assert.Equal(t, http.StatusBadRequest, response.Code, bad)
+			assert.Empty(t, response.Header().Get("Location"), bad)
+		}
+	}
+
+	// A user outside the allow-list gets access_denied and no code.
+	updateSSOTestClient(t, func(client *setting.SSOClient) { client.AllowedUserIDs = []int{user.Id + 1} })
+	denied := ssoLocation(t, ssoAuthorize(router, ssoAuthorizeCookiePath, query, bundle.RefreshToken))
+	assert.Equal(t, "access_denied", denied.Query().Get("error"))
+	assert.Empty(t, denied.Query().Get("code"))
+	updateSSOTestClient(t, func(client *setting.SSOClient) { client.AllowedUserIDs = nil })
+
+	// After new-api logout the cookie no longer signs the user in.
+	logout := httptest.NewRequest(http.MethodPost, "/api/user/auth/logout", nil)
+	logout.Header.Set("Authorization", "Bearer "+bundle.AccessToken)
+	logoutResponse := httptest.NewRecorder()
+	router.ServeHTTP(logoutResponse, logout)
+	require.Equal(t, http.StatusOK, logoutResponse.Code, logoutResponse.Body.String())
+	afterLogout := ssoLocation(t, ssoAuthorize(router, ssoAuthorizeCookiePath, ssoAuthorizeQuery("infinite", ssoTestRedirect, "st-9", "none"), bundle.RefreshToken))
+	assert.Equal(t, "login_required", afterLogout.Query().Get("error"))
+}
+
+func ssoSessionStatus(t *testing.T, router http.Handler, clientID, secret string, sids ...string) (int, map[string]bool) {
+	t.Helper()
+	payload, err := common.Marshal(map[string]any{"client_id": clientID, "client_secret": secret, "session_ids": sids})
+	require.NoError(t, err)
+	response := ssoPost(router, "/api/sso/session/status", "", string(payload))
+	var body struct {
+		Data struct {
+			Active map[string]bool `json:"active"`
+		} `json:"data"`
+	}
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body))
+	return response.Code, body.Data.Active
+}
+
+func ssoSessionLogout(router http.Handler, clientID, secret, sid string) *httptest.ResponseRecorder {
+	return ssoPost(router, "/api/sso/session/logout", "", `{"client_id":"`+clientID+`","client_secret":"`+secret+`","session_id":"`+sid+`"}`)
+}
+
+// exchangeSSOTestSession signs the user in to "infinite" from the browser
+// session behind jwt and returns the session id the exchange reports.
+func exchangeSSOTestSession(t *testing.T, router http.Handler, jwt string) string {
+	t.Helper()
+	response := ssoPost(router, "/api/sso/exchange", "", exchangeBody(issueSSOTestCode(t, router, jwt), ssoTestSecret, ssoTestRedirect))
+	var body ssoExchangeResponse
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body))
+	require.True(t, body.Success, body.Message)
+	return body.Data.SessionID
+}
+
+func TestSSOSessionStatusAndLogout(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+	sid := exchangeSSOTestSession(t, router, jwt)
+	require.Equal(t, "sso-test-session", sid, "codes from POST /api/sso/code report the issuing session")
+	assert.Equal(t, sid, exchangeSSOTestSession(t, router, jwt))
+	var links int64
+	require.NoError(t, model.DB.Model(&model.SSOSessionLink{}).Where("client_id = ? AND sid = ?", "infinite", sid).Count(&links).Error)
+	assert.Equal(t, int64(1), links, "a second sign-in reuses the link")
+
+	// Only linked sessions read as active, and only to the linked client.
+	_, otherJWT := createAccessTokenTestSession(t, user.Id, "unlinked-session")
+	status, active := ssoSessionStatus(t, router, "infinite", ssoTestSecret, sid, "unlinked-session", "missing")
+	require.Equal(t, http.StatusOK, status)
+	assert.Equal(t, map[string]bool{sid: true, "unlinked-session": false, "missing": false}, active)
+	_, active = ssoSessionStatus(t, router, "other", "other-secret", sid)
+	assert.False(t, active[sid])
+
+	// Client credentials and the batch limit are enforced.
+	status, _ = ssoSessionStatus(t, router, "infinite", "wrong", sid)
+	assert.Equal(t, http.StatusUnauthorized, status)
+	assert.Equal(t, http.StatusUnauthorized, ssoSessionLogout(router, "infinite", "wrong", sid).Code)
+	status, _ = ssoSessionStatus(t, router, "infinite", ssoTestSecret, make([]string, ssoSessionStatusMaxIDs+1)...)
+	assert.Equal(t, http.StatusBadRequest, status)
+
+	// A client cannot end a session it never signed a user in from.
+	assert.Equal(t, http.StatusForbidden, ssoSessionLogout(router, "other", "other-secret", sid).Code)
+	assert.Equal(t, http.StatusForbidden, ssoSessionLogout(router, "infinite", ssoTestSecret, "unlinked-session").Code)
+	_, active = ssoSessionStatus(t, router, "infinite", ssoTestSecret, sid)
+	require.True(t, active[sid])
+
+	// Single logout ends the new-api session itself, idempotently.
+	response := ssoSessionLogout(router, "infinite", ssoTestSecret, sid)
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	assert.Contains(t, response.Body.String(), `"revoked":true`)
+	_, active = ssoSessionStatus(t, router, "infinite", ssoTestSecret, sid)
+	assert.False(t, active[sid])
+	assert.Equal(t, http.StatusUnauthorized, listSSOTestApps(router, jwt).Code, "the browser session is signed out")
+	assert.Equal(t, http.StatusOK, listSSOTestApps(router, otherJWT).Code, "other sessions are untouched")
+	repeat := ssoSessionLogout(router, "infinite", ssoTestSecret, sid)
+	assert.Equal(t, http.StatusOK, repeat.Code)
+	assert.Contains(t, repeat.Body.String(), `"revoked":false`)
+
+	var audits []model.AuditLog
+	require.NoError(t, model.DB.Where("action LIKE ?", "sso.session_%").Find(&audits).Error)
+	require.NotEmpty(t, audits)
+	for _, audit := range audits {
+		raw, err := common.Marshal(audit)
+		require.NoError(t, err)
+		assert.NotContains(t, string(raw), sid, "session ids stay out of audit rows")
+	}
+}
+
+// Sessions ended inside new-api read as inactive to the application: a
+// password change elsewhere and a disabled user.
+func TestSSOSessionStatusFollowsNewAPISession(t *testing.T) {
+	router, user, jwt := setupSSOTest(t)
+	sid := exchangeSSOTestSession(t, router, jwt)
+	bundle, err := service.CreateLoginSession(user.Id, "password", "192.0.2.8", "test")
+	require.NoError(t, err)
+	callback := ssoLocation(t, ssoAuthorize(router, ssoAuthorizeCookiePath, ssoAuthorizeQuery("infinite", ssoTestRedirect, "st", ""), bundle.RefreshToken))
+	response := ssoPost(router, "/api/sso/exchange", "", exchangeBody(callback.Query().Get("code"), ssoTestSecret, ssoTestRedirect))
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	second := bundle.Session.SID
+	_, active := ssoSessionStatus(t, router, "infinite", ssoTestSecret, sid, second)
+	require.Equal(t, map[string]bool{sid: true, second: true}, active)
+
+	// A password change made from the second session keeps it and ends the rest.
+	identity, err := service.ParseAccessToken(bundle.AccessToken)
+	require.NoError(t, err)
+	_, err = model.BumpUserAuthVersion(user.Id)
+	require.NoError(t, err)
+	_, active = ssoSessionStatus(t, router, "infinite", ssoTestSecret, sid, second)
+	assert.Equal(t, map[string]bool{sid: false, second: false}, active, "a newer auth version alone invalidates")
+	_, err = service.AdvanceCurrentSessionToUserVersion(identity, "password_changed")
+	require.NoError(t, err)
+	_, active = ssoSessionStatus(t, router, "infinite", ssoTestSecret, sid, second)
+	assert.Equal(t, map[string]bool{sid: false, second: true}, active)
+
+	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("status", common.UserStatusDisabled).Error)
+	_, active = ssoSessionStatus(t, router, "infinite", ssoTestSecret, second)
+	assert.False(t, active[second])
 }

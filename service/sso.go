@@ -34,6 +34,9 @@ type SSOGrant struct {
 	APIKey               string       `json:"api_key"`
 	// Permissions are the user's codes for the client's application.
 	Permissions []string `json:"permissions"`
+	// SessionID is the browser login session the code was issued from; the
+	// application polls /api/sso/session/status with it.
+	SessionID string `json:"session_id"`
 }
 
 // SSOPermissions returns the permission codes the user holds in the client's
