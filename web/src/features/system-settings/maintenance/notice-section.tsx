@@ -25,6 +25,7 @@ import * as z from 'zod'
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -38,42 +39,49 @@ import { SettingsSection } from '../components/settings-section'
 import { useUpdateOption } from '../hooks/use-update-option'
 
 const noticeSchema = z.object({
-  Notice: z.string().optional(),
+  content: z.string().optional(),
 })
 
 type NoticeFormValues = z.infer<typeof noticeSchema>
 
 type NoticeSectionProps = {
   defaultValue: string
+  /** Option key the content is saved to. Defaults to the system notice. */
+  optionKey?: string
+  /** i18n keys; default to the system notice wording. */
+  titleKey?: string
+  placeholderKey?: string
+  descriptionKey?: string
 }
 
-export function NoticeSection({ defaultValue }: NoticeSectionProps) {
+export function NoticeSection(props: NoticeSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
+  const defaultValue = props.defaultValue ?? ''
   const form = useForm<NoticeFormValues>({
     resolver: zodResolver(noticeSchema),
     defaultValues: {
-      Notice: defaultValue ?? '',
+      content: defaultValue,
     },
   })
 
   useEffect(() => {
-    form.reset({ Notice: defaultValue ?? '' })
+    form.reset({ content: defaultValue })
   }, [defaultValue, form])
 
   const onSubmit = async (values: NoticeFormValues) => {
-    const normalized = values.Notice ?? ''
-    if (normalized === (defaultValue ?? '')) {
+    const normalized = values.content ?? ''
+    if (normalized === defaultValue) {
       return
     }
     await updateOption.mutateAsync({
-      key: 'Notice',
+      key: props.optionKey ?? 'Notice',
       value: normalized,
     })
   }
 
   return (
-    <SettingsSection title={t('System Notice')}>
+    <SettingsSection title={t(props.titleKey ?? 'System Notice')}>
       <Form {...form}>
         <SettingsForm onSubmit={form.handleSubmit(onSubmit)}>
           <SettingsPageFormActions
@@ -83,7 +91,7 @@ export function NoticeSection({ defaultValue }: NoticeSectionProps) {
           />
           <FormField
             control={form.control}
-            name='Notice'
+            name='content'
             render={({ field }) => (
               <FormItem>
                 <FormLabel>{t('Announcement content')}</FormLabel>
@@ -91,11 +99,15 @@ export function NoticeSection({ defaultValue }: NoticeSectionProps) {
                   <Textarea
                     rows={8}
                     placeholder={t(
-                      'Planned maintenance on Friday at 22:00 UTC...'
+                      props.placeholderKey ??
+                        'Planned maintenance on Friday at 22:00 UTC...'
                     )}
                     {...field}
                   />
                 </FormControl>
+                {props.descriptionKey && (
+                  <FormDescription>{t(props.descriptionKey)}</FormDescription>
+                )}
                 <FormMessage />
               </FormItem>
             )}

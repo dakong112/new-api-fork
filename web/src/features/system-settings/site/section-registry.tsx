@@ -62,6 +62,19 @@ const SITE_SECTIONS = [
     ),
   },
   {
+    id: 'api-keys-notice',
+    titleKey: 'API Keys page notice',
+    build: (settings: SiteSettings) => (
+      <NoticeSection
+        defaultValue={settings['general_setting.api_keys_notice'] ?? ''}
+        optionKey='general_setting.api_keys_notice'
+        titleKey='API Keys page notice'
+        placeholderKey='Contact support to get free credit'
+        descriptionKey='Shown in the API Keys page toolbar. Supports Markdown and inline HTML, e.g. <span style="color:red;font-size:18px">red text</span>. Leave empty to hide.'
+      />
+    ),
+  },
+  {
     id: 'header-navigation',
     titleKey: 'Header navigation',
     build: (settings: SiteSettings) => {

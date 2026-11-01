@@ -7519,6 +7519,9 @@
     "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "确定解散 {{name}} 吗？团队剩余余额 {{quota}} 将退回到您的个人余额，该团队所有成员的 API 密钥都会被删除。此操作不可撤销。",
     "Role key": "标识",
     "Built-in root authorization role": "内置超级管理员角色，拥有全部权限",
-    "Built-in admin authorization role": "内置管理员角色"
+    "Built-in admin authorization role": "内置管理员角色",
+    "API Keys page notice": "API 密钥页提示",
+    "Contact support to get free credit": "联系客服好评免费送额度",
+    "Shown in the API Keys page toolbar. Supports Markdown and inline HTML, e.g. <span style=\"color:red;font-size:18px\">red text</span>. Leave empty to hide.": "显示在 API 密钥页的工具栏中。支持 Markdown 和内联 HTML，例如 <span style=\"color:red;font-size:18px\">红色文字</span>。留空则不显示。"
   }
 }

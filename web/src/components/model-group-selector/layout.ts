@@ -20,6 +20,14 @@ export const modelGroupSelectorLayoutClasses = {
   desktopPanel: 'max-h-[min(50vh,28rem)] overflow-hidden',
   desktopContent:
     'grid h-[min(50vh,28rem)] max-h-[min(50vh,28rem)] min-h-0 gap-3 p-2 md:grid-cols-[9.5rem_minmax(0,1fr)]',
+  // Vendors get their own column so a long vendor list can't push groups out of view.
+  desktopPanelWithVendors: 'w-[42rem]',
+  desktopContentWithVendors: 'md:grid-cols-[7.5rem_9.5rem_minmax(0,1fr)]',
+  vendorColumn: 'flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-hidden',
+  vendorScroll:
+    'min-h-0 w-full flex-1 flex-col flex-nowrap items-stretch overflow-y-auto pr-1 [&>*]:justify-start',
+  // Mobile keeps vendors above groups, but on one swipeable row instead of wrapping.
+  mobileVendorRow: 'w-full flex-nowrap overflow-x-auto px-1 pb-1',
   groupColumn: 'flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
   groupScroll:
     'mt-2 grid min-h-0 flex-1 auto-rows-[2rem] content-start gap-1 overflow-y-auto pr-1',

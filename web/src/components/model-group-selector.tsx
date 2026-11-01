@@ -703,6 +703,39 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
     </Button>
   )
 
+  const hasVendorColumn =
+    !isMobile && groupVendors !== undefined && groupVendors.vendors.length >= 2
+
+  const renderVendorFilter = () =>
+    groupVendors && (
+      <GroupVendorFilter
+        variant='chips'
+        vendors={groupVendors.vendors}
+        value={activeVendor}
+        onChange={(vendor) => {
+          setVendorFilter(vendor)
+          if (
+            vendor === null ||
+            selectedGroup === 'auto' ||
+            groupVendors.vendorsByGroup.get(selectedGroup)?.includes(vendor)
+          ) {
+            return
+          }
+          const next = groups.find(
+            (g) =>
+              groupVendors.vendorsByGroup.get(g.value)?.includes(vendor) &&
+              isGroupAvailable(g.value, groupVendors)
+          )
+          if (next) onGroupChange(next.value)
+        }}
+        className={
+          hasVendorColumn
+            ? modelGroupSelectorLayoutClasses.vendorScroll
+            : modelGroupSelectorLayoutClasses.mobileVendorRow
+        }
+      />
+    )
+
   const renderGroupList = () => (
     <div
       className={cn(
@@ -713,30 +746,7 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
       <div className='text-muted-foreground px-1 text-[11px] leading-4 font-medium'>
         {t('Model Group')}
       </div>
-      {groupVendors && (
-        <GroupVendorFilter
-          variant='chips'
-          vendors={groupVendors.vendors}
-          value={activeVendor}
-          onChange={(vendor) => {
-            setVendorFilter(vendor)
-            if (
-              vendor === null ||
-              selectedGroup === 'auto' ||
-              groupVendors.vendorsByGroup.get(selectedGroup)?.includes(vendor)
-            ) {
-              return
-            }
-            const next = groups.find(
-              (g) =>
-                groupVendors.vendorsByGroup.get(g.value)?.includes(vendor) &&
-                isGroupAvailable(g.value, groupVendors)
-            )
-            if (next) onGroupChange(next.value)
-          }}
-          className='px-1'
-        />
-      )}
+      {!hasVendorColumn && renderVendorFilter()}
       <div
         className={cn(
           'grid gap-1',
@@ -861,9 +871,21 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
       className={
         isMobile
           ? 'grid gap-3 p-2 md:grid-cols-[9.5rem_minmax(0,1fr)]'
-          : modelGroupSelectorLayoutClasses.desktopContent
+          : cn(
+              modelGroupSelectorLayoutClasses.desktopContent,
+              hasVendorColumn &&
+                modelGroupSelectorLayoutClasses.desktopContentWithVendors
+            )
       }
     >
+      {hasVendorColumn && (
+        <div className={modelGroupSelectorLayoutClasses.vendorColumn}>
+          <div className='text-muted-foreground px-1 text-[11px] leading-4 font-medium'>
+            {t('Vendor')}
+          </div>
+          {renderVendorFilter()}
+        </div>
+      )}
       {renderGroupList()}
       <div
         className={cn(
@@ -895,7 +917,9 @@ export const ModelGroupSelector: React.FC<ModelGroupSelectorProps> = ({
         align='end'
         className={cn(
           'bg-popover z-50 w-[34rem] max-w-[calc(100vw-2rem)] rounded-xl border p-0 shadow-lg',
-          modelGroupSelectorLayoutClasses.desktopPanel
+          modelGroupSelectorLayoutClasses.desktopPanel,
+          hasVendorColumn &&
+            modelGroupSelectorLayoutClasses.desktopPanelWithVendors
         )}
         collisionPadding={8}
         side='top'

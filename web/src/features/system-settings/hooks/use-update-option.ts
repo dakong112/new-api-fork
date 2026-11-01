@@ -31,6 +31,7 @@ const STATUS_RELATED_KEYS = new Set([
   'HeaderNavModules',
   'SidebarModulesAdmin',
   'Notice',
+  'general_setting.api_keys_notice',
   'RedemptionCopyTemplate',
   'RedemptionTestQuota',
   'LogConsumeEnabled',

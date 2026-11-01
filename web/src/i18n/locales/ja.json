@@ -7520,6 +7520,9 @@
     "Dissolve {{name}}? The remaining team balance of {{quota}} returns to your personal balance, and every member API key of this team is deleted. This cannot be undone.": "{{name}} を解散しますか？チームの残高 {{quota}} は個人残高に戻り、このチームのメンバーの API キーはすべて削除されます。この操作は元に戻せません。",
     "Role key": "識別子",
     "Built-in root authorization role": "組み込みのルートロール（すべての権限を持つ）",
-    "Built-in admin authorization role": "組み込みの管理者ロール"
+    "Built-in admin authorization role": "組み込みの管理者ロール",
+    "API Keys page notice": "API キーページのお知らせ",
+    "Contact support to get free credit": "サポートに連絡して無料クレジットを獲得",
+    "Shown in the API Keys page toolbar. Supports Markdown and inline HTML, e.g. <span style=\"color:red;font-size:18px\">red text</span>. Leave empty to hide.": "API キーページのツールバーに表示されます。Markdown とインライン HTML に対応しています（例：<span style=\"color:red;font-size:18px\">赤い文字</span>）。空欄にすると非表示になります。"
   }
 }
