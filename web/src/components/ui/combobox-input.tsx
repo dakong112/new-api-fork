@@ -24,6 +24,11 @@ import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
+/** Space between the input and its list, in pixels. */
+const DROPDOWN_GAP = 4
+const LIST_MAX_HEIGHT = 200
+const LIST_MIN_HEIGHT = 96
+
 export type ComboboxInputOption = {
   value: string
   label: string
@@ -85,6 +90,9 @@ export function ComboboxInput({
     top: number
     left: number
     width: number
+    /** Opens upward when the space below the input cannot fit the list. */
+    above: boolean
+    listMaxHeight: number
   } | null>(null)
   const pointerFocusRef = React.useRef(false)
   const selectedOption = React.useMemo(
@@ -140,11 +148,35 @@ export function ComboboxInput({
       input.closest<HTMLElement>('[role="dialog"]') ?? document.body
     const measure = () => {
       const rect = input.getBoundingClientRect()
+      // A transformed dialog becomes the containing block of fixed children,
+      // so `top`/`left` count from its corner (and follow its scroll) rather
+      // than the viewport. A zero-size probe reports where (0, 0) lands.
+      const probe = document.createElement('div')
+      probe.style.cssText =
+        'position:fixed;top:0;left:0;width:0;height:0;visibility:hidden'
+      container.appendChild(probe)
+      const origin = probe.getBoundingClientRect()
+      probe.remove()
+      // Keep the list inside the visible part of the container, which clips it.
+      const bounds =
+        container === document.body
+          ? { top: 0, bottom: window.innerHeight }
+          : container.getBoundingClientRect()
+      const spaceBelow = bounds.bottom - rect.bottom - DROPDOWN_GAP * 2
+      const spaceAbove = rect.top - bounds.top - DROPDOWN_GAP * 2
+      const above = spaceBelow < LIST_MAX_HEIGHT && spaceAbove > spaceBelow
       setDropdown({
         container,
-        top: rect.bottom + 4,
-        left: rect.left,
+        top:
+          (above ? rect.top - DROPDOWN_GAP : rect.bottom + DROPDOWN_GAP) -
+          origin.top,
+        left: rect.left - origin.left,
         width: rect.width,
+        above,
+        listMaxHeight: Math.max(
+          LIST_MIN_HEIGHT,
+          Math.min(LIST_MAX_HEIGHT, above ? spaceAbove : spaceBelow)
+        ),
       })
     }
     measure()
@@ -294,6 +326,7 @@ export function ComboboxInput({
               top: dropdown.top,
               left: dropdown.left,
               width: dropdown.width,
+              transform: dropdown.above ? 'translateY(-100%)' : undefined,
             }}
             className={cn(
               'bg-popover text-popover-foreground z-100 rounded-md border shadow-md',
@@ -305,7 +338,8 @@ export function ComboboxInput({
                 ref={listRef}
                 id={listId}
                 role='listbox'
-                className='max-h-[200px] overflow-y-auto p-1'
+                style={{ maxHeight: dropdown.listMaxHeight }}
+                className='overflow-y-auto p-1'
               >
                 {filteredOptions.map((option, index) => (
                   <li

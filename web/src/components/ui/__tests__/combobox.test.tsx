@@ -24,6 +24,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { Dialog } from '@/components/dialog'
 
 import { Combobox } from '../combobox'
+import { ComboboxInput } from '../combobox-input'
 import { Sheet, SheetContent, SheetTitle } from '../sheet'
 
 const options = [
@@ -275,5 +276,72 @@ describe('selected option icons', () => {
       />
     )
     expect(screen.queryByAltText('')).not.toBeInTheDocument()
+  })
+})
+
+describe('list placement inside a transformed dialog', () => {
+  function rect(x: number, y: number, width: number, height: number) {
+    return {
+      x,
+      y,
+      left: x,
+      top: y,
+      right: x + width,
+      bottom: y + height,
+      width,
+      height,
+      toJSON: () => ({}),
+    } as DOMRect
+  }
+
+  // A centered dialog is transformed, so it becomes the containing block of
+  // fixed children: (0, 0) of the list lands on the dialog's corner.
+  function renderInDialog(
+    inputTop: number,
+    dialog: { top: number; bottom: number }
+  ) {
+    render(
+      <div role='dialog'>
+        <ComboboxInput
+          options={options}
+          onValueChange={() => undefined}
+          aria-label='Provider'
+        />
+      </div>
+    )
+    const input = screen.getByRole('combobox', { name: 'Provider' })
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: Element) {
+        if (this === input) return rect(60, inputTop, 300, 30)
+        if (this.getAttribute('role') === 'dialog') {
+          return rect(40, dialog.top, 400, dialog.bottom - dialog.top)
+        }
+        if ((this as HTMLElement).style.visibility === 'hidden') {
+          return rect(40, dialog.top, 0, 0)
+        }
+        return rect(0, 0, 0, 0)
+      }
+    )
+    return input
+  }
+
+  it('places the list right under the input, measured from the dialog corner', async () => {
+    const input = renderInDialog(100, { top: 20, bottom: 600 })
+
+    await userEvent.click(input)
+
+    const popup = (await screen.findByRole('listbox')).parentElement
+    expect(popup).toHaveStyle({ top: '114px', left: '20px', width: '300px' })
+    expect(popup?.style.transform).toBe('')
+  })
+
+  it('opens upward when the dialog has no room for the list below the input', async () => {
+    const input = renderInDialog(500, { top: 20, bottom: 560 })
+
+    await userEvent.click(input)
+
+    const popup = (await screen.findByRole('listbox')).parentElement
+    expect(popup).toHaveStyle({ top: '476px', left: '20px' })
+    expect(popup?.style.transform).toBe('translateY(-100%)')
   })
 })
