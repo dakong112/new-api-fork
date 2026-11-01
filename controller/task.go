@@ -466,6 +466,9 @@ func tasksToDto(tasks []*model.Task, fillUser bool, viewerRole int) []*dto.TaskD
 				item.FailReason = ""
 			}
 		}
+		if viewerRole < common.RoleAdminUser {
+			relay.HideChannelFromTaskDto(item)
+		}
 		if viewerRole >= common.RoleAdminUser {
 			adminInfo := &dto.TaskAdminInfo{}
 			if execution := task.PrivateData.Execution; execution != nil {

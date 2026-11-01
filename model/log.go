@@ -113,10 +113,23 @@ func assignDisplayLogIds(logs []*Log, startIdx int) {
 
 func formatUserLogs(logs []*Log, startIdx int) {
 	for i := range logs {
-		logs[i].ChannelName = ""
-		logs[i].Other = formatLogOtherJSON(logs[i].Other, logOtherVisibilityUser)
+		hideChannelFromUser(logs[i])
 	}
 	assignDisplayLogIds(logs, startIdx)
+}
+
+// hideChannelFromUser removes from a log shown to its owner everything that
+// identifies the channel: its name and id, the upstream request id, the
+// upstream fields of other, and upstream addresses in the error text. Admin
+// log views keep all of it.
+func hideChannelFromUser(log *Log) {
+	log.ChannelName = ""
+	log.ChannelId = 0
+	log.UpstreamRequestId = ""
+	if log.Type == LogTypeError {
+		log.Content = common.MaskSensitiveInfo(log.Content, common.PublicAddressMask())
+	}
+	log.Other = formatLogOtherJSON(log.Other, logOtherVisibilityUser)
 }
 
 // FormatAdminLogs removes root-only diagnostics while retaining operational
@@ -653,8 +666,7 @@ func StreamUserLogs(ctx context.Context, userId int, filter LogFilter, fn func(*
 	return streamLogs(tx, "logs.id desc", func(log *Log) error {
 		count++
 		log.Id = count
-		log.ChannelName = ""
-		log.Other = formatLogOtherJSON(log.Other, logOtherVisibilityUser)
+		hideChannelFromUser(log)
 		return fn(log)
 	})
 }

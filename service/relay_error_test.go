@@ -59,7 +59,7 @@ func TestShouldRetryRelayErrorHonorsChannelPinOnChannelError(t *testing.T) {
 	}
 }
 
-func TestProcessChannelErrorMasksDisableReasonAndNotification(t *testing.T) {
+func TestProcessChannelErrorKeepsUpstreamForAdminsButMasksCredentials(t *testing.T) {
 	previousDB, previousType := model.DB, common.MainDatabaseType()
 	previousCache, previousRedis := common.MemoryCacheEnabled, common.RedisEnabled
 	previousAutoDisable, previousErrorLog := common.AutomaticDisableChannelEnabled, constant.ErrorLogEnabled
@@ -120,7 +120,7 @@ func TestProcessChannelErrorMasksDisableReasonAndNotification(t *testing.T) {
 	loaded, err := model.GetChannelById(channel.Id, true)
 	require.NoError(t, err)
 	assert.Equal(t, common.ChannelStatusAutoDisabled, loaded.Status)
-	wantReason := "status_code=401, upstream https://***.com/***?token=*** api_key:***"
+	wantReason := "status_code=401, upstream https://private.example.com/path?token=*** api_key:***"
 	assert.Equal(t, wantReason, loaded.GetOtherInfo()["status_reason"])
 	assert.Contains(t, notification.Content, wantReason)
 	assert.NotContains(t, notification.Content, "review-token")
@@ -344,15 +344,14 @@ func TestRecordPolicyFailureStoresTruncatedMessage(t *testing.T) {
 	assert.Empty(t, events[1].Message)
 }
 
-func TestRecordPolicyFailureMasksMessage(t *testing.T) {
+// Request policy events are admin-only, so they keep the upstream address and
+// mask only credentials and IPs.
+func TestRecordPolicyFailureKeepsUpstreamAndMasksCredentials(t *testing.T) {
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
 	common.SetContextKey(c, constant.ContextKeyChannelBaseUrl, "https://up.example.com")
-	err := types.NewOpenAIError(errors.New("dial https://up.example.com/v1/chat via 10.1.2.3 failed"), types.ErrorCodeBadResponseStatusCode, 502)
+	err := types.NewOpenAIError(errors.New("dial https://up.example.com/v1/chat?key=secret via 10.1.2.3 failed"), types.ErrorCodeBadResponseStatusCode, 502)
 
 	RecordPolicyFailure(c, 45, err, PolicyDecision{Action: "stop"})
 
-	msg := RequestPolicy(c).Events()[0].Message
-	assert.NotContains(t, msg, "example.com")
-	assert.NotContains(t, msg, "10.1.2.3")
-	assert.Equal(t, err.MaskSensitiveError(common.UpstreamAddresses(c)...), msg)
+	assert.Equal(t, "dial https://up.example.com/v1/chat?key=*** via ***.***.***.*** failed", RequestPolicy(c).Events()[0].Message)
 }

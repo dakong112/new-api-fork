@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
@@ -23,22 +24,32 @@ func CloseResponseBodyGracefully(httpResponse *http.Response) {
 	}
 }
 
+// forwardedUpstreamHeaders are the only upstream response headers a client
+// receives. Everything else (Server, Set-Cookie, Cf-Ray, rate limits, the
+// upstream's organization, request id or new-api version, reporting URLs)
+// would identify the channel behind this site.
+var forwardedUpstreamHeaders = []string{
+	"Content-Type",
+	"Content-Encoding",
+	"Content-Disposition",
+	"Retry-After",
+	// Codex clients carry these between turns.
+	"X-Reasoning-Included",
+	"X-Codex-Turn-State",
+}
+
 // ShouldCopyUpstreamHeader checks whether a given upstream response header
-// should be copied to the client response. It returns false for Content-Length
-// (managed separately) and X-Oneapi-Request-Id (to preserve the local instance
-// ID). When the upstream header is X-Oneapi-Request-Id, the value is captured
-// into the Gin context for later logging.
+// should be copied to the client response: only forwardedUpstreamHeaders are.
+// When the upstream header is X-Oneapi-Request-Id, the value is captured into
+// the Gin context for later logging.
 func ShouldCopyUpstreamHeader(c *gin.Context, k string, v []string) bool {
-	if strings.EqualFold(k, "Content-Length") {
-		return false
-	}
 	if strings.EqualFold(k, common.RequestIdKey) {
 		if c != nil && len(v) > 0 {
 			c.Set(common.UpstreamRequestIdKey, v[0])
 		}
 		return false
 	}
-	return true
+	return slices.ContainsFunc(forwardedUpstreamHeaders, func(name string) bool { return strings.EqualFold(name, k) })
 }
 
 func IOCopyBytesGracefully(c *gin.Context, src *http.Response, data []byte) {

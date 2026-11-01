@@ -209,9 +209,23 @@ func isPresetUpstreamHost(address string) bool {
 	return preset
 }
 
+// PublicAddressMask is the MaskSensitiveInfo address that hides upstreams in
+// text shown to users. A reseller upstream's errors name its own site or its
+// suppliers, which are not the configured address, so every URL and domain is
+// replaced with this site's address, or masked while the server address is
+// unset or local. Admin views keep the upstream address instead.
+func PublicAddressMask() string {
+	OptionMapRWMutex.RLock()
+	siteURL := strings.TrimRight(strings.TrimSpace(OptionMap["ServerAddress"]), "/")
+	OptionMapRWMutex.RUnlock()
+	if site, err := url.Parse(siteURL); err != nil || site.Hostname() == "" || site.Hostname() == "localhost" || net.ParseIP(site.Hostname()).IsLoopback() {
+		siteURL = ""
+	}
+	return kitutil.MaskEveryHost + siteURL
+}
+
 // UpstreamAddresses returns the addresses masked in errors shown to users:
-// kitutil.MaskEveryHost with this site's address, so every URL and domain
-// becomes this site's, plus the upstream
+// PublicAddressMask, so every URL and domain becomes this site's, plus the upstream
 // the admin configured for the selected channel and the proxies its requests
 // may go through. The origin actually requested only counts for a configured
 // base URL or an Advanced Custom channel, whose routes may target absolute
@@ -228,16 +242,7 @@ func UpstreamAddresses(c *gin.Context) []string {
 	if GetContextKeyInt(c, constant.ContextKeyChannelType) == constant.ChannelTypeAdvancedCustom || (baseURL != "" && !isPresetUpstreamHost(baseURL)) {
 		candidates = append(candidates, GetContextKeyString(c, constant.ContextKeyUpstreamRequestOrigin))
 	}
-	// A reseller upstream's errors name its own site or its suppliers, which
-	// are not the configured address, so every URL and domain is replaced with
-	// this site's address, or masked while the server address is unset or local.
-	OptionMapRWMutex.RLock()
-	siteURL := strings.TrimRight(strings.TrimSpace(OptionMap["ServerAddress"]), "/")
-	OptionMapRWMutex.RUnlock()
-	if site, err := url.Parse(siteURL); err != nil || site.Hostname() == "" || site.Hostname() == "localhost" || net.ParseIP(site.Hostname()).IsLoopback() {
-		siteURL = ""
-	}
-	addresses := []string{kitutil.MaskEveryHost + siteURL}
+	addresses := []string{PublicAddressMask()}
 	for _, address := range candidates {
 		if strings.TrimSpace(address) != "" && !isPresetUpstreamHost(address) {
 			addresses = append(addresses, address)

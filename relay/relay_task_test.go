@@ -23,6 +23,7 @@ import (
 	"github.com/QuantumNous/new-api/setting/billing_setting"
 	"github.com/QuantumNous/new-api/setting/config"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -188,6 +189,40 @@ func TestTaskModel2DtoNormalizesLegacyAction(t *testing.T) {
 
 	assert.Equal(t, constant.TaskActionFirstTailToVideo, dtoTask.Action)
 	assert.Equal(t, "firstTailGenerate", task.Action)
+}
+
+func TestHideChannelFromTaskDtoKeepsUpstreamFromOwners(t *testing.T) {
+	previousServerAddress := system_setting.ServerAddress
+	system_setting.ServerAddress = "https://site.example"
+	t.Cleanup(func() { system_setting.ServerAddress = previousServerAddress })
+
+	for _, tc := range []struct {
+		name       string
+		resultURL  string
+		failReason string
+		wantURL    string
+		wantReason string
+	}{
+		{name: "upstream storage becomes the proxy URL", resultURL: "https://cdn.reseller.example/v.mp4", wantURL: "https://site.example/v1/videos/task_public/content"},
+		{name: "this site's URL is kept", resultURL: "https://site.example/v1/tasks/task_public/artifacts/video/content?access=a", wantURL: "https://site.example/v1/tasks/task_public/artifacts/video/content?access=a"},
+		{name: "a data URI is kept", resultURL: "data:video/mp4;base64,AAAA", wantURL: "data:video/mp4;base64,AAAA"},
+		{name: "the fail reason hides upstream addresses", failReason: "top up at https://www.reseller.example/topup", wantURL: "top up at https://***.example/***", wantReason: "top up at https://***.example/***"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			task := &model.Task{TaskID: "task_public", ChannelId: 7, FailReason: tc.failReason, Data: []byte(`{"video_url":"https://cdn.reseller.example/v.mp4"}`),
+				Properties: model.Properties{OriginModelName: "video-model", UpstreamModelName: "reseller-video-model"}}
+			task.PrivateData.ResultURL = tc.resultURL
+			item := TaskModel2Dto(task)
+
+			HideChannelFromTaskDto(item)
+
+			assert.Zero(t, item.ChannelId)
+			assert.Nil(t, item.Data)
+			assert.Equal(t, model.Properties{OriginModelName: "video-model"}, item.Properties)
+			assert.Equal(t, tc.wantURL, item.ResultURL)
+			assert.Equal(t, tc.wantReason, item.FailReason)
+		})
+	}
 }
 
 const mappingOrderSubmitPlugin = `

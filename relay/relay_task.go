@@ -24,6 +24,7 @@ import (
 	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/billing_setting"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 	"github.com/QuantumNous/new-api/types"
 	"github.com/gin-gonic/gin"
 )
@@ -515,9 +516,11 @@ func videoFetchByIDRespBodyBuilder(c *gin.Context) (respBody []byte, taskResp *d
 	}
 
 	// 通用 TaskDto 格式
+	item := TaskModel2Dto(originTask)
+	HideChannelFromTaskDto(item)
 	respBody, err = common.Marshal(dto.TaskResponse[any]{
 		Code: "success",
-		Data: TaskModel2Dto(originTask),
+		Data: item,
 	})
 	if err != nil {
 		taskResp = service.TaskErrorWrapper(err, "marshal_response_failed", http.StatusInternalServerError)
@@ -614,7 +617,7 @@ func tryRealtimeFetch(task *model.Task, isOpenAIVideoAPI bool) []byte {
 		"metadata": nil,
 		"status":   mapTaskStatusToSimple(task.Status),
 		"task_id":  task.TaskID,
-		"url":      task.GetResultURL(),
+		"url":      publicTaskResultURL(task.TaskID, task.GetResultURL()),
 	}
 	respBody, _ := common.Marshal(dto.TaskResponse[any]{
 		Code: "success",
@@ -660,6 +663,38 @@ func mapTaskStatusToSimple(status model.TaskStatus) string {
 	default:
 		return "processing"
 	}
+}
+
+// HideChannelFromTaskDto removes from a task shown to its owner what
+// identifies the channel: the channel id, the raw upstream task data, the
+// upstream model, and the upstream address in the result URL and fail reason.
+// Admin views keep them.
+func HideChannelFromTaskDto(item *dto.TaskDto) {
+	item.ChannelId = 0
+	item.Data = nil
+	if properties, ok := item.Properties.(model.Properties); ok {
+		properties.UpstreamModelName = ""
+		item.Properties = properties
+	}
+	item.FailReason = common.MaskSensitiveInfo(item.FailReason, common.PublicAddressMask())
+	item.ResultURL = publicTaskResultURL(item.TaskID, item.ResultURL)
+}
+
+// publicTaskResultURL is the result a task's owner receives. An upstream URL
+// becomes this site's proxy URL for the task, so the upstream storage stays
+// hidden; data URIs and this site's own URLs are kept, and text such as a
+// legacy fail reason has its addresses replaced.
+func publicTaskResultURL(taskID, result string) string {
+	if result == "" || strings.HasPrefix(result, "data:") {
+		return result
+	}
+	if !strings.HasPrefix(result, "http://") && !strings.HasPrefix(result, "https://") {
+		return common.MaskSensitiveInfo(result, common.PublicAddressMask())
+	}
+	if site := strings.TrimRight(system_setting.ServerAddress, "/"); site != "" && strings.HasPrefix(result, site+"/") {
+		return result
+	}
+	return taskcommon.BuildProxyURL(taskID)
 }
 
 func TaskModel2Dto(task *model.Task) *dto.TaskDto {

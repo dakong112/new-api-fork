@@ -87,11 +87,12 @@ func TestTaskPluginLogVisibilityIsRoleSeparated(t *testing.T) {
 
 func TestLegacyLogOtherVisibilityIsRoleSeparated(t *testing.T) {
 	other := common.MapToJsonStr(map[string]any{
-		"request_path":  "/v1/chat/completions",
-		"channel_id":    202,
-		"channel_name":  "legacy-secret-channel",
-		"channel_type":  1,
-		"reject_reason": "legacy-policy-rejection",
+		"request_path":        "/v1/chat/completions",
+		"channel_id":          202,
+		"channel_name":        "legacy-secret-channel",
+		"channel_type":        1,
+		"reject_reason":       "legacy-policy-rejection",
+		"upstream_model_name": "reseller-model",
 		"admin_info": map[string]any{
 			"existing_admin_field": "preserved",
 		},
@@ -105,17 +106,22 @@ func TestLegacyLogOtherVisibilityIsRoleSeparated(t *testing.T) {
 
 	t.Run("user", func(t *testing.T) {
 		logs := []*Log{{
-			Id:          99,
-			ChannelId:   77,
-			ChannelName: "resolved-secret-channel",
-			Other:       other,
+			Id:                99,
+			Type:              LogTypeError,
+			Content:           "status_code=402, top up at https://www.reseller.example/topup",
+			ChannelId:         77,
+			ChannelName:       "resolved-secret-channel",
+			UpstreamRequestId: "upstream-request",
+			Other:             other,
 		}}
 
 		formatUserLogs(logs, 10)
 
 		assert.Equal(t, 11, logs[0].Id)
-		assert.Equal(t, 77, logs[0].ChannelId)
+		assert.Zero(t, logs[0].ChannelId)
 		assert.Empty(t, logs[0].ChannelName)
+		assert.Empty(t, logs[0].UpstreamRequestId)
+		assert.Equal(t, "status_code=402, top up at https://***.example/***", logs[0].Content)
 		parsed, err := common.StrToMap(logs[0].Other)
 		require.NoError(t, err)
 		assert.Equal(t, "/v1/chat/completions", parsed["request_path"])
@@ -124,6 +130,7 @@ func TestLegacyLogOtherVisibilityIsRoleSeparated(t *testing.T) {
 			"channel_name",
 			"channel_type",
 			"reject_reason",
+			"upstream_model_name",
 			"admin_info",
 			"root_info",
 			"audit_info",
@@ -140,6 +147,7 @@ func TestLegacyLogOtherVisibilityIsRoleSeparated(t *testing.T) {
 		parsed, err := common.StrToMap(logs[0].Other)
 		require.NoError(t, err)
 		assert.Equal(t, "legacy-secret-channel", parsed["channel_name"])
+		assert.Equal(t, "reseller-model", parsed["upstream_model_name"])
 		assert.NotContains(t, parsed, "reject_reason")
 		assert.NotContains(t, parsed, "root_info")
 		assert.Contains(t, parsed, "audit_info")

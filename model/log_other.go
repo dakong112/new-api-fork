@@ -25,6 +25,17 @@ var legacySensitiveLogOtherKeys = []string{
 	"reject_reason",
 }
 
+// upstreamLogOtherKeys are public fields that reveal how the channel served
+// the request: the upstream model, the protocol conversion toward it and the
+// channel's parameter overrides. Admins keep them; user projections drop them.
+var upstreamLogOtherKeys = []string{
+	"upstream_model_name",
+	"is_model_mapped",
+	"response_model",
+	"request_conversion",
+	"po",
+}
+
 type logOtherVisibility int
 
 const (
@@ -250,7 +261,7 @@ func formatLogOtherJSON(value string, visibility logOtherVisibility) string {
 				changed = true
 			}
 		}
-		for _, key := range legacySensitiveLogOtherKeys {
+		for _, key := range slices.Concat(legacySensitiveLogOtherKeys, upstreamLogOtherKeys) {
 			if _, exists := values[key]; exists {
 				delete(values, key)
 				changed = true
