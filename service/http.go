@@ -32,7 +32,10 @@ var forwardedUpstreamHeaders = []string{
 	"Content-Type",
 	"Content-Encoding",
 	"Content-Disposition",
+	// OpenAI and Anthropic SDKs decide whether and when to retry from these.
 	"Retry-After",
+	"Retry-After-Ms",
+	"X-Should-Retry",
 	// Codex clients carry these between turns.
 	"X-Reasoning-Included",
 	"X-Codex-Turn-State",

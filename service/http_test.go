@@ -18,6 +18,8 @@ func TestIOCopyBytesGracefullyForwardsOnlyClientHeaders(t *testing.T) {
 	upstream := &http.Response{StatusCode: http.StatusOK, Header: http.Header{
 		"Content-Type":          {"application/json"},
 		"Retry-After":           {"3"},
+		"Retry-After-Ms":        {"3000"},
+		"X-Should-Retry":        {"true"},
 		"X-Codex-Turn-State":    {"turn"},
 		"Server":                {"openresty"},
 		"Set-Cookie":            {"sid=1; Domain=reseller.example"},
@@ -33,6 +35,8 @@ func TestIOCopyBytesGracefullyForwardsOnlyClientHeaders(t *testing.T) {
 	header := recorder.Header()
 	assert.Equal(t, "application/json", header.Get("Content-Type"))
 	assert.Equal(t, "3", header.Get("Retry-After"))
+	assert.Equal(t, "3000", header.Get("Retry-After-Ms"))
+	assert.Equal(t, "true", header.Get("X-Should-Retry"))
 	assert.Equal(t, "turn", header.Get("X-Codex-Turn-State"))
 	for _, name := range []string{"Server", "Set-Cookie", "Cf-Ray", "Openai-Organization", "X-New-Api-Version", "X-Ratelimit-Remaining", common.RequestIdKey} {
 		assert.Empty(t, header.Get(name), name)
