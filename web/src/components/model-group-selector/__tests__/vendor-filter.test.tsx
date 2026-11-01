@@ -70,6 +70,19 @@ describe('ModelGroupSelector vendor filter', () => {
     expect(screen.queryByRole('button', { name: /^zp/ })).toBeNull()
   })
 
+  it('when vendors exist on desktop, vendors sit in their own column beside the groups', async () => {
+    await openSelector(index, ['ds', 'zp'])
+    const vendorColumn = screen.getByRole('group', {
+      name: 'Vendor',
+    }).parentElement
+    expect(vendorColumn?.nextElementSibling).toContainElement(
+      screen.getByRole('button', { name: /^ds/ })
+    )
+    expect(vendorColumn).not.toContainElement(
+      screen.getByRole('button', { name: /^ds/ })
+    )
+  })
+
   it('when pricing is ready, a group without enabled models is disabled and labelled', async () => {
     await openSelector({ ...index, ready: true }, ['ds', 'empty'])
     expect(screen.getByRole('button', { name: /^empty/ })).toBeDisabled()

@@ -32,6 +32,23 @@ describe('model group selector layout', () => {
     expect(groupScrollClasses.includes('content-start')).toBeTruthy()
   })
 
+  test('with vendors, uses three columns and scrolls the vendor list vertically', () => {
+    expect(
+      modelGroupSelectorLayoutClasses.desktopContentWithVendors.split(' ')
+    ).toContain('md:grid-cols-[7.5rem_9.5rem_minmax(0,1fr)]')
+    const vendorScrollClasses =
+      modelGroupSelectorLayoutClasses.vendorScroll.split(' ')
+    expect(vendorScrollClasses).toContain('flex-col')
+    expect(vendorScrollClasses).toContain('overflow-y-auto')
+  })
+
+  test('on mobile, keeps vendors on one horizontally scrolling row', () => {
+    const rowClasses =
+      modelGroupSelectorLayoutClasses.mobileVendorRow.split(' ')
+    expect(rowClasses).toContain('flex-nowrap')
+    expect(rowClasses).toContain('overflow-x-auto')
+  })
+
   test('centers the selected group inside its own scroll container', () => {
     const scrollCalls: ScrollToOptions[] = []
     const selectedOption = {
