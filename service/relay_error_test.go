@@ -107,6 +107,7 @@ func TestProcessChannelErrorMasksDisableReasonAndNotification(t *testing.T) {
 	notifyLimitStore.Delete(notifyKey)
 	t.Cleanup(func() { notifyLimitStore.Delete(notifyKey) })
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	common.SetContextKey(c, constant.ContextKeyChannelBaseUrl, "https://private.example.com")
 	apiErr := types.NewErrorWithStatusCode(errors.New("upstream https://private.example.com/path?token=review-token api_key:review-secret"), types.ErrorCodeChannelNoAvailableKey, http.StatusUnauthorized)
 	ProcessChannelError(c, types.ChannelError{ChannelId: channel.Id, ChannelName: channel.Name, AutoBan: true}, apiErr, nil)
 	var notification WebhookPayload
@@ -125,6 +126,108 @@ func TestProcessChannelErrorMasksDisableReasonAndNotification(t *testing.T) {
 	assert.NotContains(t, notification.Content, "review-token")
 	assert.NotContains(t, notification.Content, "review-secret")
 	assert.Equal(t, http.StatusUnauthorized, apiErr.StatusCode)
+}
+
+// Errors shown to users replace every URL and domain with this site's
+// address, or mask them while no server address is configured, so a reseller
+// upstream cannot reveal its own site or its suppliers; official endpoints are
+// treated the same way.
+func TestUpstreamAddressesMaskEveryAddress(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		channelType int
+		baseURL     string
+		origin      string
+		proxyEnv    string
+		serverURL   string
+		message     string
+		want        string
+	}{
+		{
+			name:        "preset base URL is masked too",
+			channelType: constant.ChannelTypeAnthropic,
+			baseURL:     "https://api.anthropic.com",
+			origin:      "https://api.anthropic.com",
+			message:     "request to https://api.anthropic.com/v1/messages failed, see https://platform.claude.com/docs/en/build-with-claude/task-budgets",
+			want:        "request to https://***.com/***/*** failed, see https://***.com/***/***/***/***",
+		},
+		{
+			name:        "official endpoint built by the adaptor is masked too",
+			channelType: constant.ChannelTypeVertexAi,
+			origin:      "https://us-central1-aiplatform.googleapis.com",
+			message:     "request to https://us-central1-aiplatform.googleapis.com/v1/projects failed",
+			want:        "request to https://***.com/***/*** failed",
+		},
+		{
+			name:        "configured base URL is masked",
+			channelType: constant.ChannelTypeOpenAI,
+			baseURL:     "https://relay.private.example",
+			origin:      "https://relay.private.example",
+			message:     "request to https://relay.private.example/v1/chat/completions failed",
+			want:        "request to https://***.example/***/***/*** failed",
+		},
+		{
+			name:        "a reseller's own site and supplier in its error are masked",
+			channelType: constant.ChannelTypeOpenAI,
+			baseURL:     "https://api.reseller.example",
+			origin:      "https://api.reseller.example",
+			message:     "余额不足，请前往 https://www.reseller.example/topup 或 reseller.example 充值; upstream gateway.supplier.net overloaded",
+			want:        "余额不足，请前往 https://***.example/*** 或 ***.example 充值; upstream ***.***.net overloaded",
+		},
+		{
+			name:        "with a server address every URL and domain becomes this site's",
+			channelType: constant.ChannelTypeOpenAI,
+			baseURL:     "https://api.reseller.example",
+			origin:      "https://api.reseller.example",
+			serverURL:   "https://kid.site.cn/",
+			message:     "余额不足，请前往 https://www.reseller.example/topup 或 reseller.example 充值; upstream gateway.supplier.net overloaded",
+			want:        "余额不足，请前往 https://kid.site.cn 或 kid.site.cn 充值; upstream kid.site.cn overloaded",
+		},
+		{
+			name:        "a local server address falls back to masking",
+			channelType: constant.ChannelTypeOpenAI,
+			baseURL:     "https://api.reseller.example",
+			serverURL:   "http://localhost:3000",
+			message:     "请前往 https://www.reseller.example/topup 充值",
+			want:        "请前往 https://***.example/*** 充值",
+		},
+		{
+			name:        "absolute Advanced Custom route is masked",
+			channelType: constant.ChannelTypeAdvancedCustom,
+			origin:      "https://route.private.example",
+			message:     "dial tcp: lookup route.private.example: no such host",
+			want:        "dial tcp: lookup ***.***.example: no such host",
+		},
+		{
+			name:        "environment proxy is masked on a preset channel",
+			channelType: constant.ChannelTypeAnthropic,
+			baseURL:     "https://api.anthropic.com",
+			proxyEnv:    "http://egress.private.invalid:8080",
+			message:     "proxyconnect tcp: dial tcp: lookup egress.private.invalid: no such host",
+			want:        "proxyconnect tcp: dial tcp: lookup ***.***.invalid: no such host",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("HTTPS_PROXY", tc.proxyEnv)
+			t.Setenv("HTTP_PROXY", "")
+			common.OptionMapRWMutex.Lock()
+			originalOptions := common.OptionMap
+			common.OptionMap = map[string]string{"ServerAddress": tc.serverURL}
+			common.OptionMapRWMutex.Unlock()
+			t.Cleanup(func() {
+				common.OptionMapRWMutex.Lock()
+				common.OptionMap = originalOptions
+				common.OptionMapRWMutex.Unlock()
+			})
+			c, _ := gin.CreateTestContext(httptest.NewRecorder())
+			common.SetContextKey(c, constant.ContextKeyChannelType, tc.channelType)
+			common.SetContextKey(c, constant.ContextKeyChannelBaseUrl, tc.baseURL)
+			common.SetContextKey(c, constant.ContextKeyUpstreamRequestOrigin, tc.origin)
+			apiErr := types.NewErrorWithStatusCode(errors.New(tc.message), types.ErrorCodeBadResponseStatusCode, http.StatusBadGateway)
+
+			assert.Equal(t, tc.want, apiErr.ToOpenAIError(common.UpstreamAddresses(c)...).Message)
+		})
+	}
 }
 
 func TestDecideRelayRetryReasons(t *testing.T) {
@@ -243,6 +346,7 @@ func TestRecordPolicyFailureStoresTruncatedMessage(t *testing.T) {
 
 func TestRecordPolicyFailureMasksMessage(t *testing.T) {
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	common.SetContextKey(c, constant.ContextKeyChannelBaseUrl, "https://up.example.com")
 	err := types.NewOpenAIError(errors.New("dial https://up.example.com/v1/chat via 10.1.2.3 failed"), types.ErrorCodeBadResponseStatusCode, 502)
 
 	RecordPolicyFailure(c, 45, err, PolicyDecision{Action: "stop"})
@@ -250,5 +354,5 @@ func TestRecordPolicyFailureMasksMessage(t *testing.T) {
 	msg := RequestPolicy(c).Events()[0].Message
 	assert.NotContains(t, msg, "example.com")
 	assert.NotContains(t, msg, "10.1.2.3")
-	assert.Equal(t, err.MaskSensitiveError(), msg)
+	assert.Equal(t, err.MaskSensitiveError(common.UpstreamAddresses(c)...), msg)
 }

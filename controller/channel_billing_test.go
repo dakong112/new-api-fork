@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,6 +38,24 @@ func TestGetDeepSeekBalanceUSD(t *testing.T) {
 			responseJSON:    `{"balance_infos":[{"currency":"CNY","total_balance":"73.00"}]}`,
 			usdExchangeRate: 7.3,
 			want:            10,
+		},
+		{
+			name:            "converts CNY when USD balance is zero",
+			responseJSON:    `{"balance_infos":[{"currency":"USD","total_balance":"0.00"},{"currency":"CNY","total_balance":"73.00"}]}`,
+			usdExchangeRate: 7.3,
+			want:            10,
+		},
+		{
+			name:            "converts CNY when zero USD follows CNY",
+			responseJSON:    `{"balance_infos":[{"currency":"CNY","total_balance":"73.00"},{"currency":"USD","total_balance":"0.00"}]}`,
+			usdExchangeRate: 7.3,
+			want:            10,
+		},
+		{
+			name:            "returns zero when USD balance is zero and CNY is absent",
+			responseJSON:    `{"balance_infos":[{"currency":"USD","total_balance":"0.00"}]}`,
+			usdExchangeRate: 7.3,
+			want:            0,
 		},
 		{
 			name:            "returns error when USD and CNY are absent",
@@ -118,75 +137,21 @@ func TestGetDeepSeekBalanceUSD(t *testing.T) {
 	}
 }
 
-func TestGetSub2APIBalanceUSD(t *testing.T) {
-	tests := []struct {
-		name            string
-		responseJSON    string
-		want            float64
-		wantErrContains string
-	}{
-		{name: "uses remaining in USD", responseJSON: `{"isValid":true,"mode":"unrestricted","remaining":20.21,"balance":25,"unit":"USD"}`, want: 20.21},
-		{name: "falls back to balance without remaining", responseJSON: `{"isValid":true,"balance":1.06,"unit":"USD"}`, want: 1.06},
-		{name: "keeps a zero balance", responseJSON: `{"isValid":true,"remaining":0,"unit":"USD"}`, want: 0},
-		{name: "rejects an invalid key", responseJSON: `{"isValid":false,"remaining":5,"unit":"USD"}`, wantErrContains: "invalid"},
-		{name: "rejects a non USD unit", responseJSON: `{"isValid":true,"remaining":5,"unit":"CNY"}`, wantErrContains: "not USD"},
-		{name: "rejects a response without balance", responseJSON: `{"isValid":true,"unit":"USD"}`, wantErrContains: "no remaining balance"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var response Sub2APIUsageResponse
-			require.NoError(t, common.UnmarshalJsonStr(tt.responseJSON, &response))
-			got, err := getSub2APIBalanceUSD(response)
-			if tt.wantErrContains != "" {
-				require.ErrorContains(t, err, tt.wantErrContains)
-				return
-			}
-			require.NoError(t, err)
-			assert.InDelta(t, tt.want, got, 1e-9)
-		})
-	}
-}
-
-func TestGetNewAPIBalanceUSD(t *testing.T) {
-	tests := []struct {
-		name            string
-		hardLimit       float64
-		totalUsage      float64
-		want            float64
-		wantErrContains string
-	}{
-		{name: "subtracts used quota from the total", hardLimit: 30, totalUsage: 1250, want: 17.5},
-		{name: "reports an exhausted token as zero", hardLimit: 12, totalUsage: 1200, want: 0},
-		{name: "rejects an unlimited token", hardLimit: newAPIUnlimitedQuotaUSD, totalUsage: 500, wantErrContains: "unlimited quota"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := getNewAPIBalanceUSD(OpenAISubscriptionResponse{HardLimitUSD: tt.hardLimit}, OpenAIUsageResponse{TotalUsage: tt.totalUsage})
-			if tt.wantErrContains != "" {
-				require.ErrorContains(t, err, tt.wantErrContains)
-				return
-			}
-			require.NoError(t, err)
-			assert.InDelta(t, tt.want, got, 1e-9)
-		})
-	}
-}
-
-func TestFetchUpstreamBalanceRequests(t *testing.T) {
+func TestUpstreamBalanceRequestsTrimV1AndSendUserAgent(t *testing.T) {
+	setupSub2APIBalanceTest(t)
 	type seen struct{ path, auth, userAgent string }
 	var requests []seen
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests = append(requests, seen{r.URL.Path, r.Header.Get("Authorization"), r.Header.Get("User-Agent")})
-		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/v1/usage":
 			_, _ = w.Write([]byte(`{"isValid":true,"remaining":3.5,"unit":"USD"}`))
-		case "/v1/dashboard/billing/subscription":
-			_, _ = w.Write([]byte(`{"hard_limit_usd":10}`))
-		case "/v1/dashboard/billing/usage":
-			_, _ = w.Write([]byte(`{"total_usage":250}`))
+		case "/api/usage/token/":
+			_, _ = w.Write([]byte(`{"code":true,"data":{"total_available":7500000,"unlimited_quota":false}}`))
+		case "/api/status":
+			_, _ = w.Write([]byte(`{"success":true,"data":{"quota_per_unit":1000000}}`))
 		default:
-			w.WriteHeader(http.StatusNotFound)
+			http.NotFound(w, r)
 		}
 	}))
 	t.Cleanup(upstream.Close)
@@ -194,22 +159,24 @@ func TestFetchUpstreamBalanceRequests(t *testing.T) {
 	for _, base := range []string{upstream.URL, upstream.URL + "/v1/"} {
 		requests = nil
 		channel := &model.Channel{Key: "sk-upstream", BaseURL: common.GetPointer(base)}
+		require.NoError(t, model.DB.Create(channel).Error)
 
-		balance, err := fetchSub2APIBalanceUSD(channel)
+		balance, err := updateChannelSub2APIBalance(channel)
 		require.NoError(t, err, base)
 		assert.InDelta(t, 3.5, balance, 1e-9)
 
-		balance, err = fetchNewAPIBalanceUSD(channel)
+		balance, err = updateChannelNewAPIBalance(channel)
 		require.NoError(t, err, base)
 		assert.InDelta(t, 7.5, balance, 1e-9)
 
 		require.Len(t, requests, 3, base)
-		assert.Equal(t, []string{"/v1/usage", "/v1/dashboard/billing/subscription", "/v1/dashboard/billing/usage"},
+		assert.Equal(t, []string{"/v1/usage", "/api/usage/token/", "/api/status"},
 			[]string{requests[0].path, requests[1].path, requests[2].path}, "a base URL ending in /v1 must not double it")
 		for _, request := range requests {
-			assert.Equal(t, "Bearer sk-upstream", request.auth)
 			assert.NotEmpty(t, request.userAgent, "Cloudflare-fronted upstreams reject requests without a User-Agent")
 		}
+		assert.Equal(t, "Bearer sk-upstream", requests[0].auth)
+		assert.Equal(t, "Bearer sk-upstream", requests[1].auth)
 	}
 }
 
@@ -233,5 +200,50 @@ func TestShouldAlertLowBalanceOncePerLowPeriod(t *testing.T) {
 	}
 	for _, step := range steps {
 		assert.Equal(t, step.want, shouldAlertLowBalance(channelID, step.balance, step.threshold), step.name)
+	}
+}
+
+func TestUpdateChannelNewAPIBalanceUsesTheSmallerRemainingQuota(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		usage   string
+		want    float64
+		wantErr string
+	}{
+		{name: "user quota below the key quota", usage: `{"code":true,"data":{"total_available":2000000,"unlimited_quota":false,"user_quota":{"total_available":500000}}}`, want: 0.5},
+		{name: "key quota below the user quota", usage: `{"code":true,"data":{"total_available":500000,"unlimited_quota":false,"user_quota":{"total_available":2000000}}}`, want: 0.5},
+		{name: "unlimited key uses the user quota", usage: `{"code":true,"data":{"total_available":0,"unlimited_quota":true,"user_quota":{"total_available":3000000}}}`, want: 3},
+		{name: "key quota alone without user quota", usage: `{"code":true,"data":{"total_available":1500000,"unlimited_quota":false}}`, want: 1.5},
+		{name: "unlimited key without user quota", usage: `{"code":true,"data":{"total_available":0,"unlimited_quota":true}}`, wantErr: "Allow querying user quota"},
+		{name: "upstream rejects the key", usage: `{"success":false,"message":"invalid token"}`, wantErr: "invalid token"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			setupSub2APIBalanceTest(t)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/api/usage/token/":
+					assert.Equal(t, "Bearer sk-upstream", r.Header.Get("Authorization"))
+					_, _ = w.Write([]byte(tc.usage))
+				case "/api/status":
+					assert.Empty(t, r.Header.Get("Authorization"), "the key is not sent to the public status endpoint")
+					_, _ = w.Write([]byte(`{"success":true,"data":{"quota_per_unit":1000000}}`))
+				default:
+					http.NotFound(w, r)
+				}
+			}))
+			defer server.Close()
+			baseURL := server.URL + "/"
+			channel := &model.Channel{Type: constant.ChannelTypeNewAPI, BaseURL: &baseURL, Key: "sk-upstream", Name: "new-api-upstream"}
+			require.NoError(t, model.DB.Create(channel).Error)
+
+			result, err := updateChannelBalance(channel)
+			if tc.wantErr != "" {
+				require.ErrorContains(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.InDelta(t, tc.want, result.Balance, 1e-9)
+			assert.InDelta(t, tc.want, channel.Balance, 1e-9)
+		})
 	}
 }

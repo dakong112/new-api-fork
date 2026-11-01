@@ -120,7 +120,7 @@ func RecordPolicyFailure(c *gin.Context, channelID int, err *types.NewAPIError, 
 	if source == "local" {
 		event.Decision.Reason = "local_rejection"
 	}
-	message := []rune(err.MaskSensitiveError())
+	message := []rune(err.MaskSensitiveError(common.UpstreamAddresses(c)...))
 	if len(message) > policyMessageLimit {
 		message = message[:policyMessageLimit]
 	}

@@ -46,7 +46,6 @@ const OPERATIONS_SECTIONS = [
     build: (settings: OperationsSettings) => (
       <MonitoringSettingsSection
         defaultValues={{
-          QuotaRemindThreshold: settings.QuotaRemindThreshold,
           ChannelBalanceAlertThreshold: settings.ChannelBalanceAlertThreshold,
           'perf_metrics_setting.enabled':
             settings['perf_metrics_setting.enabled'] ?? true,
@@ -62,10 +61,16 @@ const OPERATIONS_SECTIONS = [
   },
   {
     id: 'email',
-    titleKey: 'SMTP Email',
+    titleKey: 'Email & Notifications',
     build: (settings: OperationsSettings) => (
       <EmailSettingsSection
         defaultValues={{
+          QuotaRemindEnabled: settings.QuotaRemindEnabled,
+          QuotaRemindThreshold: settings.QuotaRemindThreshold,
+          EmailProvider: settings.EmailProvider,
+          ResendApiKey: settings.ResendApiKey,
+          ResendKeyConfigured: settings.ResendKeyConfigured,
+          ResendFrom: settings.ResendFrom,
           SMTPServer: settings.SMTPServer,
           SMTPPort: settings.SMTPPort,
           SMTPAccount: settings.SMTPAccount,
@@ -98,7 +103,13 @@ const OPERATIONS_SECTIONS = [
     titleKey: 'Log Maintenance',
     build: (settings: OperationsSettings) => (
       <LogSettingsSection
-        defaultEnabled={Boolean(settings.LogConsumeEnabled)}
+        defaultValues={{
+          LogConsumeEnabled: Boolean(settings.LogConsumeEnabled),
+          'log_setting.user_export_enabled':
+            settings['log_setting.user_export_enabled'] ?? true,
+          'log_setting.max_range_days':
+            settings['log_setting.max_range_days'] ?? 365,
+        }}
       />
     ),
   },

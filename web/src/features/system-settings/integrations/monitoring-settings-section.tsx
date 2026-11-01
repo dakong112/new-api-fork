@@ -61,7 +61,6 @@ const numericString = z.string().refine((value) => {
 }, 'Enter a non-negative number or leave empty')
 
 const monitoringSchema = z.object({
-  QuotaRemindThreshold: numericString,
   ChannelBalanceAlertThreshold: numericString,
   perf_metrics_setting: z.object({
     enabled: z.boolean(),
@@ -75,7 +74,6 @@ type MonitoringFormInput = z.input<typeof monitoringSchema>
 type MonitoringFormValues = z.output<typeof monitoringSchema>
 
 type FlatMonitoringDefaults = {
-  QuotaRemindThreshold: string
   ChannelBalanceAlertThreshold: string
   'perf_metrics_setting.enabled': boolean
   'perf_metrics_setting.flush_interval': number
@@ -90,7 +88,6 @@ type MonitoringSettingsSectionProps = {
 const buildFormDefaults = (
   defaults: MonitoringSettingsSectionProps['defaultValues']
 ): MonitoringFormInput => ({
-  QuotaRemindThreshold: defaults.QuotaRemindThreshold ?? '',
   ChannelBalanceAlertThreshold: defaults.ChannelBalanceAlertThreshold ?? '',
   perf_metrics_setting: {
     enabled: defaults['perf_metrics_setting.enabled'],
@@ -103,7 +100,6 @@ const buildFormDefaults = (
 const normalizeDefaults = (
   defaults: MonitoringSettingsSectionProps['defaultValues']
 ): FlatMonitoringDefaults => ({
-  QuotaRemindThreshold: (defaults.QuotaRemindThreshold ?? '').trim(),
   // The server stores 0 for "off"; an empty field means the same.
   ChannelBalanceAlertThreshold:
     (defaults.ChannelBalanceAlertThreshold ?? '').trim() || '0',
@@ -119,7 +115,6 @@ const normalizeDefaults = (
 const normalizeFormValues = (
   values: MonitoringFormValues
 ): FlatMonitoringDefaults => ({
-  QuotaRemindThreshold: values.QuotaRemindThreshold.trim(),
   ChannelBalanceAlertThreshold:
     values.ChannelBalanceAlertThreshold.trim() || '0',
   'perf_metrics_setting.enabled': values.perf_metrics_setting.enabled,
@@ -194,29 +189,6 @@ export function MonitoringSettingsSection({
             onSave={form.handleSubmit(onSubmit)}
             isSaving={updateOption.isPending}
           />
-          <FormField
-            control={form.control}
-            name='QuotaRemindThreshold'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('Quota reminder (tokens)')}</FormLabel>
-                <FormControl>
-                  <Input
-                    type='number'
-                    min={0}
-                    step={1}
-                    value={field.value}
-                    onChange={(event) => field.onChange(event.target.value)}
-                  />
-                </FormControl>
-                <FormDescription>
-                  {t('Send email alerts when a user falls below this quota')}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           <FormField
             control={form.control}
             name='ChannelBalanceAlertThreshold'

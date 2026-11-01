@@ -41,7 +41,6 @@ function Fixture(props: { threshold: string }) {
       <SettingsPageProvider actionsContainer={container}>
         <MonitoringSettingsSection
           defaultValues={{
-            QuotaRemindThreshold: '1000',
             ChannelBalanceAlertThreshold: props.threshold,
             'perf_metrics_setting.enabled': true,
             'perf_metrics_setting.flush_interval': 5,

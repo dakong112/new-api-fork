@@ -155,6 +155,7 @@ var QuotaForInvitee = 0
 var ChannelDisableThreshold = 5.0
 var AutomaticDisableChannelEnabled = false
 var AutomaticEnableChannelEnabled = false
+var QuotaRemindEnabled = true
 var QuotaRemindThreshold = 1000
 
 // ChannelBalanceAlertThreshold notifies the root user when a channel balance
