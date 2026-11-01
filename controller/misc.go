@@ -72,6 +72,7 @@ func GetStatus(c *gin.Context) {
 		"turnstile_site_key":          common.TurnstileSiteKey,
 		"docs_link":                   operation_setting.GetGeneralSetting().DocsLink,
 		"api_keys_notice":             operation_setting.GetGeneralSetting().ApiKeysNotice,
+		"api_keys_group_guide":        operation_setting.GetGeneralSetting().ApiKeysGroupGuide,
 		"redemption_copy_template":    common.RedemptionCopyTemplate,
 		"redemption_test_quota":       common.RedemptionTestQuota,
 		"group_display_order":         common.GroupDisplayOrder,

@@ -265,6 +265,66 @@ func TestGetUserModelsExpandsAutoGroupsInConfiguredOrder(t *testing.T) {
 	assert.Equal(t, "zz-default-model", models[2])
 }
 
+// Each selectable group lists the models its key would get from /v1/models:
+// enabled and priced ones, with auto spanning the auto groups.
+func TestGetUserGroupModelsListsWhatEachGroupServes(t *testing.T) {
+	withSelfUseModeDisabled(t)
+	withTieredBillingConfig(t, map[string]string{
+		"zz-default-model": "tiered_expr",
+		"zz-vip-model":     "tiered_expr",
+	}, map[string]string{
+		"zz-default-model": `tier("base", p * 1)`,
+		"zz-vip-model":     `tier("base", p * 2)`,
+	})
+	originalAutoGroups := setting.AutoGroups2JsonString()
+	originalUsableGroups := setting.UserUsableGroups2JSONString()
+	t.Cleanup(func() {
+		require.NoError(t, setting.UpdateAutoGroupsByJsonString(originalAutoGroups))
+		require.NoError(t, setting.UpdateUserUsableGroupsByJSONString(originalUsableGroups))
+	})
+	require.NoError(t, setting.UpdateAutoGroupsByJsonString(`["vip","default"]`))
+	require.NoError(t, setting.UpdateUserUsableGroupsByJSONString(`{"auto":"Auto","default":"Default","vip":"VIP"}`))
+
+	db := setupModelListControllerTestDB(t)
+	require.NoError(t, db.Create(&model.User{
+		Id:       1004,
+		Username: "group-models-user",
+		Password: "password",
+		Group:    "default",
+		Status:   common.UserStatusEnabled,
+	}).Error)
+	require.NoError(t, db.Create(&[]model.Ability{
+		{Group: "default", Model: "zz-default-model", ChannelId: 1, Enabled: true},
+		{Group: "default", Model: "zz-unpriced-model", ChannelId: 1, Enabled: true},
+		{Group: "vip", Model: "zz-vip-model", ChannelId: 2, Enabled: true},
+		{Group: "vip", Model: "zz-disabled-model", ChannelId: 2, Enabled: false},
+	}).Error)
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/api/user/self/group_models", nil)
+	ctx.Set("id", 1004)
+
+	GetUserGroupModels(ctx)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			UserGroup string              `json:"user_group"`
+			Groups    map[string][]string `json:"groups"`
+		} `json:"data"`
+	}
+	require.NoError(t, common.Unmarshal(recorder.Body.Bytes(), &payload))
+	require.True(t, payload.Success)
+	assert.Equal(t, "default", payload.Data.UserGroup)
+	assert.Equal(t, map[string][]string{
+		"auto":    {"zz-default-model", "zz-vip-model"},
+		"default": {"zz-default-model"},
+		"vip":     {"zz-vip-model"},
+	}, payload.Data.Groups)
+}
+
 func TestListModelsIncludesTieredBillingModel(t *testing.T) {
 	withSelfUseModeDisabled(t)
 	withTieredBillingConfig(t, map[string]string{

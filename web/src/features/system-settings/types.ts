@@ -151,6 +151,7 @@ export type SiteSettings = {
   TaskPublicAddress: string
   'general_setting.docs_link': string
   'general_setting.api_keys_notice': string
+  'general_setting.api_keys_group_guide': string
   'legal.user_agreement': string
   'legal.privacy_policy': string
   HeaderNavModules: string

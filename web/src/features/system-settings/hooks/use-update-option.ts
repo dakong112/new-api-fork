@@ -32,6 +32,7 @@ const STATUS_RELATED_KEYS = new Set([
   'SidebarModulesAdmin',
   'Notice',
   'general_setting.api_keys_notice',
+  'general_setting.api_keys_group_guide',
   'RedemptionCopyTemplate',
   'RedemptionTestQuota',
   'LogConsumeEnabled',

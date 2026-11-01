@@ -71,6 +71,12 @@ const key = apiKeySchema.parse({
   group: 'default',
   model_limits_enabled: false,
 })
+const groupModels = {
+  user_group: 'default',
+  groups: {
+    default: ['model-alpha', 'model-beta-with-a-long-name', 'model-gamma'],
+  },
+}
 const i18n = createInstance()
 await i18n.init({
   lng: 'en',
@@ -311,6 +317,9 @@ async function renderKeysPage(status = 1, overrides: Partial<ApiKey> = {}) {
         data: { success: true, data: { items: [currentKey], total: 1 } },
       }
     }
+    if (url === '/api/user/self/group_models') {
+      return { data: { success: true, data: groupModels } }
+    }
     return { data: { success: true, data: { default: { ratio: 1 } } } }
   })
   const post = vi.spyOn(api, 'post').mockResolvedValue({
@@ -351,7 +360,13 @@ async function renderKeysPage(status = 1, overrides: Partial<ApiKey> = {}) {
 
 it('combines creation and last use while keeping expiry, models and IP restrictions separate', async () => {
   await renderKeysPage()
-  for (const name of ['Name', 'API Key', 'Group', 'Models', 'IP Restriction']) {
+  for (const name of [
+    'Name',
+    'API Key',
+    'Group',
+    /^Models/,
+    'IP Restriction',
+  ]) {
     expect(screen.getByRole('columnheader', { name })).toBeInTheDocument()
   }
   expect(screen.getByRole('columnheader', { name: 'Time' })).toBeInTheDocument()
@@ -384,7 +399,7 @@ it('restores dates hidden by the old default and preserves unrelated column pref
     screen.getByRole('columnheader', { name: 'Expires' })
   ).toBeInTheDocument()
   expect(
-    screen.queryByRole('columnheader', { name: 'Models' })
+    screen.queryByRole('columnheader', { name: /^Models/ })
   ).not.toBeInTheDocument()
 })
 
@@ -479,7 +494,7 @@ it('keeps full mobile information without group or quota section headings', asyn
   }
 })
 
-it('keeps mobile quota readable and opens complete model and IP restrictions by tapping', async () => {
+it('keeps mobile quota readable, copies allowed model names and opens IP restrictions by tapping', async () => {
   const matchMedia = window.matchMedia
   vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
     ...matchMedia(query),
@@ -513,15 +528,26 @@ it('keeps mobile quota readable and opens complete model and IP restrictions by 
     'font-normal',
     'text-right'
   )
-  await userEvent.click(screen.getByRole('button', { name: /Models: 2 model/ }))
-  let details = await screen.findByRole('dialog')
-  expect(within(details).getByText('model-alpha')).toBeVisible()
-  expect(within(details).getByText('model-beta-with-a-long-name')).toBeVisible()
-  await userEvent.keyboard('{Escape}')
+  // Model limits narrow the group's models to the two allowed ones.
+  const copy = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue()
+  await userEvent.click(
+    await screen.findByRole('button', {
+      name: 'Copy model name model-beta-with-a-long-name',
+    })
+  )
+  await waitFor(() =>
+    expect(copy).toHaveBeenCalledWith('model-beta-with-a-long-name')
+  )
+  expect(
+    screen.getByRole('button', { name: 'Copy model name model-alpha' })
+  ).toBeInTheDocument()
+  expect(
+    screen.queryByRole('button', { name: 'Copy model name model-gamma' })
+  ).not.toBeInTheDocument()
   await userEvent.click(
     screen.getByRole('button', { name: /IP Restriction: 2 IP/ })
   )
-  details = await screen.findByRole('dialog')
+  const details = await screen.findByRole('dialog')
   expect(within(details).getByText('192.0.2.1')).toBeVisible()
   expect(within(details).getByText('2001:db8::1')).toBeVisible()
 })

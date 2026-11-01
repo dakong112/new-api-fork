@@ -30,15 +30,20 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
 
+import { useUserGroupModels } from '../hooks/use-user-group-models'
+import { getApiKeyModels } from '../lib'
 import type { ApiKey } from '../types'
 import { useApiKeys } from './api-keys-provider'
+import { GroupModelList } from './group-model-list'
 
 export function ApiKeyCell({ apiKey }: { apiKey: ApiKey }) {
   const { t } = useTranslation()
@@ -140,20 +145,74 @@ type ApiKeyRestrictionProps = {
   detailsTrigger?: 'hover' | 'click'
 }
 
-export function ModelLimitsCell(props: ApiKeyRestrictionProps) {
-  const { t } = useTranslation()
-  const models = props.apiKey.model_limits_enabled
-    ? (props.apiKey.model_limits || '').split(',').filter(Boolean)
-    : []
+/** How many model names a key row shows before "+N". */
+const INLINE_MODEL_COUNT = 2
 
+/**
+ * The models a key gets from /v1/models, each a button that copies its name,
+ * so users paste exact model names instead of typing them.
+ */
+export function ApiKeyModelsCell(props: { apiKey: ApiKey }) {
+  const { t } = useTranslation()
+  const { data: groupModels, isError } = useUserGroupModels()
+  const { copyToClipboard: copyModelName } = useCopyToClipboard()
+
+  if (!groupModels) {
+    return isError ? null : <Skeleton className='h-5 w-24' />
+  }
+  const models = getApiKeyModels(props.apiKey, groupModels)
+  if (models.length === 0) {
+    return (
+      <span className='text-muted-foreground text-xs'>
+        {t('No models available')}
+      </span>
+    )
+  }
+
+  const hiddenCount = models.length - INLINE_MODEL_COUNT
   return (
-    <ApiKeyRestrictionCell
-      items={models}
-      label={t('{{count}} models', { count: models.length })}
-      title={t('Models')}
-      emptyLabel={t('Unlimited')}
-      detailsTrigger={props.detailsTrigger}
-    />
+    <div className='flex min-w-0 flex-wrap items-center gap-1'>
+      {models.slice(0, INLINE_MODEL_COUNT).map((model) => (
+        <Button
+          key={model}
+          variant='outline'
+          size='xs'
+          className='max-w-[150px] cursor-copy font-mono font-normal'
+          title={t('Click to copy: {{value}}', { value: model })}
+          aria-label={t('Copy model name {{model}}', { model })}
+          onClick={(event) => {
+            event.stopPropagation()
+            void copyModelName(model)
+          }}
+        >
+          <span className='truncate'>{model}</span>
+        </Button>
+      ))}
+      {hiddenCount > 0 && (
+        <Popover>
+          <PopoverTrigger
+            render={
+              <Button
+                variant='ghost'
+                size='xs'
+                aria-label={t('Show all {{count}} models', {
+                  count: models.length,
+                })}
+                onClick={(event) => event.stopPropagation()}
+              />
+            }
+          >
+            +{hiddenCount}
+          </PopoverTrigger>
+          <PopoverContent
+            align='start'
+            className='w-[min(420px,calc(100vw-2rem))]'
+          >
+            <GroupModelList models={models} listClassName='max-h-[260px]' />
+          </PopoverContent>
+        </Popover>
+      )}
+    </div>
   )
 }
 

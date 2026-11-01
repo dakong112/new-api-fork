@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -215,17 +216,52 @@ func getModelListGroups(c *gin.Context) (modelListGroups, error) {
 	}, nil
 }
 
-func ListModels(c *gin.Context, modelType int) {
-	acceptUnsetRatioModel := operation_setting.SelfUseModeEnabled
-	if !acceptUnsetRatioModel {
-		userId := c.GetInt("id")
-		if userId > 0 {
-			userSettings, _ := model.GetUserSetting(userId, false)
-			if userSettings.AcceptUnsetRatioModel {
-				acceptUnsetRatioModel = true
+// acceptsUnsetRatioModels reports whether the user's model lists include
+// models without billing config: in self-use mode, or by the user's setting.
+func acceptsUnsetRatioModels(userId int) bool {
+	if operation_setting.SelfUseModeEnabled {
+		return true
+	}
+	if userId <= 0 {
+		return false
+	}
+	userSettings, _ := model.GetUserSetting(userId, false)
+	return userSettings.AcceptUnsetRatioModel
+}
+
+// GetUserGroupModels lists, for every group the user may select, the models
+// a key of that group gets from /v1/models, so the console can show them while
+// the user picks a group. "auto" lists the models of the user's auto groups.
+func GetUserGroupModels(c *gin.Context) {
+	user, err := model.GetUserCache(c.GetInt("id"))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	acceptUnsetRatioModel := acceptsUnsetRatioModels(user.Id)
+	groups := service.GetUserUsableGroups(user.Group)
+	// A key without a group uses the user's own group.
+	groups[user.Group] = ""
+	groupModels := make(map[string][]string, len(groups))
+	for group := range groups {
+		ownerGroups := []string{group}
+		if group == "auto" {
+			ownerGroups = service.GetUserAutoGroup(user.Group)
+		}
+		models := make([]string, 0)
+		for _, modelName := range service.GetGroupsEnabledModels(ownerGroups) {
+			if acceptUnsetRatioModel || helper.HasModelBillingConfig(modelName) {
+				models = append(models, modelName)
 			}
 		}
+		slices.Sort(models)
+		groupModels[group] = models
 	}
+	common.ApiSuccess(c, gin.H{"user_group": user.Group, "groups": groupModels})
+}
+
+func ListModels(c *gin.Context, modelType int) {
+	acceptUnsetRatioModel := acceptsUnsetRatioModels(c.GetInt("id"))
 
 	userModelNames := make([]string, 0)
 	groups, err := getModelListGroups(c)

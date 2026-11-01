@@ -75,6 +75,19 @@ const SITE_SECTIONS = [
     ),
   },
   {
+    id: 'api-keys-group-guide',
+    titleKey: 'Group selection guide',
+    build: (settings: SiteSettings) => (
+      <NoticeSection
+        defaultValue={settings['general_setting.api_keys_group_guide'] ?? ''}
+        optionKey='general_setting.api_keys_group_guide'
+        titleKey='Group selection guide'
+        placeholderKey='Explain which group to choose for which models'
+        descriptionKey='Opened from "How to choose a group?" when users create or edit an API key. Supports Markdown. Leave empty to show the built-in guide.'
+      />
+    ),
+  },
+  {
     id: 'header-navigation',
     titleKey: 'Header navigation',
     build: (settings: SiteSettings) => {

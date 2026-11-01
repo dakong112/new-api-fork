@@ -24,7 +24,14 @@ import {
   waitFor,
   within,
 } from '@testing-library/react'
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import {
+  afterEach,
+  describe,
+  expect,
+  onTestFinished,
+  test,
+  vi,
+} from 'vitest'
 
 import type { ApiKey } from '../../types'
 
@@ -106,6 +113,22 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
             usable_group: {},
             supported_endpoint: {},
             auto_groups: [],
+          },
+        }
+      case '/api/user/self/group_models':
+        return {
+          data: {
+            success: true,
+            data: {
+              user_group: 'default',
+              groups: {
+                auto: ['deepseek-v4', 'glm-5'],
+                default: ['glm-5'],
+                vip: ['deepseek-v4', 'deepseek-v4-flash'],
+                empty: [],
+                relay: [],
+              },
+            },
           },
         }
       case '/api/token/auto-groups':
@@ -612,5 +635,82 @@ describe('API keys mutate drawer user quota query switch', () => {
     fireEvent.click(findButton('Save changes', true))
     await waitFor(() => expect(createdPayloads).toHaveLength(1))
     expect(createdPayloads[0]?.allow_user_quota_query).toBe(false)
+  })
+})
+
+describe('API keys mutate drawer group models', () => {
+  test('refuses to save without a group and asks the user to pick one', async () => {
+    const createdPayloads: Array<Record<string, unknown>> = []
+    installApiFixtures(createdPayloads)
+    await renderDrawer()
+    selectComboboxOption(getControlByLabel('Group'), 'Priority access')
+    const vendorFilter = await screen.findByRole('group', { name: 'Vendor' })
+    fireEvent.click(within(vendorFilter).getByRole('button', { name: '智谱' }))
+    changeInput(getControlByLabel('Name'), 'no-group')
+
+    fireEvent.click(findButton('Save changes', true))
+
+    expect(await screen.findByText('Please select a group')).toBeTruthy()
+    expect(createdPayloads).toHaveLength(0)
+  })
+
+  test('previews the models of the highlighted group beside the list', async () => {
+    const matchMedia = window.matchMedia
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      ...matchMedia(query),
+      matches: query.includes('min-width') || matchMedia(query).matches,
+    }))
+    installApiFixtures([])
+    await renderDrawer()
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Group' }))
+    fireEvent.pointerMove(await screen.findByRole('option', { name: /^vip/ }))
+
+    expect(
+      await screen.findByRole('button', {
+        name: 'Copy model name deepseek-v4-flash',
+      })
+    ).toBeTruthy()
+    expect(screen.getByRole('option', { name: /^vip/ })).toHaveTextContent(
+      '2 models'
+    )
+  })
+
+  test('lists the chosen group’s models below the picker and copies a name', async () => {
+    const copy = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: copy },
+    })
+    onTestFinished(() => {
+      Reflect.deleteProperty(navigator, 'clipboard')
+    })
+    installApiFixtures([])
+    await renderDrawer()
+
+    selectComboboxOption(getControlByLabel('Group'), 'Priority access')
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Copy model name deepseek-v4-flash',
+      })
+    )
+
+    await waitFor(() => expect(copy).toHaveBeenCalledWith('deepseek-v4-flash'))
+    expect(
+      screen.queryByRole('button', { name: 'Copy model name glm-5' })
+    ).toBeNull()
+  })
+
+  test('opens the built-in group guide while the administrator left it empty', async () => {
+    installApiFixtures([])
+    await renderDrawer()
+
+    fireEvent.click(findButton('How to choose a group?', true))
+
+    const guide = await screen.findByRole('dialog', {
+      name: 'How to choose a group',
+    })
+    expect(within(guide).getByText('Steps')).toBeTruthy()
+    expect(within(guide).getByText('Tips')).toBeTruthy()
   })
 })

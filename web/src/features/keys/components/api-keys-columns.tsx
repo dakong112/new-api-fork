@@ -40,8 +40,8 @@ import {
 } from './api-key-timestamp-cell'
 import {
   ApiKeyCell,
+  ApiKeyModelsCell,
   IpRestrictionsCell,
-  ModelLimitsCell,
 } from './api-keys-cells'
 import { DataTableRowActions } from './data-table-row-actions'
 
@@ -189,10 +189,17 @@ export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
       {
         id: 'model_limits',
         accessorKey: 'model_limits',
-        header: t('Models'),
-        cell: ({ row }) => <ModelLimitsCell apiKey={row.original} />,
+        header: () => (
+          <span className='inline-flex items-baseline gap-1.5'>
+            {t('Models')}
+            <span className='text-muted-foreground text-xs font-normal'>
+              {t('Click to copy')}
+            </span>
+          </span>
+        ),
+        cell: ({ row }) => <ApiKeyModelsCell apiKey={row.original} />,
         enableSorting: false,
-        size: 160,
+        size: 280,
         meta: { mobileHidden: true },
       },
       {

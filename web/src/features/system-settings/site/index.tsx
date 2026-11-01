@@ -37,6 +37,7 @@ const defaultSiteSettings: SiteSettings = {
   TaskPublicAddress: '',
   'general_setting.docs_link': '',
   'general_setting.api_keys_notice': '',
+  'general_setting.api_keys_group_guide': '',
   'legal.user_agreement': '',
   'legal.privacy_policy': '',
   HeaderNavModules: '',

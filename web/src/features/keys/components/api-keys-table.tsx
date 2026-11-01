@@ -59,7 +59,7 @@ import { ApiKeyQuotaCell } from './api-key-quota-cell'
 import { ApiKeyActivityCell } from './api-key-timestamp-cell'
 import {
   ApiKeyCell,
-  ModelLimitsCell,
+  ApiKeyModelsCell,
   IpRestrictionsCell,
 } from './api-keys-cells'
 import { useApiKeysColumns } from './api-keys-columns'
@@ -189,8 +189,14 @@ function ApiKeysMobileList({
               <ApiKeyQuotaCell apiKey={apiKey} now={now} variant='card' />
             </div>
 
+            <div className='space-y-1'>
+              <p className='text-muted-foreground text-xs'>
+                <span>{t('Models')}</span> · <span>{t('Click to copy')}</span>
+              </p>
+              <ApiKeyModelsCell apiKey={apiKey} />
+            </div>
+
             <div className='flex flex-wrap items-center gap-x-5 gap-y-1'>
-              <ModelLimitsCell apiKey={apiKey} detailsTrigger='click' />
               <IpRestrictionsCell apiKey={apiKey} detailsTrigger='click' />
             </div>
 

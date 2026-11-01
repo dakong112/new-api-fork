@@ -13,7 +13,9 @@ const (
 type GeneralSetting struct {
 	DocsLink string `json:"docs_link"`
 	// API 密钥页工具栏中展示的 Markdown 提示，留空不展示
-	ApiKeysNotice       string `json:"api_keys_notice"`
+	ApiKeysNotice string `json:"api_keys_notice"`
+	// 创建密钥时"如何选择分组"弹窗的 Markdown 教程，留空使用内置教程
+	ApiKeysGroupGuide   string `json:"api_keys_group_guide"`
 	PingIntervalEnabled bool   `json:"ping_interval_enabled"`
 	PingIntervalSeconds int    `json:"ping_interval_seconds"`
 	// 当前站点额度展示类型：USD / CNY / TOKENS

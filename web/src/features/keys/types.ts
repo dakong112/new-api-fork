@@ -103,6 +103,13 @@ export interface TokenAutoGroupsConfig {
   max_count: number
 }
 
+/** The models each selectable group serves, as a key of it gets from /v1/models. */
+export interface UserGroupModels {
+  /** The group a key without one uses. */
+  user_group: string
+  groups: Record<string, string[]>
+}
+
 // ============================================================================
 // Dialog Types
 // ============================================================================

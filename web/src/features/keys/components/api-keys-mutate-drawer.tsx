@@ -92,12 +92,14 @@ import {
   getTokenAutoGroups,
 } from '../api'
 import { DEFAULT_GROUP, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
+import { useUserGroupModels } from '../hooks/use-user-group-models'
 import {
   getApiKeyFormSchema,
   type ApiKeyFormValues,
   getApiKeyFormDefaultValues,
   transformFormDataToPayload,
   transformApiKeyToFormDefaults,
+  getApiKeyModels,
 } from '../lib'
 import type { ApiKey } from '../types'
 import {
@@ -106,6 +108,8 @@ import {
 } from './api-key-group-combobox'
 import { useApiKeys } from './api-keys-provider'
 import { AutoGroupOrderEditor } from './auto-group-order-editor'
+import { GroupGuideDialog } from './group-guide-dialog'
+import { GroupModelList } from './group-model-list'
 
 type ApiKeyMutateDrawerProps = {
   open: boolean
@@ -283,6 +287,7 @@ export function ApiKeysMutateDrawer({
     isUpdate && currentRow ? `update:${currentRow.id}` : 'create'
   const isFormInitialized = initializedTarget === formTarget
   const selectedGroup = form.watch('group')
+  const { data: groupModels } = useUserGroupModels(open)
   const groupVendors = useGroupVendors(open)
   // A vendor that vanished (or a hidden filter) means "All".
   const activeVendor =
@@ -411,6 +416,7 @@ export function ApiKeysMutateDrawer({
     ? t('Enter quota in tokens')
     : t('Enter quota in {{currency}}', { currency: currencyLabel })
   const autoGroupsMode = form.watch('auto_groups_mode')
+  const autoGroups = form.watch('auto_groups')
   const unlimitedQuota = form.watch('unlimited_quota')
 
   return (
@@ -462,7 +468,10 @@ export function ApiKeysMutateDrawer({
                 name='group'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('Group')}</FormLabel>
+                    <div className='flex items-center justify-between gap-2'>
+                      <FormLabel>{t('Group')}</FormLabel>
+                      <GroupGuideDialog />
+                    </div>
                     <GroupVendorFilter
                       variant='cards'
                       vendors={groupVendors.vendors}
@@ -490,9 +499,26 @@ export function ApiKeysMutateDrawer({
                         value={field.value}
                         onValueChange={field.onChange}
                         placeholder={t('Select a group')}
+                        groupModels={groupModels}
                       />
                     </FormControl>
                     <FormMessage />
+                    {groupModels && field.value && (
+                      <GroupModelList
+                        models={getApiKeyModels(
+                          {
+                            group: field.value,
+                            auto_groups:
+                              autoGroupsMode === 'custom' ? autoGroups : [],
+                            model_limits_enabled: false,
+                            model_limits: '',
+                          },
+                          groupModels
+                        )}
+                        className='bg-muted/30 rounded-lg border p-3'
+                        listClassName='max-h-[200px]'
+                      />
+                    )}
                   </FormItem>
                 )}
               />

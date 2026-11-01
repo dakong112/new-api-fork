@@ -37,11 +37,14 @@ import {
 import { useMediaQuery } from '@/hooks'
 import { cn } from '@/lib/utils'
 
+import { getGroupModels } from '../lib/group-models'
+import type { UserGroupModels } from '../types'
 import {
   AUTO_GROUP_FRAME_CLASS_NAME,
   AutoGroupFlowBorder,
   GroupRatioBadge,
 } from './auto-group-visuals'
+import { GroupModelList } from './group-model-list'
 
 export type ApiKeyGroupOption = {
   value: string
@@ -60,6 +63,12 @@ type ApiKeyGroupComboboxProps = {
   onValueChange: (value: string) => void
   placeholder?: string
   disabled?: boolean
+  /**
+   * The models of each group. When given, every option shows its model count
+   * and, on wide screens, the highlighted option's models appear beside the
+   * list, so users see what a group serves before picking it.
+   */
+  groupModels?: UserGroupModels
   /** Set by FormControl so the field label names the trigger. */
   id?: string
   'aria-describedby'?: string
@@ -72,12 +81,17 @@ export function ApiKeyGroupCombobox({
   onValueChange,
   placeholder,
   disabled,
+  groupModels,
   ...triggerProps
 }: ApiKeyGroupComboboxProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState('')
+  // The option the pointer or arrow keys rest on; its models are previewed.
+  const [activeValue, setActiveValue] = useState('')
   const shouldReduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
+  const isWide = useMediaQuery('(min-width: 640px)')
+  const showPreview = groupModels !== undefined && isWide
   const selectedOption = options.find((option) => option.value === value)
   const isAutoSelected = selectedOption?.value === 'auto'
 
@@ -102,8 +116,18 @@ export function ApiKeyGroupCombobox({
     setSearchValue('')
   }
 
+  const activeOption =
+    filteredOptions.find((option) => option.value === activeValue) ??
+    filteredOptions[0]
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (nextOpen) setActiveValue(value ?? '')
+      }}
+    >
       <PopoverTrigger
         render={
           <Button
@@ -158,12 +182,22 @@ export function ApiKeyGroupCombobox({
         />
       </PopoverTrigger>
       <PopoverContent
-        className='data-closed:zoom-out-100 data-open:zoom-in-100 data-[side=bottom]:slide-in-from-top-0 data-[side=left]:slide-in-from-right-0 data-[side=right]:slide-in-from-left-0 data-[side=top]:slide-in-from-bottom-0 w-[var(--anchor-width)] overflow-hidden rounded-xl p-0 shadow-lg data-closed:duration-75 data-open:duration-100'
+        align='start'
+        className={cn(
+          'data-closed:zoom-out-100 data-open:zoom-in-100 data-[side=bottom]:slide-in-from-top-0 data-[side=left]:slide-in-from-right-0 data-[side=right]:slide-in-from-left-0 data-[side=top]:slide-in-from-bottom-0 w-[var(--anchor-width)] overflow-hidden rounded-xl p-0 shadow-lg data-closed:duration-75 data-open:duration-100',
+          showPreview &&
+            'flex w-[max(var(--anchor-width),min(720px,calc(100vw-2rem)))]'
+        )}
         onWheel={(event) => event.stopPropagation()}
         onTouchMove={(event) => event.stopPropagation()}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <Command shouldFilter={false}>
+        <Command
+          shouldFilter={false}
+          value={activeOption?.value ?? ''}
+          onValueChange={setActiveValue}
+          className={cn(showPreview && 'w-[45%] shrink-0 border-e')}
+        >
           <CommandInput
             placeholder={t('Search...')}
             value={searchValue}
@@ -217,6 +251,14 @@ export function ApiKeyGroupCombobox({
                           {option.desc}
                         </span>
                       )}
+                      {groupModels && (
+                        <span className='text-muted-foreground block text-[11px]'>
+                          {t('{{count}} models', {
+                            count: getGroupModels(option.value, groupModels)
+                              .length,
+                          })}
+                        </span>
+                      )}
                     </span>
                     <GroupRatioBadge
                       ratio={option.ratio}
@@ -229,6 +271,18 @@ export function ApiKeyGroupCombobox({
             </CommandGroup>
           </CommandList>
         </Command>
+        {showPreview && activeOption && (
+          <GroupModelList
+            key={activeOption.value}
+            models={getGroupModels(activeOption.value, groupModels)}
+            title={t('Models in {{group}} ({{count}})', {
+              group: activeOption.label,
+              count: getGroupModels(activeOption.value, groupModels).length,
+            })}
+            className='min-w-0 flex-1 p-3'
+            listClassName='max-h-[320px]'
+          />
+        )}
       </PopoverContent>
     </Popover>
   )

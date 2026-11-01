@@ -41,7 +41,9 @@ export function getApiKeyFormSchema(t: TFunction, maxAutoGroups = 5) {
       model_limits: z.array(z.string()),
       allow_ips: z.string().optional(),
       allow_user_quota_query: z.boolean(),
-      group: z.string().optional(),
+      // Required: a key left on the user's own group often reaches none of
+      // the models the user meant to call.
+      group: z.string().min(1, t('Please select a group')),
       auto_groups_mode: z.enum(['inherit', 'custom']),
       auto_groups: z.array(z.string()),
       cross_group_retry: z.boolean().optional(),
