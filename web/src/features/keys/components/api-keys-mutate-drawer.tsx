@@ -108,7 +108,7 @@ import {
 } from './api-key-group-combobox'
 import { useApiKeys } from './api-keys-provider'
 import { AutoGroupOrderEditor } from './auto-group-order-editor'
-import { GroupGuideDialog } from './group-guide-dialog'
+import { GroupGuide } from './group-guide'
 import { GroupModelList } from './group-model-list'
 
 type ApiKeyMutateDrawerProps = {
@@ -468,10 +468,8 @@ export function ApiKeysMutateDrawer({
                 name='group'
                 render={({ field }) => (
                   <FormItem>
-                    <div className='flex items-center justify-between gap-2'>
-                      <FormLabel>{t('Group')}</FormLabel>
-                      <GroupGuideDialog />
-                    </div>
+                    <FormLabel>{t('Group')}</FormLabel>
+                    <GroupGuide />
                     <GroupVendorFilter
                       variant='cards'
                       vendors={groupVendors.vendors}

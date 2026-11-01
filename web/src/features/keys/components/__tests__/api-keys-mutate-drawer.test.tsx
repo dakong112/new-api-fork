@@ -666,11 +666,13 @@ describe('API keys mutate drawer group models', () => {
     fireEvent.click(screen.getByRole('combobox', { name: 'Group' }))
     fireEvent.pointerMove(await screen.findByRole('option', { name: /^vip/ }))
 
-    expect(
-      await screen.findByRole('button', {
-        name: 'Copy model name deepseek-v4-flash',
-      })
-    ).toBeTruthy()
+    const preview = await screen.findByRole('button', {
+      name: 'Copy model name deepseek-v4-flash',
+    })
+    // The preview sits beside the list, not under it.
+    expect(preview.closest('[data-slot="popover-content"]')).toHaveClass(
+      'flex-row'
+    )
     expect(screen.getByRole('option', { name: /^vip/ })).toHaveTextContent(
       '2 models'
     )
@@ -701,16 +703,12 @@ describe('API keys mutate drawer group models', () => {
     ).toBeNull()
   })
 
-  test('opens the built-in group guide while the administrator left it empty', async () => {
+  test('shows the built-in group guide under the group label while the administrator left it empty', async () => {
     installApiFixtures([])
     await renderDrawer()
 
-    fireEvent.click(findButton('How to choose a group?', true))
-
-    const guide = await screen.findByRole('dialog', {
-      name: 'How to choose a group',
-    })
-    expect(within(guide).getByText('Steps')).toBeTruthy()
+    const guide = await screen.findByRole('note')
+    expect(within(guide).getByText('How to choose a group?')).toBeTruthy()
     expect(within(guide).getByText('Tips')).toBeTruthy()
   })
 })

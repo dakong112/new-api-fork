@@ -83,7 +83,7 @@ const SITE_SECTIONS = [
         optionKey='general_setting.api_keys_group_guide'
         titleKey='Group selection guide'
         placeholderKey='Explain which group to choose for which models'
-        descriptionKey='Opened from "How to choose a group?" when users create or edit an API key. Supports Markdown. Leave empty to show the built-in guide.'
+        descriptionKey='Shown under the group field when users create or edit an API key. Supports Markdown. Leave empty to show the built-in guide.'
       />
     ),
   },

@@ -186,7 +186,8 @@ export function ApiKeyGroupCombobox({
         className={cn(
           'data-closed:zoom-out-100 data-open:zoom-in-100 data-[side=bottom]:slide-in-from-top-0 data-[side=left]:slide-in-from-right-0 data-[side=right]:slide-in-from-left-0 data-[side=top]:slide-in-from-bottom-0 w-[var(--anchor-width)] overflow-hidden rounded-xl p-0 shadow-lg data-closed:duration-75 data-open:duration-100',
           showPreview &&
-            'flex w-[max(var(--anchor-width),min(720px,calc(100vw-2rem)))]'
+            // The popover stacks its children by default; the preview sits beside the list.
+            'w-[max(var(--anchor-width),min(720px,calc(100vw-2rem)))] flex-row gap-0'
         )}
         onWheel={(event) => event.stopPropagation()}
         onTouchMove={(event) => event.stopPropagation()}
