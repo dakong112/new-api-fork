@@ -59,6 +59,9 @@ function getAnnouncementKey(item: Record<string, unknown>): string {
   return `hash:${hashString(fingerprint)}`
 }
 
+/** How often open pages check for a new system notice. */
+export const NOTICE_POLL_INTERVAL_MS = 5 * 60 * 1000
+
 /**
  * Hook to manage notifications (Notice + Announcements)
  * Provides unread counts and read status management
@@ -77,11 +80,12 @@ export function useNotifications() {
   } = useQuery({
     queryKey: ['notice'],
     queryFn: async () => requireServerSuccess(await getNotice()),
-    // Poll so a notice published mid-session reaches signed-in users; the
-    // server answers 304 via ETag when nothing changed, so this stays cheap.
-    // Polling pauses while the tab is hidden and resumes on focus.
-    staleTime: 1000 * 30,
-    refetchInterval: 1000 * 60,
+    // Poll so a notice published mid-session reaches signed-in users within
+    // five minutes; the server answers 304 via ETag when nothing changed.
+    // Polling pauses while the tab is hidden, and returning to the tab only
+    // checks again once the last answer is five minutes old.
+    staleTime: NOTICE_POLL_INTERVAL_MS,
+    refetchInterval: NOTICE_POLL_INTERVAL_MS,
     refetchOnWindowFocus: true,
   })
 
