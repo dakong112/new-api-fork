@@ -16,9 +16,17 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { describe, expect, it } from 'vitest'
+import { renderHook } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 
-import { sortGroupNames } from '../group-order'
+import { sortGroupNames, useGroupDisplayOrder } from '../group-order'
+
+const statusMock = vi.hoisted(() => ({
+  current: { status: null as Record<string, unknown> | null },
+}))
+vi.mock('@/hooks/use-status', () => ({
+  useStatus: () => statusMock.current,
+}))
 
 describe('sortGroupNames', () => {
   it('puts auto first, then the configured order, then the rest alphabetically', () => {
@@ -49,5 +57,30 @@ describe('sortGroupNames', () => {
     const names = ['vip', 'default']
     sortGroupNames(names, ['default'])
     expect(names).toEqual(['vip', 'default'])
+  })
+})
+
+describe('useGroupDisplayOrder', () => {
+  it.each([
+    ['configured', { group_display_order: ['vip', 1, 'default'] }],
+    ['unset', {}],
+    ['missing status', null],
+  ])(
+    'returns the same array across re-renders when the status is %s',
+    (_label, status) => {
+      statusMock.current = { status }
+      const { result, rerender } = renderHook(() => useGroupDisplayOrder())
+      const first = result.current
+      rerender()
+      expect(result.current).toBe(first)
+    }
+  )
+
+  it('keeps only string group names from the status order', () => {
+    statusMock.current = {
+      status: { group_display_order: ['vip', 1, 'default'] },
+    }
+    const { result } = renderHook(() => useGroupDisplayOrder())
+    expect(result.current).toEqual(['vip', 'default'])
   })
 })

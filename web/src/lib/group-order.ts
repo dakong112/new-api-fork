@@ -16,6 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { useMemo } from 'react'
+
 import { useStatus } from '@/hooks/use-status'
 
 /**
@@ -35,9 +37,17 @@ export function sortGroupNames(names: string[], order: string[]): string[] {
   })
 }
 
-/** The admin-defined group display order, from the public status. */
+/**
+ * The admin-defined group display order, from the public status. The array
+ * keeps its identity while the status is unchanged: callers memoize on it, and
+ * a fresh array per render made the API key drawer's form reset loop forever.
+ */
 export function useGroupDisplayOrder(): string[] {
   const { status } = useStatus()
   const order = status?.group_display_order
-  return Array.isArray(order) ? order.filter((g) => typeof g === 'string') : []
+  return useMemo(
+    () =>
+      Array.isArray(order) ? order.filter((g) => typeof g === 'string') : [],
+    [order]
+  )
 }
